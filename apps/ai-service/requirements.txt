@@ -3,3 +3,6 @@ uvicorn
 pydantic
 requests
 redis
+transformers
+torch
+sentencepiece
