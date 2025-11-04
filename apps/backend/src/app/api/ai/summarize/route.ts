@@ -1,113 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AIService } from '@/services/ai.service';
+import { logger } from '@/lib/logger';
+import { SummarizeRequest } from '@/types/ai.types';
+
+const aiService = new AIService();
+
+/**
+ * Validate the request body matches our expected schema
+ */
+function validateRequest(body: unknown): SummarizeRequest {
+  if (!body || typeof body !== 'object') {
+    throw new Error('Request body must be an object');
+  }
+
+  if (!('thread' in body) || !Array.isArray(body.thread)) {
+    throw new Error('Request body must contain a thread array');
+  }
+
+  const { thread } = body as { thread: unknown[] };
+  
+  if (!thread.every(msg => 
+    msg && typeof msg === 'object' && 
+    'text' in msg && typeof msg.text === 'string'
+  )) {
+    throw new Error('Each message in thread must have a text field');
+  }
+
+  return body as SummarizeRequest;
+}
 
 /**
  * POST /api/ai/summarize
- * 
- * Forwards text content to AI service for summarization.
- * Accepts a content string and returns the AI-generated summary.
- * 
- * @param request - Next.js request object containing JSON body with content field
- * @returns JSON response with summary data or error message
- * 
- * @example
- * POST /api/ai/summarize
- * {
- *   "content": "Hello, can we meet tomorrow?"
- * }
+ * Forwards a thread of messages to the AI service for summarization.
  */
 export async function POST(request: NextRequest) {
+  logger.time('summarize-request');
+  
   try {
-    // Validate request body
-    const { content } = await request.json();
-
-    if (!content || typeof content !== 'string') {
-      return NextResponse.json(
-        { 
-          error: 'Content field is required and must be a string',
-          status: 400,
-          timestamp: new Date().toISOString()
-        },
-        { status: 400 }
-      );
-    }
-
-    // Get AI service URL from environment
-    const aiServiceUrl = process.env.AI_SERVICE_URL;
-    if (!aiServiceUrl) {
-      throw new Error('AI_SERVICE_URL environment variable is not configured');
-    }
-
-    // Start latency measurement
-    const startTime = performance.now();
+    const body = await request.json();
+    const validatedRequest = validateRequest(body);
     
-    // Call AI service with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    const summary = await aiService.summarizeThread(validatedRequest);
+    
+    logger.timeEnd('summarize-request');
+    
+    return NextResponse.json({
+      summary: summary.summary,
+      status: 'success'
+    });
 
-    try {
-      const response = await fetch(`${aiServiceUrl}/summarize`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ thread: [{ text: content }] }), // Format as per AI service spec
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`AI service responded with status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Calculate and log latency
-      const latencyMs = Math.round(performance.now() - startTime);
-      console.info(`AI summarize request completed in ${latencyMs}ms`);
-      
-      return NextResponse.json({
-        ...data,
-        status: 200,
-        timestamp: new Date().toISOString(),
-        latency: latencyMs
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
   } catch (error: unknown) {
-    console.error('Error in /api/ai/summarize:', error);
+    logger.error('Summarization failed', { error });
     
-    // Handle different error types
+    // Handle AI service connection errors
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.error('AI service connection failed:', error.message);
       return NextResponse.json(
-        {
-          error: 'AI service is currently unavailable',
-          status: 503,
-          timestamp: new Date().toISOString(),
-          details: 'Could not establish connection to AI service'
-        },
+        { error: 'AI service unavailable', status: 'error' },
         { status: 503 }
       );
     }
     
-    if (error instanceof Error && error.name === 'AbortError') {
+    // Handle validation errors
+    if (error instanceof Error && error.message.includes('Request body')) {
       return NextResponse.json(
-        {
-          error: 'Request timeout',
-          status: 504,
-          timestamp: new Date().toISOString()
-        },
-        { status: 504 }
+        { error: error.message, status: 'error' },
+        { status: 400 }
       );
     }
 
+    // Handle all other errors
     return NextResponse.json(
-      {
-        error: 'Internal server error',
-        status: 500,
-        timestamp: new Date().toISOString()
-      },
+      { error: 'Internal server error', status: 'error' },
       { status: 500 }
     );
   }
