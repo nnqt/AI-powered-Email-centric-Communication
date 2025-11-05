@@ -33,3 +33,22 @@ coverage/
 
 # Copilot logs
 .copilot/*.tmp
+
+# Latex log, temporary files
+*.aux
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+*.log
+*.lof
+*.lot
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.pdfsync
