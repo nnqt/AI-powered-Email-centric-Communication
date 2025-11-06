@@ -6,16 +6,16 @@
     "apps/*"
   ],
   "scripts": {
-  "dev:frontend": "cd apps/frontend && npm install && npm run dev",
-  "dev:backend": "cd apps/backend && npm install && npm run dev",
-  "dev:setup:ai": "cd apps/ai-service && ./venv/bin/pip install -r requirements.txt",
-  "dev:ai": "cd apps/ai-service && ./venv/bin/python main.py",
-  "dev:infra": "cd infra && docker compose up",
-  "dev:db": "cd infra && docker compose up mongo redis",
-  "stop:infra": "cd infra && docker compose down",
-  "logs:infra": "cd infra && docker compose logs -f",
-  "start:all": "npm-run-all -p dev:frontend dev:backend dev:ai"
-},
+    "dev:frontend": "cd apps/frontend && npm install && npm run dev",
+    "dev:backend": "cd apps/backend && npm install && npm run dev",
+    "dev:setup:ai": "cd apps/ai-service && ([ -d venv ] || python3 -m venv venv) && ./venv/bin/pip install -r requirements.txt",
+    "dev:ai": "cd apps/ai-service && ./venv/bin/python main.py",
+    "dev:infra": "cd infra && docker compose up",
+    "dev:db": "cd infra && docker compose up mongo redis",
+    "stop:infra": "cd infra && docker compose down",
+    "logs:infra": "cd infra && docker compose logs -f",
+    "start:all": "npm-run-all -p dev:frontend dev:backend dev:ai"
+  },
   "devDependencies": {
     "npm-run-all": "^4.1.5"
   }
