@@ -1,17 +1,129 @@
 \section{Phân tích và Đặc tả Yêu cầu}
 \label{sec:YeuCau}
+
+Dựa trên mục tiêu xây dựng một nền tảng quản lý giao tiếp tập trung với Email là lõi (Email-centric), chương này trình bày bức tranh tổng thể về \textbf{yêu cầu hệ thống} dưới góc nhìn vừa kỹ thuật vừa nghiệp vụ. Trong phạm vi PoC (Proof of Concept), hệ thống được giả định vận hành theo mô hình \textit{single-tenant} (một người dùng hoặc một tài khoản tổ chức), ưu tiên kiểm chứng tính khả thi của kiến trúc và năng lực xử lý dữ liệu kết hợp AI, hơn là giải quyết các bài toán multi-tenant ở quy mô lớn.
+
+Để đảm bảo tính cô đọng, chương này tổ chức lại yêu cầu thành hai nhóm chính: \textbf{yêu cầu chức năng} và \textbf{yêu cầu phi chức năng}, thay vì tách quá nhiều tiểu mục nhỏ. Trong từng nhóm, các yêu cầu sẽ được mô tả theo góc nhìn "module lõi" của kiến trúc (Email, Contact, Timeline, AI, Đa kênh và Hạ tầng).
+
 \subsection{Yêu cầu chức năng (Functional Requirements)}
-    \subsubsection{Quản lý Email (Lõi)}
-    \subsubsection{Hợp nhất hồ sơ (Contact Unification)}
-    \subsubsection{Hiển thị Timeline}
-    \subsubsection{Chức năng AI (Tóm tắt, Gợi ý)}
-    \subsubsection{Mở rộng đa kênh (Module Tùy chọn)}
+\label{subsec:FR}
+
+Nhóm yêu cầu chức năng mô tả \textit{hệ thống cần làm gì} để hỗ trợ người dùng quản lý email và thông tin liên lạc một cách tập trung, có ngữ cảnh và được tăng cường bởi AI.
+
+\subsubsection*{(1) Lõi quản lý Email và đồng bộ hai chiều}
+
+Email là kênh giao tiếp bắt buộc và là nguồn dữ liệu chính của hệ thống.
+
+\begin{itemize}
+    \item \textbf{FR-01 – Đồng bộ Email gần thời gian thực (near real-time sync):}
+    Hệ thống cần tích hợp với Gmail API và sử dụng cơ chế \textit{Push Notification/Webhook} thay vì \textit{polling} thủ công. Khi có email mới tới hộp thư gốc, một sự kiện sẽ được đẩy tới backend, từ đó ghi nhận vào cơ sở dữ liệu và hiển thị lên giao diện Timeline trong khoảng thời gian mục tiêu dưới 5 giây. Cơ chế này không chỉ giúp giảm độ trễ mà còn tiết kiệm tài nguyên mạng và chi phí API.
+
+    \item \textbf{FR-02 – Soạn thảo và gửi Email trực tiếp:}
+    Người dùng có thể soạn email ngay trong giao diện hệ thống với hỗ trợ \textit{Rich Text} (in đậm, in nghiêng, bullet, trích dẫn) và đính kèm tệp. Email gửi đi từ nền tảng phải đồng bộ ngược lại vào Gmail để đảm bảo lịch sử ở hai phía luôn nhất quán, tránh tình trạng "mỗi nơi một mảnh".
+
+    \item \textbf{FR-03 – Quản lý trạng thái Email và phản ánh lại máy chủ:}
+    Hệ thống cho phép đánh dấu \textit{đã đọc/chưa đọc}, \textit{lưu trữ} (archive) hoặc gắn nhãn (labels/tags) đối với từng email. Các thay đổi này được đồng bộ ngược (two-way sync) về Gmail, giúp người dùng có thể sử dụng luân phiên cả giao diện gốc lẫn nền tảng PoC mà không bị lệch trạng thái.
+\end{itemize}
+
+\subsubsection*{(2) Dòng thời gian giao tiếp (Communication Timeline)}
+
+Timeline là nơi thể hiện giá trị "Email-centric nhưng có ngữ cảnh".
+
+\begin{itemize}
+    \item \textbf{FR-04 – Cập nhật giao diện tức thời (real-time UI update):}
+    Khi backend nhận Webhook từ Gmail hoặc khi một tác vụ AI hoàn tất tóm tắt, giao diện Timeline phải được cập nhật tự động qua WebSocket hoặc cơ chế push tương đương, giúp người dùng luôn thấy trạng thái mới nhất mà không phải F5 thủ công.
+\end{itemize}
+
+\subsubsection*{(3) Chức năng AI: tóm tắt, gợi ý phản hồi và hợp nhất hồ sơ}
+
+Module AI vận hành như một \textit{AI microservice} độc lập, giao tiếp với backend qua HTTP/REST hoặc WebSocket.
+
+\begin{itemize}
+    \item \textbf{FR-05 – Tự động khởi tạo và làm giàu hồ sơ Contact:}
+    Khi xuất hiện một địa chỉ email mới trong luồng dữ liệu, backend chỉ ghi nhận tối thiểu thông tin kỹ thuật (email, thời gian, header), còn AI service sẽ chạy nền để suy luận thêm metadata: tên hiển thị, ngôn ngữ thường sử dụng, domain liên quan tới tổ chức nào,… Từ đó, hệ thống tạo hoặc cập nhật một hồ sơ Contact ở trạng thái sơ bộ (draft) mà không cần thao tác thủ công từ người dùng.
+
+    \item \textbf{FR-06 – Gợi ý hợp nhất định danh (AI-assisted Contact Unification):}
+    Dựa trên lịch sử giao tiếp, nội dung email và các đặc trưng như domain, chữ ký, cách xưng hô, AI service đưa ra các gợi ý nhóm nhiều địa chỉ email khác nhau vào cùng một Contact duy nhất. Người dùng có thể xem danh sách gợi ý này trong giao diện và chấp nhận hoặc từ chối. Sau khi được chấp nhận, thao tác hợp nhất được thực hiện nền, đảm bảo toàn bộ timeline và dữ liệu liên quan được quy về một hồ sơ "360 độ".
+
+    \item \textbf{FR-07 – Tóm tắt luồng trao đổi (Thread Summarization):}
+    Đối với các chuỗi email dài (thread), hệ thống định kỳ hoặc theo yêu cầu gửi nội dung thread tới AI Service để sinh ra một bản tóm tắt ngắn gọn (summary) kèm theo danh sách "Key Issues". Bản tóm tắt này được lưu lại trong DB, gắn với thread tương ứng và hiển thị trực tiếp trên giao diện Timeline để người dùng nắm nhanh "bức tranh tổng thể".
+
+    \item \textbf{FR-08 – Gợi ý phản hồi thông minh (Smart Reply Suggestion):}
+    Khi người dùng mở một email gần nhất trong thread, AI Service dựa trên nội dung email hiện tại cộng với ngữ cảnh lịch sử để đề xuất 2–3 phương án trả lời (reply candidates). Các gợi ý này nên ở dạng có thể chỉnh sửa lại trước khi gửi, đảm bảo vai trò AI là hỗ trợ (augmented intelligence) chứ không thay thế hoàn toàn con người.
+\end{itemize}
+
+\subsubsection*{(5) Mở rộng đa kênh và kiến trúc adapter}
+
+Mặc dù PoC chỉ tích hợp Email, kiến trúc cần sẵn sàng cho việc bổ sung các kênh IM.
+
+\begin{itemize}
+    \item \textbf{FR-10 – Định nghĩa interface chuẩn cho Message/Conversation:}
+    Hệ thống phải xây dựng các interface trừu tượng (ví dụ: \texttt{Message}, \texttt{Conversation}) độc lập với nguồn kênh. Điều này cho phép về sau có thể thêm các adapter cho Zalo, Telegram, WhatsApp mà không phải viết lại logic lõi (core business logic). PoC có thể minh họa cấu trúc này bằng các stub hoặc module giả lập.
+\end{itemize}
+
 \subsection{Yêu cầu phi chức năng (Non-Functional Requirements)}
-    \subsubsection{Hiệu năng}
-    \subsubsection{Bảo mật}
-    \subsubsection{Khả năng mở rộng}
-\subsection{Các kịch bản sử dụng (Use Cases)}
-    % Đây là 5-7 kịch bản giả lập mà chúng ta đã thảo luận
-    \subsubsection{Kịch bản 1: Tuyển dụng}
-    \subsubsection{Kịch bản 2: Hỏi hàng}
-    %...
+\label{subsec:NFR}
+
+Yêu cầu phi chức năng mô tả \textit{hệ thống cần vận hành như thế nào} về mặt hiệu năng, bảo mật và khả năng mở rộng, để đảm bảo PoC không chỉ chạy được mà còn phản ánh đúng định hướng kiến trúc cho tương lai.
+
+\subsubsection*{(1) Hiệu năng và trải nghiệm người dùng}
+
+\begin{itemize}
+    \item \textbf{Độ trễ đồng bộ Email:}
+    Thời gian từ khi email tới hộp thư gốc đến khi xuất hiện trên Timeline được đặt mục tiêu dưới 5 giây trong điều kiện mạng ổn định, nhờ cơ chế Webhook và xử lý bất đồng bộ ở backend.
+
+    \item \textbf{Xử lý AI bất đồng bộ:}
+    Các tác vụ AI như tóm tắt và gợi ý phản hồi có thể kéo dài từ vài giây đến hàng chục giây. Do đó, toàn bộ pipeline AI phải được thực hiện theo mô hình async, sử dụng hàng đợi (Redis Queue) để không chặn luồng xử lý chính. Người dùng vẫn nhìn thấy email mới gần như ngay lập tức, trong khi kết quả AI được cập nhật bổ sung sau.
+\end{itemize}
+
+\subsubsection*{(2) Bảo mật và quản lý cấu hình}
+
+\begin{itemize}
+    \item \textbf{Quản lý thông tin nhạy cảm qua môi trường:}
+    Các thông tin như API key của OpenAI, thông tin OAuth Client của Gmail, chuỗi kết nối (connection string) tới MongoDB và Redis phải được cấu hình qua biến môi trường (.env), không được ghi cứng trong mã nguồn. Điều này vừa tuân thủ thực hành bảo mật tốt, vừa giúp PoC dễ dàng triển khai trên nhiều môi trường khác nhau.
+
+    \item \textbf{Phân tách quyền truy cập (ở mức PoC):}
+    Mặc dù PoC không đi sâu vào bài toán authentication/authorization phức tạp, kiến trúc phải sẵn sàng để gắn thêm lớp xác thực (ví dụ: OAuth2, JWT) ở các lớp API mà không cần thay đổi cấu trúc tổng thể.
+\end{itemize}
+
+\subsubsection*{(3) Khả năng mở rộng và triển khai}
+
+\begin{itemize}
+    \item \textbf{Containerization toàn bộ thành phần:}
+    Frontend (Next.js), Backend (Next.js API Routes), AI Service (FastAPI), Database (MongoDB) và Redis đều được đóng gói thành các container độc lập, được điều phối bởi Docker Compose. Cách tiếp cận này giúp mô phỏng khá sát môi trường triển khai thực tế và tạo tiền đề để sau này chuyển sang các nền tảng container orchestration (như Kubernetes) nếu cần.
+
+    \item \textbf{Mở rộng theo chiều ngang (horizontal scalability) ở mức kiến trúc:}
+    Dù PoC không bắt buộc chạy ở quy mô lớn, các lựa chọn công nghệ (Node.js event-driven, FastAPI async, Redis Queue) đều hướng tới khả năng nhân bản (scale-out) trong tương lai: có thể tăng số replica của Backend hoặc AI Service mà không phải thay đổi code nhiều.
+\end{itemize}
+
+\subsection{Quyết định công nghệ và Chiến lược kiến trúc}
+\label{subsec:GiaiPhapCongNghe}
+
+Dựa trên yêu cầu ở trên, luận án đưa ra một số quyết định công nghệ và chiến lược kiến trúc trọng yếu.
+
+\subsubsection*{(1) Backend hướng sự kiện với Node.js/Next.js}
+
+Backend sử dụng \textbf{Next.js API Routes} trong môi trường Node.js. Bài toán là \textit{I/O-bound}: hệ thống phải tiếp nhận webhook từ Gmail, kết nối tới MongoDB/Redis, đồng thời duy trì kênh WebSocket tới nhiều client.
+
+So với Java (Spring Boot) hay Go, Node.js cho tốc độ phát triển PoC nhanh hơn, cấu hình đơn giản, hệ sinh thái npm phong phú. So với các framework Python hướng web truyền thống, mô hình event loop của Node.js phù hợp hơn cho việc xử lý đồng thời nhiều kết nối mạng. Đồng thời, dùng TypeScript ở cả frontend và backend giúp chia sẻ kiểu dữ liệu, giảm lỗi tích hợp.
+
+\subsubsection*{(2) MongoDB cho dữ liệu bán cấu trúc}
+
+Dữ liệu email là bán cấu trúc (semi-structured), các trường header và metadata đa dạng. \textbf{MongoDB} cho phép lưu trữ trực tiếp các document JSON từ Gmail API cùng với kết quả phân tích AI (summary, key\_issues, sentiment,…) mà không cần schema cứng như RDBMS. Điều này giúp PoC linh hoạt thay đổi mô hình dữ liệu trong giai đoạn khám phá (exploration), đồng thời vẫn đảm bảo hiệu năng ghi/đọc ở mức chấp nhận được.
+
+\subsubsection*{(3) AI Microservice với Python/FastAPI}
+
+Module AI được tách ra thành \textbf{FastAPI service} viết bằng Python để tận dụng hệ sinh thái AI/ML. Việc tách microservice này giúp:
+
+\begin{itemize}
+    \item Tránh làm nghẽn luồng xử lý của backend khi AI phải gọi các API có độ trễ cao (OpenAI).
+    \item Dễ dàng thay đổi nhà cung cấp AI hoặc chuyển sang mô hình local (HuggingFace, Ollama) trong tương lai mà không ảnh hưởng tới backend.
+\end{itemize}
+
+\subsubsection*{(4) Hàng đợi và xử lý bất đồng bộ với Redis}
+
+Redis được sử dụng như một \textbf{message queue} đơn giản để hiện thực mô hình Producer–Consumer giữa backend và AI service. Khi có email mới, backend chỉ lưu dữ liệu, đẩy một job vào Redis rồi trả về kết quả tối thiểu cho frontend. AI service đọc job từ hàng đợi, xử lý tóm tắt/gợi ý và cập nhật lại DB, sau đó kích hoạt thông báo real-time cho người dùng.
+
+\subsubsection*{(5) Cách tiếp cận AI: Prompt Engineering và Contextualization}
+
+Trong giai đoạn PoC, hệ thống áp dụng hướng tiếp cận \textit{Prompt Engineering} với output có cấu trúc (structured JSON) thay vì fine-tuning. Các prompt được thiết kế để AI trả về cả nội dung tóm tắt lẫn thông tin có cấu trúc (sentiment, key\_issues, action\_required,...) nhằm phục vụ cho các logic hiển thị hoặc cảnh báo sau này. Đồng thời, AI luôn được cung cấp ngữ cảnh ở cấp độ thread thay vì từng email đơn lẻ, giúp kết quả tóm tắt và gợi ý phản hồi sát với diễn biến thực tế của cuộc trao đổi.

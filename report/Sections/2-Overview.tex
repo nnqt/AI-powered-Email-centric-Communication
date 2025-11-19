@@ -1,124 +1,126 @@
 \section{Tổng quan}
 \label{sec:TongQuan}
 
-Bối cảnh của cuộc cách mạng công nghiệp lần thứ tư và sự thâm nhập sâu rộng của công nghệ số đã làm thay đổi căn bản phương thức trao đổi thông tin trong môi trường doanh nghiệp và tổ chức. Bên cạnh kênh giao tiếp truyền thống và mang tính chính thức là Email, sự phổ biến ngày càng tăng của các nền tảng nhắn tin tức thời (Instant Messaging - IM) như Zalo, WhatsApp, Telegram hay Viber đã tạo ra một hệ sinh thái giao tiếp đa kênh phức tạp.
+Cuộc cách mạng công nghiệp lần thứ tư, cùng với làn sóng chuyển đổi số mạnh mẽ trong thập niên vừa qua, đã làm thay đổi sâu sắc cách thức con người và tổ chức trao đổi thông tin. Trong môi trường doanh nghiệp hiện đại, Email vẫn giữ vai trò là kênh giao tiếp chính thức, dùng cho những trao đổi mang tính lưu trữ, pháp lý hoặc điều phối quy trình. Song song đó, các nền tảng nhắn tin tức thời (Instant Messaging - IM) như Zalo, WhatsApp, Telegram hay Viber ngày càng được ưa chuộng nhờ tính tức thời, thân thiện và phù hợp với tương tác hàng ngày.
 
-Sự đa dạng hóa này, mặc dù mang lại tính tiện lợi và tức thời, nhưng cũng đồng thời làm nảy sinh một thách thức cốt lõi: đó là **sự phân mảnh nghiêm trọng của dữ liệu liên lạc**. Lịch sử trao đổi với một đối tác, khách hàng hay ứng viên không còn tồn tại ở một nơi duy nhất mà bị phân tán trên nhiều nền tảng khác nhau.
+Sự tồn tại đồng thời của hai nhóm kênh này đã hình thành nên một hệ sinh thái giao tiếp đa kênh đa dạng nhưng cũng đầy phức tạp. Nếu như Email thường được sử dụng để khởi tạo mối quan hệ (gửi hồ sơ ứng tuyển, báo giá, hợp đồng…), thì các trao đổi tiếp theo, mang tính thương lượng, xác nhận nhanh hay chăm sóc khách hàng, lại dễ dàng "trôi" sang các ứng dụng IM. Về phía người dùng cuối, điều này mang lại trải nghiệm linh hoạt và tiện lợi. Tuy nhiên, dưới góc nhìn quản lý và vận hành, sự đa dạng hóa kênh giao tiếp lại dẫn đến một hệ quả đáng lo ngại: \textbf{sự phân mảnh nghiêm trọng của dữ liệu liên lạc}.
 
-Luận án này tập trung nghiên cứu và đề xuất giải pháp cho vấn đề nêu trên. Mục tiêu chính là trình bày cơ sở lý luận, phân tích thực trạng và đề xuất một mô hình kiến trúc cho một **Nền tảng Quản lý Trao đổi Tập trung**. Nền tảng này được thiết kế với Email là thành phần trung tâm (Email-centric) và sở hữu kiến trúc module linh hoạt, cho phép tích hợp tùy chọn các kênh giao tiếp khác nhằm giải quyết bài toán phân mảnh dữ liệu một cách hiệu quả.
+Thay vì có một bản ghi đầy đủ về lịch sử trao đổi với từng đối tác, khách hàng hay ứng viên, dữ liệu thực tế bị chia cắt thành nhiều mảnh rời rạc: một phần nằm trong hộp thư Email, một phần trong các đoạn chat Zalo, một phần khác lại nằm trong nhóm Telegram nội bộ. Trạng thái này khiến cho việc truy xuất lại bối cảnh, kiểm tra lại cam kết hoặc tổng hợp báo cáo trở nên tốn thời gian, phụ thuộc vào trí nhớ của cá nhân và dễ phát sinh sai sót. Trong bối cảnh doanh nghiệp ngày càng coi dữ liệu là tài sản chiến lược, tình trạng phân mảnh đó không chỉ là bất tiện kỹ thuật mà còn là rủi ro về mặt vận hành và ra quyết định.
+
+Luận án này tập trung nghiên cứu và đề xuất một hướng tiếp cận nhằm giải quyết bài toán nêu trên. Mục tiêu tổng quát là xây dựng cơ sở lý luận, phân tích thực trạng và đề xuất mô hình kiến trúc cho một \textbf{Nền tảng Quản lý Trao đổi Tập trung} (Centralized Communication Management Platform). Nền tảng được thiết kế với Email là thành phần trung tâm (Email-centric), đóng vai trò "xương sống" của luồng giao tiếp, đồng thời sở hữu kiến trúc module linh hoạt, cho phép tích hợp tùy chọn các kênh giao tiếp khác về sau. Cách tiếp cận này kỳ vọng vừa khắc phục bài toán phân mảnh dữ liệu, vừa giữ được tính đơn giản và khả năng triển khai thực tế cho các đội nhóm vừa và nhỏ.
 
 \subsection{Đặt vấn đề}
 \label{subsec:DatVanDe}
 
-Trong các quy trình nghiệp vụ chuyên nghiệp, chẳng hạn như tuyển dụng, quản lý quan hệ khách hàng (CRM), hay hỗ trợ kỹ thuật, Email thường đóng vai trò là kênh khởi đầu, mang tính chính thức. Tuy nhiên, để tăng tốc độ phản hồi và sự thuận tiện, các trao đổi tiếp theo thường được chuyển dịch sang các ứng dụng IM. Chính sự chuyển dịch không đồng nhất này đã dẫn đến nhiều bất cập trong công tác quản lý và vận hành. Những bất cập này có thể được nhận diện cụ thể như sau:
+Trong các quy trình nghiệp vụ mang tính chuyên nghiệp, chẳng hạn như tuyển dụng nhân sự, quản lý quan hệ khách hàng (Customer Relationship Management - CRM) hay hỗ trợ kỹ thuật (Support), Email thường được sử dụng như kênh giao tiếp khởi đầu. Các trao đổi thông qua Email mang tính trang trọng, có cấu trúc và dễ lưu trữ, tạo nền tảng cho việc hình thành hồ sơ và quy trình nội bộ. Tuy nhiên, để đáp ứng yêu cầu phản hồi nhanh, thuận tiện và gần gũi hơn, không ít cuộc trao đổi sau đó được "dịch chuyển" dần sang các ứng dụng IM như Zalo, WhatsApp hay Telegram.
+
+Sự chuyển dịch không đồng nhất này diễn ra một cách tự nhiên theo thói quen của người dùng, chứ không theo một thiết kế hệ thống nào. Theo thời gian, một quy trình tưởng chừng đơn giản như tiếp nhận và xử lý yêu cầu của khách hàng có thể trải dài trên nhiều kênh: từ email ban đầu, tới các tin nhắn trao đổi ngắn, rồi quay lại email để chốt thỏa thuận cuối cùng. Đối với từng cá nhân, việc "nhảy" qua lại giữa các ứng dụng này có thể không phải vấn đề lớn. Nhưng đối với tổ chức, đặc biệt là khi có nhiều nhân sự cùng tham gia xử lý, các bất cập sau sẽ dần bộc lộ rõ:
 
 \begin{itemize}
-    \item \textbf{Sự phân mảnh dữ liệu (Data Fragmentation):} Đây là thách thức lớn nhất. Lịch sử trao đổi bị phân tán trên nhiều ứng dụng (Email, Zalo, Telegram...) khiến việc tổng hợp một bức tranh toàn cảnh về lịch sử tương tác của một đối tác trở nên khó khăn, tốn thời gian và dễ sai sót.
+    \item \textbf{Sự phân mảnh dữ liệu (Data Fragmentation):} Đây là thách thức cốt lõi và mang tính nền tảng. Lịch sử trao đổi với một đối tượng cụ thể (ứng viên, khách hàng, đối tác) không còn tồn tại tại một nơi duy nhất, mà bị phân tán trên nhiều ứng dụng khác nhau (Email, Zalo, Telegram, nhóm chat nội bộ...). Khi cần nhìn lại toàn cảnh, người dùng buộc phải "ghép hình" thủ công từ nhiều nguồn, dễ bỏ sót chi tiết quan trọng và gần như không thể tự động hóa.
     
-    \item \textbf{Sự đứt gãy ngữ cảnh (Contextual Discontinuity):} Khi bắt đầu một tương tác mới, người dùng buộc phải truy xuất thông tin từ nhiều nguồn riêng lẻ để nắm bắt lại bối cảnh của cuộc hội thoại. Quá trình này làm giảm hiệu suất và khả năng phản hồi một cách chính xác và kịp thời.
+    \item \textbf{Sự đứt gãy ngữ cảnh (Contextual Discontinuity):} Mỗi lần một nhân sự mới được giao tiếp quản một case đang dang dở, hoặc đơn giản chỉ là quay lại xử lý một cuộc trao đổi sau một khoảng thời gian, họ phải lần lượt mở từng ứng dụng, tìm kiếm theo từ khóa, đối chiếu thời gian để dựng lại bức tranh bối cảnh. Quá trình này không chỉ mất thời gian mà còn tạo cảm giác "không liền mạch" trong trải nghiệm làm việc, làm giảm khả năng đưa ra quyết định chính xác và kịp thời.
     
-    \item \textbf{Suy giảm hiệu suất và gia tăng rủi ro nghiệp vụ:} Việc chuyển đổi liên tục giữa các ứng dụng không chỉ gây lãng phí thời gian mà còn tiềm ẩn nguy cơ bỏ sót thông tin quan trọng (ví dụ: một yêu cầu khẩn cấp qua tin nhắn). Điều này có thể dẫn đến các quyết định thiếu cơ sở, phản hồi trùng lặp, hoặc mang lại trải nghiệm tiêu cực cho đối tác.
+    \item \textbf{Suy giảm hiệu suất và gia tăng rủi ro nghiệp vụ:} Việc liên tục chuyển đổi giữa các ứng dụng khác nhau trong suốt ca làm việc gây ra hiện tượng "context switching" liên tục, được chứng minh là có tác động tiêu cực đến năng suất. Bên cạnh đó, các thông tin quan trọng (ví dụ: yêu cầu nâng mức dịch vụ, phản hồi tiêu cực của khách hàng) nếu chỉ xuất hiện trong một đoạn chat riêng lẻ rất dễ bị bỏ sót, dẫn tới những rủi ro về uy tín và chất lượng dịch vụ.
     
-    \item \textbf{Hiện tượng quá tải thông tin (Information Overload):} Ngay cả khi dữ liệu được thu thập thủ công, khối lượng email và tin nhắn đồ sộ trong một luồng lịch sử dài vẫn là một rào cản. Tồn tại nhu cầu cấp thiết về một cơ chế thông minh có khả năng tự động "tiêu hóa" lượng thông tin đó, chắt lọc và trích xuất những thông tin cốt lõi.
+    \item \textbf{Hiện tượng quá tải thông tin (Information Overload):} Ngay cả trong trường hợp toàn bộ dữ liệu được tập hợp lại, khối lượng email và tin nhắn khổng lồ trong một lịch sử trao đổi kéo dài nhiều tháng vẫn là một gánh nặng nhận thức. Người phụ trách khó có thể đọc lại tất cả nội dung mỗi lần cần nắm bắt bối cảnh. Do đó, nảy sinh nhu cầu về một cơ chế thông minh có khả năng tự động "tiêu hóa" lượng thông tin thô này, chắt lọc và trích xuất các ý chính, mốc quan trọng và vấn đề trọng tâm.
 \end{itemize}
 
-Từ những phân tích trên, tính cấp thiết của một giải pháp hợp nhất, thông minh được đặt ra.
+Đối chiếu với thực tế làm việc tại nhiều doanh nghiệp dịch vụ vừa và nhỏ, có thể nhận thấy mô hình đa kênh hiện tại phần lớn phát triển theo hướng \textit{tự phát} hơn là \textit{được thiết kế có chủ đích}. Từ những phân tích nêu trên, việc nghiên cứu một giải pháp hợp nhất, thông minh, đặt Email ở vị trí trung tâm để tái cấu trúc cách tổ chức lưu trữ và khai thác dữ liệu liên lạc là nhu cầu mang tính cấp thiết, không chỉ về mặt tiện ích mà còn về mặt chiến lược dữ liệu của tổ chức.
 
 
 \subsection{Nghiên cứu các giải pháp hiện có}
 \label{subsec:NghienCuuHienCo}
 
-Để làm rõ tính mới và sự cần thiết của đề tài, luận án tiến hành khảo sát và phân tích các giải pháp quản lý liên lạc hiện có trên thị trường. Các giải pháp này có thể được phân loại thành ba nhóm chính, mỗi nhóm có những ưu điểm và hạn chế riêng biệt.
+Để khẳng định tính mới và xác định đúng "khoảng trống" mà luận án hướng tới, việc khảo sát bức tranh giải pháp hiện có trên thị trường là cần thiết. Qua quá trình tham khảo tài liệu, trải nghiệm dùng thử và phân tích tính năng, các giải pháp quản lý liên lạc và chăm sóc khách hàng hiện nay có thể được quy nạp thành ba nhóm chính, mỗi nhóm thể hiện một triết lý thiết kế khác nhau với các điểm mạnh và hạn chế riêng.
 
 \subsubsection{Nhóm 1: Các ứng dụng tập trung vào Email (Email-centric)}
 \label{subsubsec:EmailCentric}
 
-Nhóm này bao gồm các ứng dụng được thiết kế nhằm mục đích cách mạng hóa trải nghiệm email truyền thống, tập trung vào tốc độ, giao diện người dùng và các tính năng thông minh cơ bản.
+Nhóm đầu tiên là các ứng dụng đặt trọng tâm vào việc "nâng cấp" trải nghiệm làm việc với Email truyền thống. Thay vì bổ sung thật nhiều module, các giải pháp này tập trung vào việc làm cho việc xử lý hộp thư trở nên nhanh, gọn, thông minh và dễ chịu hơn đối với người dùng chuyên nghiệp.
 
 \begin{itemize}
     \item \textbf{Các đại diện tiêu biểu:} Superhuman, Front, Missive.
-    \item \textbf{Phân tích ưu điểm:} Các giải pháp này cung cấp một trải nghiệm người dùng (UX) vượt trội so với các ứng dụng email tiêu chuẩn. Chúng mạnh về các thao tác nhanh (phím tắt), tính năng cộng tác nội bộ (shared inbox), và gần đây là tích hợp AI ở mức độ cơ bản (ví dụ: tóm tắt email, hỗ trợ soạn thảo).
-    \item \textbf{Phân tích hạn chế:} Điểm yếu cốt lõi của nhóm này là sự tập trung gần như tuyệt đối vào Email. Khả năng tích hợp các kênh nhắn tin (IM) khác như WhatsApp, Telegram, Zalo là rất yếu, không phải là cốt lõi thiết kế, hoặc hoàn toàn không có. Điều này khiến chúng không thể giải quyết triệt để bài toán phân mảnh dữ liệu đa kênh.
+    \item \textbf{Phân tích ưu điểm:} Các ứng dụng này thường cung cấp trải nghiệm người dùng (User Experience - UX) được tối ưu rất kỹ: giao diện tối giản nhưng giàu thông tin, hỗ trợ phím tắt gần như cho mọi thao tác, cho phép xử lý số lượng lớn email trong thời gian ngắn. Một số sản phẩm như Front, Missive còn bổ sung tính năng cộng tác nội bộ (shared inbox, internal comments), giúp nhiều thành viên cùng phối hợp trên một địa chỉ email chung. Trong những năm gần đây, nhiều giải pháp trong nhóm này cũng bắt đầu tích hợp các tính năng AI ở mức độ cơ bản như tóm tắt email, gợi ý câu trả lời, kiểm tra lại tông giọng (tone) trước khi gửi.
+    \item \textbf{Phân tích hạn chế:} Dù mạnh về trải nghiệm với Email, phần lớn các giải pháp này vẫn coi Email là "vũ trụ" trung tâm duy nhất. Việc tích hợp với các kênh IM nếu có thường chỉ dừng ở mức độ thông báo (notifications) hoặc các kết nối cơ bản, không được thiết kế như một phần của kiến trúc dữ liệu xuyên suốt. Do đó, bài toán hợp nhất lịch sử trao đổi đa kênh chưa được giải quyết triệt để: người dùng vẫn phải chạy song song nhiều ứng dụng nếu muốn bao quát đầy đủ các kênh tương tác với khách hàng.
 \end{itemize}
 
 \subsubsection{Nhóm 2: Các nền tảng Quản lý Quan hệ Khách hàng (CRM) đa kênh}
 \label{subsubsec:MultiChannelCRM}
 
-Đây là các hệ thống phần mềm dịch vụ (SaaS) quy mô lớn, toàn diện, được thiết kế để quản lý mọi điểm chạm của khách hàng, trong đó email và tin nhắn chỉ là một phần.
+Nhóm thứ hai là các nền tảng CRM (Customer Relationship Management) đa kênh, thường được cung cấp theo mô hình phần mềm dịch vụ (Software-as-a-Service - SaaS). Đây là những hệ thống "nặng ký", được thiết kế để bao phủ gần như toàn bộ vòng đời tương tác giữa doanh nghiệp và khách hàng.
 
 \begin{itemize}
     \item \textbf{Các đại diện tiêu biểu:} Zendesk, HubSpot Service Hub, Intercom.
-    \item \textbf{Phân tích ưu điểm:} Thế mạnh tuyệt đối của nhóm này là khả năng hợp nhất dữ liệu đa kênh mạnh mẽ. Chúng có thể thu thập tương tác từ email, live chat, mạng xã hội, SMS... và hợp nhất vào một hồ sơ khách hàng 360 độ.
-    \item \textbf{Phân tích hạn chế:} Các giải pháp này bộc lộ ba nhược điểm lớn: (1) \textit{Sự cồng kềnh}: Chúng là các hệ thống lớn, phức tạp, đòi hỏi thời gian thiết lập và đào tạo đáng kể. (2) \textit{Chi phí cao}: Mô hình định giá thường dựa trên mỗi người dùng (per-seat) và đắt đỏ. (3) \textit{Tính chất "overkill" (vượt quá nhu cầu)}: Đối với các đội nhóm nhỏ hoặc cá nhân chỉ cần quản lý email và một vài kênh IM, các tính năng CRM toàn diện của nhóm này là không cần thiết.
+    \item \textbf{Phân tích ưu điểm:} Điểm mạnh rõ rệt của các nền tảng này là khả năng hợp nhất dữ liệu đa kênh: email, live chat, mạng xã hội, SMS, thậm chí cả cuộc gọi điện thoại đều có thể được ghi nhận và liên kết với một hồ sơ khách hàng duy nhất. Ngoài ra, chúng thường đi kèm với bộ công cụ quản lý ticket, workflow tự động, báo cáo và dashboard phong phú, giúp nhà quản lý có góc nhìn 360 độ về mỗi khách hàng và toàn bộ hoạt động chăm sóc.
+    \item \textbf{Phân tích hạn chế:} Đổi lại, các hệ thống này thường khá cồng kềnh. Việc triển khai đòi hỏi thời gian khảo sát, cấu hình, tích hợp và đào tạo nội bộ đáng kể. Mô hình định giá thường dựa trên số lượng người dùng (per-seat) nên chi phí có thể trở nên rất cao đối với các doanh nghiệp nhỏ. Đối với những đội ngũ chỉ có nhu cầu quản lý email và một vài kênh IM đơn giản, "gói tính năng" đồ sộ của các nền tảng CRM đa kênh dễ trở thành "overkill" – vượt quá nhu cầu thực tế nhưng vẫn phải chi trả đầy đủ.
 \end{itemize}
 
 \subsubsection{Nhóm 3: Các giải pháp mã nguồn mở (Open-source)}
 \label{subsubsec:OpenSource}
 
-Nhóm này bao gồm các nền tảng mà người dùng có thể tự triển khai (self-host), cung cấp khả năng kiểm soát hoàn toàn dữ liệu và tùy biến.
+Nhóm thứ ba là các giải pháp mã nguồn mở, cho phép tổ chức tự triển khai (self-host) trên hạ tầng của riêng mình. Chúng thường được cộng đồng phát triển theo hướng linh hoạt, dễ mở rộng và không bị khóa chặt vào mô hình kinh doanh của một nhà cung cấp duy nhất.
 
 \begin{itemize}
     \item \textbf{Các đại diện tiêu biểu:} Chatwoot, Rocket.Chat.
-    \item \textbf{Phân tích ưu điểm:} Lợi thế lớn nhất là \textit{quyền riêng tư và kiểm soát dữ liệu} (data sovereignty), do dữ liệu được lưu trữ nội bộ, không phụ thuộc vào bên thứ ba. Thêm vào đó là khả năng tùy biến cao và chi phí bản quyền bằng không.
-    \item \textbf{Phân tích hạn chế:} Các giải pháp này đòi hỏi năng lực kỹ thuật cao để triển khai, bảo trì và nâng cấp. Mặc dù có khả năng tích hợp đa kênh, trải nghiệm người dùng với Email thường không được tối ưu và mượt mà như các giải pháp ở Nhóm 1.
+    \item \textbf{Phân tích ưu điểm:} Giá trị nổi bật nhất của nhóm này là \textit{quyền riêng tư và quyền kiểm soát dữ liệu} (data sovereignty). Bằng việc tự triển khai trên máy chủ nội bộ hoặc hạ tầng cloud riêng, tổ chức có thể kiểm soát hoàn toàn nơi dữ liệu được lưu trữ, cách sao lưu, mã hóa và truy cập. Bên cạnh đó, mã nguồn mở cho phép mức độ tùy biến cao: từ giao diện người dùng tới workflow nghiệp vụ, tích hợp thêm các adapter mới hoặc gắn AI vào những điểm chạm cụ thể.
+    \item \textbf{Phân tích hạn chế:} Đổi lại cho sự tự do đó là yêu cầu về năng lực kỹ thuật nội bộ: đội ngũ phải có kiến thức về quản trị hệ thống, bảo mật, cập nhật phiên bản và xử lý sự cố. Ngoài ra, dù nhiều dự án open-source đã hỗ trợ đa kênh tương đối tốt, trải nghiệm làm việc với Email (như một ứng dụng chuyên biệt) vẫn chưa đạt mức tinh chỉnh và mượt mà như các sản phẩm ở Nhóm 1, vốn được tối ưu chỉ cho một bài toán duy nhất.
 \end{itemize}
 
 \subsection{Xác định "lỗ hổng" thị trường và đề xuất giải pháp của luận án}
 \label{subsec:XacDinhLoHongVaDeXuat}
 
-Phân tích ba nhóm giải pháp trên cho thấy một "lỗ hổng" thị trường rõ rệt:
+Từ việc phân tích ba nhóm giải pháp nêu trên, có thể nhận diện tương đối rõ một "lỗ hổng" trong không gian giải pháp hiện tại:
 
 \begin{itemize}
-    \item Người dùng cần một giải pháp có \textbf{trải nghiệm Email xuất sắc} (như Nhóm 1).
-    \item Nhưng giải pháp đó phải có \textbf{khả năng mở rộng đa kênh linh hoạt} (như Nhóm 2), mà không bị \textbf{cồng kềnh và đắt đỏ}.
-    \item Đồng thời, giải pháp cần đảm bảo \textbf{quyền kiểm soát dữ liệu} và khả năng \textbf{tích hợp AI sâu} (vượt ra ngoài tóm tắt đơn thuần, tiến tới gợi ý ngữ cảnh, trích xuất vấn đề).
+    \item Người dùng, đặc biệt là các đội nhóm vừa và nhỏ, mong muốn một công cụ có \textbf{trải nghiệm làm việc với Email xuất sắc} (nhanh, mượt, hỗ trợ thao tác chuyên nghiệp) như các ứng dụng ở Nhóm 1.
+    \item Đồng thời, công cụ đó cần duy trì \textbf{khả năng mở rộng đa kênh linh hoạt} như Nhóm 2, cho phép từng bước đưa thêm dữ liệu từ các kênh IM vào cùng một bức tranh tổng thể mà không bị \textbf{cồng kềnh và đắt đỏ} như các hệ thống CRM toàn diện.
+    \item Cuối cùng, giải pháp phải cho phép tổ chức \textbf{giữ quyền kiểm soát dữ liệu} của riêng mình và \textbf{tích hợp AI ở mức sâu}, vượt ra khỏi những tính năng bề mặt như tóm tắt một email đơn lẻ, hướng tới khả năng hiểu ngữ cảnh, trích xuất vấn đề, gợi ý hành động tiếp theo.
 \end{itemize}
 
-Luận án này đề xuất một hướng giải quyết nhằm lấp đầy "lỗ hổng" đó thông qua việc **thiết kế và hiện thực một hệ thống Chứng minh Khái niệm (Proof of Concept - PoC)** với các đặc điểm kiến trúc sau:
+Luận án này đề xuất một hướng tiếp cận nhằm lấp đầy "lỗ hổng" đó thông qua việc \textbf{thiết kế và hiện thực một hệ thống Chứng minh Khái niệm (Proof of Concept - PoC)} với các đặc điểm kiến trúc cốt lõi sau:
 
 \begin{enumerate}
-    \item \textbf{Kiến trúc lấy Email làm lõi (Email-centric Core):} Tập trung giải quyết tốt nhất bài toán Email trước tiên. Thay vì xem email là "một trong nhiều kênh", chúng ta xem Email là kênh bắt buộc, là xương sống của giao tiếp nghiệp vụ.
+    \item \textbf{Kiến trúc lấy Email làm lõi (Email-centric Core):} Hệ thống được thiết kế với giả định rằng Email luôn là kênh bắt buộc và đóng vai trò xương sống trong giao tiếp nghiệp vụ. Thay vì xem Email là "một trong nhiều kênh" như nhiều hệ thống CRM, luận án lựa chọn đi sâu giải quyết thật tốt bài toán Email trước, sau đó mới mở rộng ra các kênh khác.
     
-    \item \textbf{Thiết kế Module và Microservice:} Hệ thống được thiết kế theo kiến trúc monorepo nhưng với các thành phần dịch vụ độc lập (backend, frontend, AI-service). Cách tiếp cận này cho phép hệ thống (1) linh hoạt: dễ dàng phát triển, nâng cấp từng phần; và (2) mở rộng: sẵn sàng các "adapter" để kết nối với các kênh IM khác (Zalo, Telegram...) trong tương lai mà không ảnh...
+    \item \textbf{Thiết kế module và microservice linh hoạt:} Nền tảng được tổ chức theo kiến trúc monorepo nhưng bên trong là các dịch vụ độc lập (backend, frontend, AI-service) giao tiếp qua API rõ ràng. Cách tổ chức này vừa giúp quá trình phát triển, nâng cấp từng phần diễn ra linh hoạt, vừa chuẩn bị sẵn "điểm móc" để về sau có thể bổ sung các adapter cho các kênh IM như Zalo, Telegram mà không ảnh hưởng đến lõi.
     
-    \item \textbf{Tích hợp AI như một dịch vụ độc lập (AI as a Service):} Dịch vụ AI (phát triển bằng FastAPI) được tách rời khỏi logic nghiệp vụ của backend. Điều này cho phép:
-    \begin{itemize}
-        \item Dễ dàng chuyển đổi giữa các nhà cung cấp AI (ví dụ: từ OpenAI sang AI local) mà không cần thay đổi mã nguồn backend.
-        \item Cho phép AI thực hiện các tác vụ phức tạp (như tóm tắt, gợi ý, và xa hơn là AI agent) một cách độc lập và bất đồng bộ (async).
-    \end{itemize}
+    \item \textbf{Tích hợp AI như một dịch vụ độc lập (AI as a Service):} Thay vì nhúng trực tiếp các lời gọi AI vào backend, luận án tách riêng một dịch vụ AI (phát triển bằng FastAPI) hoạt động như một microservice độc lập. Cách tiếp cận này mang lại hai lợi ích: (1) cho phép hoán đổi linh hoạt giữa các nhà cung cấp AI (OpenAI, mô hình nội bộ, HuggingFace, v.v.) mà không phải sửa logic nghiệp vụ; (2) tạo điều kiện để AI thực thi các tác vụ phức tạp như tóm tắt thread dài, gợi ý phản hồi, thậm chí mở rộng thành AI agent trong tương lai theo mô hình bất đồng bộ (async), không chặn luồng xử lý chính.
     
-    \item \textbf{Khả năng tự triển khai (Self-hostable):} Toàn bộ hệ thống được đóng gói bằng Docker Compose, cho phép người dùng toàn quyền kiểm soát dữ liệu của mình (giải quyết vấn đề của Nhóm 1 và 2) mà không quá phức tạp về kỹ thuật (như Nhóm 3).
+    \item \textbf{Khả năng tự triển khai (Self-hostable):} Toàn bộ hệ thống được đóng gói bằng Docker Compose, cho phép người dùng tự triển khai trên hạ tầng của mình một cách tương đối đơn giản. Điều này giúp cân bằng giữa ưu điểm trải nghiệm của Nhóm 1, năng lực hợp nhất dữ liệu của Nhóm 2 và quyền kiểm soát dữ liệu của Nhóm 3.
 \end{enumerate}
 
-PoC được xây dựng trong luận án này sẽ tập trung vào việc hiện thực hóa kiến trúc trên. Nó sẽ giải quyết các vấn đề đã đặt ra bằng cách: (1) Đồng bộ và hợp nhất Email vào một giao diện timeline; (2) Tự động tóm tắt và trích xuất vấn đề từ các luồng email dài (giải quyết "quá tải thông tin"); và (3) Cung cấp kiến trúc nền tảng sẵn sàng cho việc mở rộng đa kênh sau này.
+PoC được xây dựng trong khuôn khổ luận án sẽ tập trung hiện thực hóa các trụ cột kiến trúc trên, với ba đường hướng chính: (1) Đồng bộ và hợp nhất Email vào một giao diện timeline xuyên suốt; (2) Tự động tóm tắt và trích xuất vấn đề từ các luồng email dài để giảm "quá tải thông tin"; và (3) Đặt nền móng kiến trúc, cả ở mức dữ liệu lẫn dịch vụ, để sẵn sàng mở rộng đa kênh trong các giai đoạn phát triển tiếp theo.
 
 \subsection{Mục tiêu và phạm vi luận án}
 \label{subsec:MucTieuVaPhamVi}
 
 \subsubsection{Mục tiêu}
-Luận án đặt ra các mục tiêu kỹ thuật cụ thể sau:
+
+Trên nền tảng bối cảnh và lỗ hổng thị trường đã phân tích, luận án đặt ra các mục tiêu kỹ thuật cụ thể sau đây:
 \begin{itemize}
-    \item Phân tích và thiết kế kiến trúc hệ thống quản lý giao tiếp tập trung theo mô hình microservice linh hoạt.
-    \item Hiện thực PoC với các module chính: Backend (Next.js), Frontend (Next.js/React) và AI Service (FastAPI).
-    \item Xây dựng cơ chế đồng bộ hóa email và hợp nhất dữ liệu liên lạc vào cơ sở dữ liệu MongoDB.
-    \item Phát triển chức năng AI (sử dụng OpenAI API làm giải pháp ban đầu) để tóm tắt luồng email và gợi ý phản hồi.
-    \item Thử nghiệm và đánh giá PoC thông qua các kịch bản dữ liệu giả lập.
+    \item Phân tích và thiết kế kiến trúc của một hệ thống quản lý giao tiếp tập trung, lấy Email làm lõi, theo mô hình microservice linh hoạt, phù hợp với bối cảnh sử dụng thực tế của các đội ngũ vừa và nhỏ.
+    \item Hiện thực một PoC với các module chính: Backend (Next.js), Frontend (Next.js/React) và AI Service (FastAPI), thể hiện rõ cách các thành phần tương tác với nhau trong một kiến trúc monorepo.
+    \item Xây dựng cơ chế đồng bộ hóa email với Gmail và hợp nhất dữ liệu liên lạc vào cơ sở dữ liệu MongoDB dưới dạng các thực thể Contact, Conversation và Timeline Event.
+    \item Phát triển chức năng AI (sử dụng OpenAI API làm giải pháp ban đầu) để tóm tắt luồng email và gợi ý phản hồi theo ngữ cảnh, minh họa khả năng ứng dụng AI theo hướng hỗ trợ ra quyết định.
+    \item Thử nghiệm và đánh giá PoC thông qua các kịch bản dữ liệu giả lập, tập trung vào trải nghiệm người dùng, độ ổn định của kiến trúc và tiềm năng mở rộng trong các giai đoạn tiếp theo.
 \end{itemize}
 
 \subsubsection{Phạm vi của PoC}
-Để đảm bảo tính khả thi trong khuôn khổ thời gian của luận án, PoC sẽ tập trung vào các phạm vi sau:
+
+Do giới hạn về thời gian và nguồn lực trong khuôn khổ một luận án tốt nghiệp, PoC được xây dựng với phạm vi rõ ràng, tập trung vào những thành phần cốt lõi nhất nhưng vẫn phản ánh đúng tinh thần kiến trúc đề xuất:
 \begin{itemize}
     \item \textbf{Trong phạm vi (In-scope):} 
         \begin{itemize}
-            \item Hệ thống chỉ tập trung vào tích hợp và xử lý kênh **Email**.
-            \item Chức năng AI sử dụng API của bên thứ ba (OpenAI) để xử lý tóm tắt.
-            \item Giao diện người dùng (Frontend) tập trung vào việc hiển thị timeline trao đổi và kết quả tóm tắt của AI.
-            \item Thử nghiệm trên dữ liệu giả lập (synthesized data).
+            \item Hệ thống chỉ tập trung vào tích hợp và xử lý kênh \textbf{Email}, chưa triển khai kết nối thực tế với các kênh IM khác.
+            \item Chức năng AI sử dụng API của bên thứ ba (OpenAI) để xử lý tóm tắt và gợi ý phản hồi, chưa triển khai mô hình tự huấn luyện.
+            \item Giao diện người dùng (Frontend) tập trung vào việc hiển thị timeline trao đổi, chi tiết từng email và các thông tin tóm tắt/đề xuất từ AI.
+            \item Thử nghiệm trên dữ liệu giả lập (synthesized data) hoặc dữ liệu thử nghiệm, nhằm đánh giá kiến trúc và trải nghiệm, không nhằm mục tiêu triển khai sản phẩm thương mại hoàn chỉnh.
         \end{itemize}
     \item \textbf{Ngoài phạm vi (Out-of-scope):}
         \begin{itemize}
-            \item Chưa tích hợp trực tiếp với các API của kênh nhắn tin (Zalo, WhatsApp, Telegram...). Luận án chỉ dừng ở mức thiết kế kiến trúc sẵn sàng cho việc này.
-            \item Chưa triển khai các mô hình AI local (như Ollama).
-            \item Chưa phát triển các tính năng nâng cao như AI agent hay quản lý xác thực người dùng (authentication).
+            \item Chưa tích hợp trực tiếp với các API của kênh nhắn tin (Zalo, WhatsApp, Telegram...). Luận án chỉ dừng ở mức thiết kế và chuẩn bị kiến trúc sẵn sàng cho việc này.
+            \item Chưa triển khai các mô hình AI local (như Ollama, mô hình self-host) do hạn chế về tài nguyên.
+            \item Chưa phát triển các tính năng nâng cao như AI agent đa bước, hệ thống phân quyền và xác thực người dùng (authentication/authorization) ở mức sản phẩm.
         \end{itemize}
 \end{itemize}
