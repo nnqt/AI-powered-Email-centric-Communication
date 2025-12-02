@@ -1,69 +1,92 @@
 # Copilot Prompt Templates
 
-## 🧠 General Role
+These templates describe **how the user is expected to talk to you**
+and what style of output you should generate.
 
-You are **GitHub Copilot**, coding assistant for a multi-service project built in:
+## General Role
 
-* Next.js (frontend + backend)
-* Python (FastAPI AI microservice)
-* Redis + MongoDB
-* Docker Compose for orchestration
+You are **GitHub Copilot**, coding assistant for a multi-service
+project built in:
+
+- Next.js (frontend + backend)
+- Python (FastAPI AI microservice)
+- Redis + MongoDB
+- Docker Compose for orchestration
 
 Always:
 
-* follow async patterns,
-* write modular, documented code,
-* respect the monorepo structure from `/copilot/PROJECT_STRUCTURE.md`.
+- follow async patterns,
+- write modular, documented code,
+- respect the monorepo structure from `PROJECT_STRUCTURE.md`,
+- keep the mapping to FR-01/02/03/04/07/08 in mind.
 
----
+## Common Prompt Patterns
 
-## 🔧 Common Prompts
+### 1. Implement email sync and storage (FR-01/FR-02)
 
-### 1. Generate a REST API route
+> “Implement a Next.js API route `/api/emails/sync` that pulls recent
+> emails from Gmail, upserts them into MongoDB, and returns the number
+> of new messages. Use async patterns and a separate `email` module for
+> provider-specific logic.”
 
-> “Create a Next.js API route `/api/messages` that connects to MongoDB, returns paginated email records, and caches results in Redis.”
+### 2. Build contact-centric timeline (FR-03)
 
-### 2. Implement AI summarization endpoint
+> “Create backend functions in `modules/timeline` that, given a
+> contact id, return a sorted list of email threads with basic
+> metadata and any stored summaries. Then expose it via
+> `GET /api/contacts/:id/timeline`.”
 
-> “Write FastAPI route `/summarize` that accepts a list of messages and returns a concise summary and key points.”
+### 3. Realtime timeline updates (FR-04)
 
-### 3. Add WebSocket streaming
+> “Add a WebSocket or server-sent events endpoint that notifies the
+> frontend when new emails or summaries are available for a given
+> contact. Use Redis pub/sub internally to broadcast updates.”
 
-> “Add WebSocket support in FastAPI to stream partial summaries as the model processes data.”
+### 4. AI summarization endpoint (FR-07)
 
-### 4. Implement MongoDB data model
+> “Write a FastAPI route `/summarize` that accepts a thread id and a
+> list of messages, calls OpenAI with a well-structured prompt, and
+> returns a JSON object with `summary`, `key_issues`, and
+> `action_required` fields.”
 
-> “Define a Mongoose schema for EmailThread with sender, receiver, subject, content, and summary fields.”
+### 5. Smart reply suggestions (FR-08)
 
-### 5. Integrate with AI service
+> “Implement `POST /suggest-reply` in the AI service and a corresponding
+> backend route `POST /api/threads/:id/replies` that calls it. Return
+> 2–3 suggested replies as strings so the frontend can render them as
+> editable options.”
 
-> “In the backend, create a helper function that calls AI service at `/summarize` using Axios, handles timeouts, and caches results.”
+### 6. Frontend timeline UI
 
-### 6. Build frontend timeline UI
+> “Create a React component `TimelineView` that shows a list of threads
+> for a contact, including subject, last message time, and the latest
+> AI summary if available. Use Tailwind for styling and fetch data from
+> `/api/contacts/:id/timeline`.”
 
-> “Create a React component `TimelineView` that shows conversation threads grouped by contact, using Tailwind for styling.”
+## Specialized Prompts
 
----
+### AI Logic and Clients
 
-## 🧩 Specialized Prompts
+> “Write `llm_client.py` for the AI service that wraps OpenAI calls and
+> exposes `generate_summary` and `generate_replies` async functions.
+> Read configuration from environment variables and handle timeouts.”
 
-### AI Function Prompts
+### Data Modeling
 
-> “Write Python service in `/services/summarizer.py` that uses OpenAI API to summarize multiple emails asynchronously.”
+> “Define a MongoDB schema or TypeScript types for `EmailThread` and
+> `Summary` so that the backend can persist both raw messages and AI
+> output, linked by `threadId`.”
 
-### Realtime Updates
+### Infrastructure
 
-> “Implement Redis pub/sub channel `updates` to broadcast new summaries to connected frontend WebSocket clients.”
+> “Extend `docker-compose.yml` to include the AI service container and
+> configure networks so that the backend can call it at
+> `http://ai-service:5000`.”
 
-### Docker Helpers
+## Tone & Output Expectations
 
-> “Generate Dockerfile for Next.js app and FastAPI AI service, optimized for development with hot-reload.”
-
----
-
-## ✅ Tone & Output Expectations
-
-* Write concise, production-grade code.
-* Include comments where logic is non-trivial.
-* When unsure, provide flexible scaffolding instead of hardcoding.
-* Align with code conventions in `CODE_STYLE_GUIDE.md`.
+- Write concise, production-grade code.
+- Include comments only where logic is non-trivial.
+- When unsure, provide flexible scaffolding and highlight assumptions.
+- Align with conventions in `CODE_STYLE_GUIDE.md` and the structure in
+  `PROJECT_STRUCTURE.md`.

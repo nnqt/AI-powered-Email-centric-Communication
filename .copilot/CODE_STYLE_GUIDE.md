@@ -1,68 +1,105 @@
 # Code Style and Conventions
 
-## General Guidelines
+This guide defines common coding patterns so that generated code is
+consistent across the monorepo and easy to extend when more FRs are
+implemented.
 
-* Use **clear, modular, and documented** code.
-* Use **TypeScript** for frontend/backend and **Python 3.10+** for AI service.
-* Follow **async-first** design for APIs.
-* Always log errors and critical operations.
-* Use environment variables from `.env` (never hard-code credentials).
+## General Principles
 
----
+- Prefer **clear, small, testable modules** over large files.
+- Use **TypeScript** for frontend and backend; **Python 3.10+** for
+  the AI service.
+- Design APIs with **async-first** patterns (non-blocking I/O).
+- Always read sensitive configuration from environment variables; do
+  not hard-code secrets.
+- Log errors and critical operations in a structured, minimal way.
 
 ## Frontend (Next.js)
 
-* Use **functional components** and **React Hooks**.
-* Use **SWR or React Query** for data fetching.
-* Define API routes in `/apps/backend/api/`.
-* Maintain folder structure:
+- Use **functional components** and **React Hooks** only.
+- Co-locate logic with features when possible, but keep shared
+  utilities in dedicated folders.
+- Prefer **SWR** or **React Query** (or Next.js `fetch` in Server
+  Components) for data fetching instead of manual `useEffect`
+  - `fetch`.
+- Suggested structure under `apps/frontend/src` (or equivalent):
 
+  ```text
+  /app              # Next.js app directory
+  /components       # Reusable UI pieces
+  /features         # Feature-oriented modules (timeline, contact, email)
+  /hooks            # Custom React hooks
+  /services         # HTTP clients (calling backend APIs)
+  /types            # Shared TypeScript types
   ```
-  /components
-  /pages
-  /hooks
-  /services
-  /types
-  ```
-* Use TailwindCSS for styling.
-* Keep UI minimal and responsive.
 
----
+- Use **TailwindCSS** for styling; favor utility classes over custom
+  CSS when reasonable.
+- Keep components presentational where possible; move side effects and
+  data fetching to hooks or feature modules.
 
 ## Backend (Next.js API Routes)
 
-* Each route in `/api` handles one responsibility (CRUD, summary, contact, etc.).
-* Use **REST naming** conventions:
+- Treat each route handler as a **thin controller**:
+  - Validate input.
+  - Call domain/service functions.
+  - Map results to HTTP responses.
+- Use **REST-like** naming:
+  - `GET /api/threads`
+  - `GET /api/threads/:id`
+  - `POST /api/threads/:id/summary`
+  - `POST /api/threads/:id/replies`
+- Organize backend code by feature, not by technical layer only, for
+  example:
 
-  * `GET /api/messages`
-  * `POST /api/messages`
-  * `POST /api/summary`
-* Add **WebSocket support** using `socket.io` or Next.js native route handler.
-* Use **Redis** for:
+  ```text
+  /apps/backend/src
+    /app/api          # Next.js route handlers
+    /modules
+      /email          # Email integration, Gmail API, etc. (FR-01/02)
+      /timeline       # Timeline queries and aggregation (FR-03/04)
+      /ai             # Clients to AI service (FR-07/08)
+      /common         # Shared helpers, error handling
+  ```
 
-  * caching AI summaries
-  * real-time queue updates
+- Use **async** database and Redis clients.
+- Wrap external calls (email provider, AI service) in dedicated client
+  modules to simplify mocking and future provider changes.
+- For realtime features (FR-04), add WebSocket or Next.js Route
+  Handler-based streaming where appropriate; centralize connection
+  management.
 
----
+## AI Service (FastAPI)
 
-## AI Service (Python - FastAPI)
-
-* Use **pydantic models** for request/response validation.
-* Create separate modules:
-
-  * `/routes`
-  * `/services`
-  * `/models`
-  * `/core`
-* Add `/ws` route for streaming responses.
-* Log all incoming requests and AI output.
-* Write docstrings and type hints.
-
----
+- Use **pydantic** models for all request/response bodies.
+- Separate layers:
+  - `routes/` for HTTP endpoints.
+  - `services/` for LLM-related logic.
+  - `core/` for configuration and client setup.
+- All public endpoints should be `async def` and non-blocking.
+- Include minimal but clear docstrings and type hints.
+- Log:
+  - Route-level events (request received, success/failure).
+  - Provider errors with enough context but without leaking secrets.
 
 ## Naming & Style
 
-* Variable names: `camelCase` (JS), `snake_case` (Python)
-* Functions: verb + noun → `fetchEmails`, `generate_summary`
-* Constants: `UPPER_CASE`
-* Avoid abbreviations except standard (e.g., `msg`, `cfg`)
+- JavaScript/TypeScript:
+  - Variables and functions: `camelCase`.
+  - React components and classes: `PascalCase`.
+- Python:
+  - Variables and functions: `snake_case`.
+  - Classes: `PascalCase`.
+- Constants in both languages: `UPPER_SNAKE_CASE`.
+- Function names should be **verb + noun**, e.g.:
+  - `fetchEmails`, `syncThread`, `generateSummary`, `suggestReplies`.
+- Avoid cryptic abbreviations; use meaningful names.
+
+## Error Handling
+
+- Prefer returning structured error objects (with `code` and `message`)
+  from API routes instead of raw strings.
+- For recoverable errors (e.g. temporary AI failure), propagate a
+  clear message and let the UI decide how to communicate it.
+- For unrecoverable errors, log and fail fast; do not silently swallow
+  exceptions.

@@ -1,0 +1,374 @@
+\section{AI và Mô hình Ngôn ngữ Lớn (LLM)}
+\label{sec:AIvaLLM}
+
+Chương này trình bày vai trò của Trí tuệ Nhân tạo (AI), đặc biệt là các Mô hình Ngôn ngữ Lớn (Large Language Models -- LLM), trong bối cảnh các hệ thống giao tiếp hiện đại. Nội dung tập trung vào việc phân loại các cách tiếp cận AI (Local vs. Cloud), các kỹ thuật làm việc với LLM (Prompt engineering, Fine-tuning, LoRA, RAG), đồng thời phân tích cách áp dụng chúng vào nền tảng quản lý giao tiếp tập trung với Email là lõi (Email-centric) đã được giới thiệu ở Chương~\ref{sec:TongQuan} và yêu cầu hệ thống ở Chương~\ref{sec:YeuCau}.
+
+\subsection{Bối cảnh AI trong các hệ thống giao tiếp}
+\label{subsec:AIContextCommunication}
+
+Trong Chương~\ref{sec:TongQuan}, báo cáo đã phân tích hai vấn đề cốt lõi trong môi trường giao tiếp đa kênh hiện nay: (i) Sự phân mảnh dữ liệu liên lạc giữa nhiều kênh khác nhau và (ii) Hiện tượng quá tải thông tin khi khối lượng email và tin nhắn tăng nhanh theo thời gian. Dưới góc nhìn kỹ thuật, đây là hai thách thức mà AI, đặc biệt là các mô hình xử lý ngôn ngữ tự nhiên (Natural Language Processing -- NLP), tỏ ra phù hợp để hỗ trợ.
+
+Trong khoảng 5 năm trở lại đây, sự xuất hiện của các LLM như GPT-3, GPT-4 (OpenAI), PaLM 2 và Gemini (Google), Claude (Anthropic), LLaMA/Llama 2/Llama 3 (Meta) đã tạo ra bước nhảy vọt về khả năng hiểu và sinh ngôn ngữ tự nhiên. Các mô hình này không chỉ dừng ở việc phân loại hay trích xuất thông tin đơn lẻ, mà có thể tóm tắt văn bản dài, trả lời câu hỏi có ngữ cảnh, gợi ý phản hồi, thậm chí lập kế hoạch hành động theo chuỗi bước. Các nhà cung cấp lớn như OpenAI, Google, Anthropic, Amazon Bedrock đã cung cấp các API thương mại ổn định để khai thác năng lực này trong ứng dụng thực tế.
+
+Đối với một hệ thống Email-centric, AI có thể đóng vai trò ở nhiều phương diện:
+\begin{itemize}
+    \item Ở phương diện \textbf{hiểu nội dung (Understanding)}, AI phân tích nội dung email và tin nhắn để nhận diện chủ đề chính, yêu cầu công việc, độ ưu tiên, cảm xúc.
+    \item Ở phương diện \textbf{tóm tắt (Summarization)}, AI rút gọn các chuỗi trao đổi dài thành vài đoạn ngắn, giúp người dùng nắm bối cảnh nhanh chóng mà không phải đọc lại toàn bộ.
+    \item Ở phương diện \textbf{hỗ trợ quyết định (Decision Support)}, AI gợi ý câu trả lời, soạn sẵn bản nháp email, hoặc đề xuất các công việc tiếp theo (gửi nhắc nhở, đặt lịch hẹn, yêu cầu thông tin bổ sung...).
+    \item Ở phương diện \textbf{tổ chức lại dữ liệu (Knowledge Organization)}, AI giúp gắn tag, phân cụm, hợp nhất hồ sơ liên lạc (Contact Unification) dựa trên nội dung trao đổi, thay vì chỉ dựa trên địa chỉ email tĩnh.
+\end{itemize}
+
+Tuy nhiên, để khai thác AI một cách hiệu quả và bền vững, kiến trúc hệ thống cần lựa chọn hình thức triển khai phù hợp (Local vs. Cloud), cũng như kỹ thuật tích hợp LLM tương ứng với từng yêu cầu chức năng.
+
+\subsection{Phân loại giải pháp AI: Local vs. Cloud}
+\label{subsec:LocalVsCloud}
+
+\subsubsection{Tìm hiểu về Local AI và Cloud AI}
+\label{subsubsec:DefOperation}
+
+Các giải pháp AI hiện nay có thể được chia thành hai nhóm chính:
+
+\begin{itemize}
+    \item \textbf{Cloud AI}: mô hình AI được vận hành trên hạ tầng đám mây của các nhà cung cấp lớn như OpenAI (Azure/OpenAI Service), Google Cloud (Vertex AI, Gemini API), Amazon Web Services (Amazon Bedrock, Amazon Titan), Anthropic (Claude)\footnote{Xem tài liệu chính thức của OpenAI, Google Cloud, AWS, Anthropic về các dịch vụ LLM API.}. Ứng dụng khách gửi request tới API từ xa (over-the-wire), nhận kết quả thông qua giao thức HTTP(S) hoặc WebSocket.
+    \item \textbf{Local AI / On-premise AI}: mô hình AI được tải về và chạy trên hạ tầng do tổ chức tự quản lý (máy chủ GPU nội bộ, cluster Kubernetes, hoặc thậm chí máy trạm cá nhân). Ví dụ: triển khai các mô hình mã nguồn mở như Llama 3 (Meta), Mistral, Mixtral, Phi-3 (Microsoft) thông qua các framework như Hugging Face Transformers, vLLM, Ollama hoặc các hệ thống suy luận tối ưu hóa.
+\end{itemize}
+
+Về bản chất, cả hai nhóm đều dựa trên các kiến trúc LLM tương tự (transformer-based), nhưng khác nhau ở vị trí \textit{deploy} (đám mây công cộng vs. hạ tầng tự quản lý), mô hình chi phí và cách tiếp cận về bảo mật, tuân thủ quy định (compliance).
+
+\subsubsection{Ưu điểm, nhược điểm và ví dụ tiêu biểu}
+\label{subsubsec:ProsConsExamples}
+
+\paragraph{Cloud AI.}
+
+Các dịch vụ Cloud AI mang lại nhiều lợi ích cho giai đoạn PoC và cả triển khai sản phẩm:
+\begin{itemize}
+    \item \textbf{Ưu điểm:}
+    \begin{itemize}
+        \item \textit{Chất lượng mô hình cao:} Các nhà cung cấp như OpenAI, Google, Anthropic liên tục huấn luyện và tinh chỉnh những mô hình mới (ví dụ GPT-4.1, GPT-4o, Gemini 1.5, Claude 3) với chất lượng vượt trội so với nhiều mô hình mã nguồn mở cùng thời điểm theo các benchmark công khai (MMLU, GSM8K, BIG-Bench).
+        \item \textit{Hạ tầng sẵn có và khả năng mở rộng:} Người dùng không phải quản lý cluster GPU, không phải lo về scaling khi số lượng request tăng, vì hạ tầng đã được ẩn sau lớp API.
+        \item \textit{Thời gian triển khai nhanh:} Việc tích hợp chỉ cần gọi API qua HTTP/REST hoặc WebSocket, phù hợp cho các đội nhỏ muốn kiểm chứng nhanh ý tưởng.
+        \item \textit{Dịch vụ đi kèm phong phú:} Nhiều nền tảng cung cấp thêm tính năng như embedding, RAG-as-a-service, function calling, tool calling, monitoring và logging tập trung.
+    \end{itemize}
+    \item \textbf{Nhược điểm:}
+    \begin{itemize}
+        \item \textit{Chi phí vận hành theo usage:} Chi phí phụ thuộc vào số token đầu vào/đầu ra, số lần gọi API và model tier. Với khối lượng email lớn hoặc cần tóm tắt lịch sử dài thường xuyên, chi phí có thể tăng nhanh nếu không có chiến lược tối ưu (cache, batch, giới hạn độ dài).
+        \item \textit{Phụ thuộc vào bên thứ ba:} Hệ thống phụ thuộc vào SLA, chính sách giá, chính sách dữ liệu và độ ổn định của nhà cung cấp.
+        \item \textit{Quan ngại về dữ liệu:} Dù các nhà cung cấp lớn thường cam kết không dùng dữ liệu của khách hàng để huấn luyện thêm mà không có opt-in, nhiều tổ chức vẫn có yêu cầu nghiêm ngặt về việc không đưa dữ liệu nhạy cảm (như hợp đồng, hồ sơ ứng viên) ra ngoài hạ tầng nội bộ.
+    \end{itemize}
+\end{itemize}
+
+\paragraph{Local AI / On-premise AI.}
+
+Local AI lại mang đến một tập ưu/nhược điểm khác:
+\begin{itemize}
+    \item \textbf{Ưu điểm:}
+    \begin{itemize}
+        \item \textit{Kiểm soát dữ liệu tốt hơn:} Tất cả dữ liệu và kết quả suy luận được xử lý trong hạ tầng nội bộ, phù hợp với các yêu cầu tuân thủ như GDPR, yêu cầu của ngành tài chính, y tế hoặc các doanh nghiệp có chính sách bảo mật nghiêm ngặt.
+        \item \textit{Mô hình chi phí linh hoạt:} Sau khi đầu tư hạ tầng (phần cứng, GPU), chi phí suy luận biên (Marginal cost) cho mỗi request có thể thấp hơn so với Cloud AI nếu khối lượng sử dụng lớn và liên tục.
+        \item \textit{Tùy biến sâu:} Tổ chức có thể tinh chỉnh mô hình (Fine-tune), cài thêm thành phần kiểm soát, lọc nội dung, hoặc kết hợp nhiều mô hình theo cách riêng.
+    \end{itemize}
+    \item \textbf{Nhược điểm:}
+    \begin{itemize}
+        \item \textit{Yêu cầu hạ tầng và chuyên môn:} Vận hành Local AI đòi hỏi kiến thức về quản trị hệ thống, tối ưu suy luận (Inference optimization), cũng như cập nhật bảo mật cho các thành phần liên quan.
+        \item \textit{Khó bắt kịp tốc độ tiến hóa của mô hình:} Các mô hình mã nguồn mở mới liên tục xuất hiện, nhưng vẫn thường chậm hơn 1--2 thế hệ so với mô hình thương mại hàng đầu về chất lượng tổng thể.
+        \item \textit{Chi phí đầu tư ban đầu cao:} Với doanh nghiệp nhỏ hoặc PoC, việc đầu tư GPU chuyên dụng có thể không kinh tế so với việc dùng API Cloud theo mức sử dụng.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Bảng so sánh Local AI và Cloud AI}
+\label{subsubsec:ComparisonTable}
+
+Bảng~\ref{tab:local-vs-cloud} tóm tắt một số khía cạnh so sánh chính giữa Cloud AI và Local AI trong bối cảnh một nền tảng Email-centric.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh Cloud AI và Local AI trong bối cảnh hệ thống Email-centric}
+    \label{tab:local-vs-cloud}
+    \begin{tabular}{|p{3cm}|p{5.2cm}|p{5.2cm}|}
+        \hline
+        \textbf{Tiêu chí} & \textbf{Cloud AI} & \textbf{Local AI / On-premise} \\
+        \hline
+        Chi phí ban đầu & Thấp, trả theo mức sử dụng (pay-as-you-go) & Cao, đầu tư hạ tầng (GPU, server) ban đầu \\
+        \hline
+        Chi phí dài hạn & Có thể cao nếu khối lượng request lớn, cần tối ưu qua cache và batching & Có thể rẻ hơn nếu tận dụng tối đa hạ tầng đã đầu tư \\
+        \hline
+        Độ trễ (latency) & Phụ thuộc mạng Internet và vị trí data center; thường ổn định nhưng có \textit{network overhead} & Có thể thấp hơn nếu hạ tầng đặt gần ứng dụng; phụ thuộc tối ưu suy luận \\
+        \hline
+        Bảo mật và quyền riêng tư & Dữ liệu đi qua hạ tầng bên thứ ba; phụ thuộc vào cam kết và chính sách của nhà cung cấp & Dữ liệu nằm trong hạ tầng nội bộ; dễ đáp ứng các yêu cầu tuân thủ nghiêm ngặt \\
+        \hline
+        Khả năng mở rộng & Rất cao, do hạ tầng được ẩn sau API & Phụ thuộc tài nguyên vật lý; cần cơ chế scale-out thủ công hoặc qua Kubernetes \\
+        \hline
+        Cập nhật mô hình & Tự động được hưởng lợi từ các phiên bản model mới & Cần chủ động cập nhật mô hình, kiểm thử lại hệ thống \\
+        \hline
+        Mức độ kiểm soát & Ít kiểm soát nội bộ đối với kiến trúc và tham số mô hình & Kiểm soát sâu, có thể tinh chỉnh, thêm guardrail và pipeline riêng \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Đối với PoC trong báo cáo này, việc sử dụng Cloud AI (ví dụ OpenAI API) là lựa chọn hợp lý để rút ngắn thời gian phát triển, trong khi kiến trúc vẫn được thiết kế mở để có thể thay thế hoặc bổ sung Local AI trong tương lai khi nhu cầu bảo mật và tối ưu chi phí tăng cao.
+
+\subsection{Các phương pháp tiếp cận LLM}
+\label{subsec:ApproachesLLM}
+
+\subsubsection{Phương pháp Prompt Engineering}
+\label{subsubsec:PromptEng}
+
+Prompt Engineering là kỹ thuật thiết kế và điều chỉnh nội dung yêu cầu (prompt) gửi tới LLM nhằm đạt được kết quả mong muốn, ổn định và dễ kiểm soát mà không cần thay đổi tham số bên trong mô hình. Các nhà cung cấp lớn như OpenAI, Google, Anthropic đều khuyến nghị coi prompt như một \textit{lớp lập trình} trên mô hình, với các kỹ thuật như chain-of-thought, few-shot learning, role specification\footnote{Xem hướng dẫn Prompt Engineering từ OpenAI và Google trong tài liệu chính thức của họ.}.
+
+Trong bối cảnh nền tảng Email-centric, Prompt Engineering có một số vai trò quan trọng:
+\begin{itemize}
+    \item Ràng buộc mô hình tạo ra các tóm tắt email ngắn gọn, tập trung vào các key issues, tránh \textit{hallucination}.
+    \item Yêu cầu mô hình trả về kết quả ở dạng JSON có cấu trúc (ví dụ: summary, sentiment, key\_issues, action\_required) để backend dễ xử lý tiếp.
+    \item Hướng mô hình sinh gợi ý phản hồi (smart reply) phù hợp với vai trò và ngữ cảnh giao tiếp (tuyển dụng, chăm sóc khách hàng, hỗ trợ kỹ thuật...).
+\end{itemize}
+
+\paragraph{Ví dụ prompt tóm tắt chuỗi email.}
+
+Dưới đây là một ví dụ rút gọn về prompt dùng cho tác vụ FR-06 (tóm tắt cuộc trao đổi) trong hệ thống:
+
+\begin{lstlisting}[style=CStyle, language={}]
+You are an assistant that summarizes email threads for a recruiter.
+
+Input: a list of emails in chronological order.
+
+Task:
+- Produce a concise summary (3-5 sentences) focusing on:
+  * current status of the conversation
+  * key decisions and agreements
+  * open questions or pending actions
+- Return JSON with fields: `summary`, `key_issues`, `action_required`.
+
+Emails:
+{{thread_text}}
+\end{lstlisting}
+
+Với cách thiết kế này, hệ thống có thể lấy kết quả JSON, lưu trực tiếp vào MongoDB (cùng với bản ghi email thread) và đẩy một bản tóm tắt ngắn lên giao diện Timeline.
+
+\paragraph{Ví dụ prompt gợi ý phản hồi (smart reply).}
+
+Đối với FR-07 (gợi ý phản hồi), prompt có thể được thiết kế như sau:
+
+\begin{lstlisting}[style=CStyle, language={}]
+You are an assistant helping a recruiter reply to candidates.
+
+Given the latest email from the candidate and the conversation context,
+propose 2-3 short, polite reply options.
+
+Requirements:
+- Keep each reply under 150 words.
+- Match the tone: professional, friendly, concise.
+- Do NOT invent facts (salary, company policy) if they are not present.
+
+Return JSON: { "replies": ["...", "...", "..."] }.
+
+Context:
+{{conversation_context}}
+
+Latest email:
+{{latest_email}}
+\end{lstlisting}
+
+Prompt Engineering có ưu điểm là \textbf{không cần dữ liệu huấn luyện riêng} và \textbf{triển khai nhanh}, rất phù hợp với giai đoạn PoC. Tuy nhiên, nhược điểm là kết quả đôi khi thiếu ổn định, phụ thuộc vào model version và khó đảm bảo hành vi tuyệt đối nhất quán trong mọi trường hợp.
+
+\subsubsection{Fine-tuning và LoRA}
+\label{subsubsec:FineTuningLoRA}
+
+Fine-tuning là quá trình tiếp tục huấn luyện một mô hình đã được huấn luyện sẵn (pre-trained model) trên một tập dữ liệu hẹp hơn, mang tính miền (domain-specific) hoặc tác vụ (task-specific), nhằm điều chỉnh hành vi của mô hình phù hợp hơn với nhu cầu cụ thể. Các nền tảng như OpenAI, Google Vertex AI, AWS Bedrock đều cung cấp dịch vụ fine-tuning cho một số dòng mô hình nhất định.
+
+LoRA (Low-Rank Adaptation) là một kỹ thuật fine-tuning hiệu quả, trong đó chỉ một số ma trận hạng thấp (low-rank matrices) được huấn luyện thêm và \textit{gắn} vào mô hình gốc, giúp giảm đáng kể số tham số cần cập nhật và tài nguyên tính toán so với việc tinh chỉnh toàn bộ mô hình. LoRA phổ biến trong cộng đồng mô hình mã nguồn mở (ví dụ với Llama, Mistral) do tính linh hoạt và tiết kiệm chi phí.
+
+\paragraph{Quy trình fine-tuning tổng quát.}
+
+Quy trình điển hình gồm các bước:
+\begin{enumerate}
+    \item Thu thập và làm sạch dữ liệu huấn luyện phù hợp với tác vụ (ví dụ: cặp \texttt{email thread} -- \texttt{summary chuẩn}, hoặc \texttt{email} -- \texttt{reply chất lượng cao}).
+    \item Chuyển đổi dữ liệu về định dạng mà nhà cung cấp yêu cầu (JSONL, CSV, v.v.).
+    \item Cấu hình bài toán fine-tuning (model base, số epoch, learning rate, batch size, tiêu chí dừng...).
+    \item Chạy quá trình huấn luyện trên hạ tầng cloud hoặc local GPU.
+    \item Đánh giá mô hình mới trên tập kiểm thử (validation/test set) và so sánh với mô hình gốc.
+    \item Triển khai (deploy) mô hình đã tinh chỉnh vào pipeline suy luận của hệ thống.
+\end{enumerate}
+
+\paragraph{Khi nào nên dùng fine-tuning / LoRA với hệ thống này.}
+
+\begin{itemize}
+    \item \textbf{Nên dùng nếu:}
+    \begin{itemize}
+        \item Doanh nghiệp có lượng lớn dữ liệu nội bộ chất lượng cao (email được gắn nhãn, các bản tóm tắt chuẩn, reply chuẩn theo quy định), đủ để huấn luyện.
+        \item Cần hành vi rất đặc thù, ví dụ giọng văn thương hiệu, quy tắc nghiệp vụ cố định, hoặc phải tuân thủ các \textit{template} chặt chẽ.
+        \item Mô hình mặc định dù đã sử dụng Prompt Engineering nhưng vẫn cho kết quả không đủ ổn định.
+    \end{itemize}
+    \item \textbf{Không nên (hoặc chưa cần) dùng nếu:}
+    \begin{itemize}
+        \item Hệ thống đang ở giai đoạn PoC, dữ liệu chưa đủ nhiều và chưa được gắn nhãn kỹ.
+        \item Chi phí và độ phức tạp để triển khai, giám sát một mô hình fine-tuned là quá lớn so với lợi ích tăng thêm.
+        \item Prompt Engineering kết hợp với RAG đã cho kết quả đáp ứng yêu cầu.
+    \end{itemize}
+\end{itemize}
+
+Đối với nền tảng Email-centric trong báo cáo này, ưu tiên \textbf{Prompt Engineering + RAG} trên các mô hình có sẵn, trong khi fine-tuning và LoRA được xem như hướng mở rộng khi hệ thống đã đi vào vận hành thực tế và tích lũy đủ dữ liệu.
+
+\subsubsection{Retrieval-Augmented Generation (RAG)}
+\label{subsubsec:RAG}
+
+RAG (Retrieval-Augmented Generation) là kiến trúc kết hợp giữa mô hình sinh ngôn ngữ (LLM) và một hệ thống truy vấn tri thức (retrieval system). Thay vì yêu cầu mô hình ``ghi nhớ'' tất cả tri thức trong tham số, RAG tách riêng phần tri thức thành một kho lưu trữ (ví dụ: vector database, Elasticsearch, hoặc đơn giản là collection trong MongoDB), sau đó:
+\begin{enumerate}
+    \item Nhận input (ví dụ: câu hỏi, yêu cầu tóm tắt, yêu cầu phân tích).
+    \item Truy vấn (retrieve) các đoạn văn bản liên quan trong kho dữ liệu (email lịch sử, log trao đổi, tài liệu hướng dẫn...).
+    \item Kết hợp input ban đầu với các đoạn trích liên quan thành một prompt đầy đủ.
+    \item Gửi prompt này tới LLM để sinh câu trả lời/tóm tắt, đảm bảo kết quả dựa trên tri thức cập nhật và chính xác hơn.
+\end{enumerate}
+
+RAG được nhiều công ty lớn (như Microsoft, Meta, Google) khuyến nghị như một chiến lược chính để xây dựng ứng dụng AI doanh nghiệp, vì cho phép cập nhật tri thức liên tục mà không cần fine-tuning mô hình gốc.
+
+Trong hệ thống Email-centric, RAG đặc biệt phù hợp với các bài toán:
+\begin{itemize}
+    \item Tóm tắt chuỗi email dài: thay vì đưa toàn bộ lịch sử vào prompt, hệ thống có thể chỉ truy vấn các đoạn email quan trọng (dựa trên thời gian, người gửi, từ khóa) rồi đưa vào LLM.
+    \item Trả lời câu hỏi theo bối cảnh: ví dụ, ``Khách hàng A đang ở trạng thái deal nào?'' hoặc ``Lần trao đổi gần nhất với ứng viên B là gì?'' có thể được trả lời bằng cách truy vấn lịch sử giao tiếp tương ứng rồi cho LLM tóm tắt.
+    \item Kết hợp nhiều nguồn: tích hợp email, ghi chú nội bộ, ticket hỗ trợ vào một kho chung để LLM có cái nhìn toàn diện khi sinh câu trả lời.
+\end{itemize}
+
+\subsection{Ứng dụng AI trong nền tảng Email-centric}
+\label{subsec:AIInEmailCentric}
+
+\subsubsection{Liên kết với các yêu cầu chức năng FR-05..FR-08}
+\label{subsubsec:MappingFR}
+
+Như đã trình bày trong Chương~\ref{sec:YeuCau}, nhóm yêu cầu chức năng liên quan trực tiếp đến AI bao gồm (tên và mã yêu cầu có thể được rút gọn ở đây):
+
+\begin{itemize}
+    \item \textbf{FR-05 -- Tự động khởi tạo và làm giàu hồ sơ Contact:} AI phân tích nội dung email để trích xuất thông tin về cá nhân/tổ chức (tên, chức vụ, công ty, vai trò trong quy trình), gợi ý hợp nhất nhiều địa chỉ email thuộc cùng một thực thể.
+    \item \textbf{FR-06 -- Tóm tắt luồng trao đổi (Conversation Summary):} AI tạo bản tóm tắt ngắn gọn cho từng thread, cập nhật theo thời gian khi có email mới.
+    \item \textbf{FR-07 -- Gợi ý phản hồi (Smart Reply Suggestions):} AI đề xuất vài phương án trả lời dựa trên nội dung email gần nhất và bối cảnh lịch sử.
+    \item \textbf{FR-08 -- Phân tích ngữ cảnh nâng cao (Advanced Context):} AI đánh giá sentiment, mức độ ưu tiên, phát hiện rủi ro hoặc cơ hội trong nội dung trao đổi.
+\end{itemize}
+
+Các yêu cầu này có thể được ánh xạ (mapping) tới các kỹ thuật AI đã trình bày như sau:
+
+\begin{itemize}
+    \item \textbf{FR-05:} chủ yếu sử dụng Prompt Engineering kết hợp với các \textit{pattern} trích xuất có cấu trúc (structured extraction) từ LLM, và có thể bổ sung RAG nếu cần tham chiếu các nguồn tri thức nội bộ (ví dụ danh sách công ty, ngành nghề).
+    \item \textbf{FR-06:} sử dụng Prompt Engineering và RAG để tóm tắt chuỗi email. RAG giúp giới hạn ngữ cảnh vào các đoạn quan trọng, giảm chi phí token và cải thiện chất lượng tóm tắt.
+    \item \textbf{FR-07:} tóm tắt luồng trao đổi (Thread Summarization) bằng cách gửi toàn bộ hoặc một phần thread email tới AI Service, nơi LLM (cloud hoặc local) áp dụng Prompt Engineering (và khi cần, RAG) để tạo ra bản tóm tắt ngắn gọn cùng các trường có cấu trúc (summary, key issues, action required...). Kết quả được lưu kèm bản ghi thread trong cơ sở dữ liệu và hiển thị trên giao diện như mô tả ở Chương~\ref{sec:YeuCau}.
+    \item \textbf{FR-08:} gợi ý phản hồi thông minh (Smart Reply Suggestions) bằng cách sử dụng LLM để sinh 2--3 phương án trả lời cho email gần nhất trong bối cảnh toàn bộ cuộc hội thoại. Prompt được thiết kế để đảm bảo giọng văn chuyên nghiệp, thân thiện, không tạo thông tin sai lệch và có thể được tinh chỉnh dần dựa trên dữ liệu nội bộ nếu doanh nghiệp muốn chuẩn hoá ``giọng thương hiệu''. Người dùng luôn là bước cuối cùng phê duyệt và chỉnh sửa trước khi gửi.
+\end{itemize}
+
+\subsubsection{Luồng xử lý tóm tắt, gợi ý phản hồi và hợp nhất hồ sơ}
+\label{subsubsec:PipelineExamples}
+
+Trong kiến trúc monorepo của hệ thống, module AI được tách thành một \textit{AI microservice} viết bằng FastAPI (Python), giao tiếp với backend Next.js thông qua HTTP/REST (và có thể mở rộng sang WebSocket). Dưới đây là ba luồng xử lý tiêu biểu:
+
+\paragraph{Luồng tóm tắt (Summarization Pipeline).}
+
+\begin{enumerate}
+    \item Backend nhận email mới (qua Gmail API hoặc một cơ chế đồng bộ khác) và lưu metadata vào MongoDB.
+    \item Backend gửi request tới AI Service tại endpoint \texttt{/summarize}, truyền vào danh sách email trong thread kèm ngữ cảnh cần tóm tắt.
+    \item AI Service áp dụng Prompt Engineering (và/hoặc RAG) để gọi Cloud AI hoặc Local AI, nhận về kết quả tóm tắt và các trường có cấu trúc (summary, key issues, action required...).
+    \item Backend lưu kết quả vào MongoDB, đồng thời cập nhật cache Redis để đẩy thay đổi lên giao diện Timeline gần thời gian thực.
+    \item Frontend nhận sự kiện (qua WebSocket hoặc long-polling) và hiển thị bản tóm tắt mới cho người dùng.
+\end{enumerate}
+
+\paragraph{Luồng gợi ý phản hồi (Smart Reply Pipeline).}
+
+\begin{enumerate}
+    \item Khi người dùng mở một email cụ thể trong giao diện, frontend gửi request tới backend yêu cầu gợi ý phản hồi.
+    \item Backend truy vấn MongoDB để lấy nội dung email và một phần lịch sử hội thoại, sau đó gửi tới AI Service tại endpoint \texttt{/suggest-reply}.
+    \item AI Service sử dụng Prompt Engineering để yêu cầu model tạo ra 2--3 phương án trả lời (ở dạng JSON). Nếu cần, dịch vụ có thể dùng thêm RAG để lấy các đoạn tri thức nội bộ (chính sách, quy định) nhằm tránh \textit{bịa thông tin}.
+    \item Backend trả các gợi ý này về cho frontend, nơi người dùng có thể chỉnh sửa rồi gửi thực tế qua Gmail API hoặc client email tương ứng.
+\end{enumerate}
+
+\paragraph{Luồng hợp nhất hồ sơ (Contact Unification).}
+
+\begin{enumerate}
+    \item Định kỳ hoặc khi có email mới, backend gom nhóm các email theo địa chỉ gửi/nhận và các heuristic đơn giản (tên hiển thị, domain công ty...).
+    \item Với các trường hợp mơ hồ (nhiều địa chỉ khác nhau nhưng có thể thuộc cùng một người), backend có thể gửi các ``candidate clusters'' tới AI Service để yêu cầu LLM đánh giá mức độ tương đồng dựa trên nội dung trao đổi (cách xưng hô, đề cập tên công ty, vai trò...).
+    \item AI trả về gợi ý ``nên hợp nhất'' hay ``nên giữ tách'', cùng với lý do tóm tắt. Người dùng cuối có thể phê duyệt các gợi ý này trên giao diện.
+\end{enumerate}
+
+\subsection{AI Agent và khả năng mở rộng trong tương lai}
+\label{subsec:AIAgent}
+
+\subsubsection{Khái niệm và kiến trúc tổng quát}
+\label{subsubsec:AgentConcept}
+
+AI Agent là một mô hình (hoặc tập hợp mô hình) AI không chỉ sinh văn bản đơn lẻ, mà còn có khả năng \textbf{lập kế hoạch}, \textbf{tương tác với môi trường} và \textbf{sử dụng công cụ} để hoàn thành một mục tiêu ở mức cao (high-level goal). Nhiều nghiên cứu và sản phẩm gần đây (OpenAI o1, ReAct, AutoGPT, LangChain Agents, Microsoft AutoGen) đề xuất kiến trúc agent trong đó LLM đóng vai trò bộ não (reasoning engine), còn các ``tool'' là các API hoặc hàm có thể gọi được (function calling / tool calling).
+
+Một kiến trúc agent điển hình bao gồm các thành phần:
+\begin{itemize}
+    \item \textbf{Planner:} mô-đun (thường là LLM) có nhiệm vụ phân rã yêu cầu lớn thành chuỗi các bước nhỏ hơn, có thể thực thi được.
+    \item \textbf{Tools / Actions:} tập các hành động mà agent có thể thực thi, ví dụ gọi API backend để truy vấn email, tạo contact, gửi nhắc nhở, ghi chú timeline.
+    \item \textbf{Memory:} cơ chế lưu trữ trạng thái dài hạn hoặc ngắn hạn (short-term / long-term memory), bao gồm lịch sử trao đổi với người dùng, các hành động đã thực hiện, kết quả trung gian.
+    \item \textbf{Environment:} thế giới bên ngoài mà agent tương tác, ở đây là hệ thống Email-centric, cơ sở dữ liệu, Redis, các dịch vụ khác.
+    \item \textbf{Feedback Loop:} cơ chế đánh giá kết quả và điều chỉnh kế hoạch nếu cần (tự đánh giá hoặc có sự can thiệp của con người -- human-in-the-loop).
+\end{itemize}
+
+Trong bối cảnh doanh nghiệp, các agent thường được thiết kế dưới dạng \textit{co-pilot} cho nhân viên, nghĩa là agent hỗ trợ một phần công việc chứ không tự động hoá hoàn toàn, nhằm đảm bảo yếu tố an toàn, tuân thủ và trải nghiệm người dùng.
+
+\subsubsection{Kịch bản ứng dụng trong nền tảng Email-centric}
+\label{subsubsec:AgentScenarios}
+
+Dựa trên kiến trúc của hệ thống PoC, một số kịch bản agent tiềm năng có thể bao gồm:
+
+\paragraph{Agent quản lý inbox (Inbox Management Agent).}
+
+Agent này có mục tiêu hỗ trợ người dùng xử lý hộp thư đến một cách hiệu quả hơn:
+\begin{itemize}
+    \item Phân loại email theo mức độ ưu tiên (gấp, quan trọng, có thể đọc sau) dựa trên nội dung, lịch sử trao đổi và role của người gửi.
+    \item Gợi ý nhóm email theo ``topic'' hoặc ``deal'' để dễ theo dõi.
+    \item Đề xuất hành động tiếp theo (trả lời, chuyển tiếp, tạo task nội bộ, đặt lịch họp) cho từng email hoặc nhóm email.
+\end{itemize}
+
+Lúc này, planner sẽ đọc một batch email trong inbox, quyết định email nào cần gọi tool \texttt{summarizeThread}, tool nào gọi \texttt{suggestReply}, và khi nào cần ping người dùng để xác nhận.
+
+\paragraph{Agent follow-up (Follow-up Agent).}
+
+Agent follow-up chịu trách nhiệm theo dõi các thread đang treo (pending) và nhắc nhở người dùng gửi follow-up đúng thời điểm:
+\begin{itemize}
+    \item Theo dõi những email chưa nhận được phản hồi sau một khoảng thời gian cấu hình.
+    \item Sinh bản nháp email follow-up gợi ý, phù hợp ngữ cảnh (ví dụ nhắc nhẹ nhàng, hỏi thêm thông tin, chốt lịch).
+    \item Đề xuất lịch follow-up dựa trên mức độ ưu tiên của deal hoặc ứng viên.
+\end{itemize}
+
+Agent có thể dùng RAG để nhìn lại toàn bộ bối cảnh thread, đảm bảo follow-up không gây khó chịu (spam) và mang lại giá trị.
+
+\paragraph{Agent tạo ghi chú và báo cáo (Note-taking \\ Reporting Agent).}
+
+Agent này tập trung chuyển đổi các cuộc trao đổi rời rạc thành ghi chú và báo cáo có cấu trúc:
+\begin{itemize}
+    \item Tự động tạo ``meeting notes'' sau các cuộc trao đổi email dài hoặc sau khi người dùng gắn tag ``meeting'' cho một thread.
+    \item Tổng hợp nhật ký giao tiếp (communication timeline) theo từng contact hoặc account (khách hàng, ứng viên), phục vụ cho việc họp nội bộ hoặc báo cáo quản lý.
+\end{itemize}
+
+\subsubsection{Ưu điểm, hạn chế và thách thức triển khai}
+\label{subsubsec:AgentChallenges}
+
+Việc đưa AI Agent vào nền tảng Email-centric mang đến nhiều cơ hội nhưng cũng không ít thách thức:
+
+\begin{itemize}
+    \item \textbf{Ưu điểm:}
+    \begin{itemize}
+        \item Tăng mức độ tự động hoá công việc lặp lại (lọc email, nhắc follow-up, tạo ghi chú), giúp người dùng tập trung vào các quyết định mang tính chiến lược.
+        \item Khai thác tốt hơn tri thức ẩn trong lịch sử giao tiếp (implicit knowledge), nhờ khả năng tổng hợp và lập kế hoạch của agent.
+        \item Tạo ra trải nghiệm ``trợ lý cá nhân'' (personal assistant) gắn liền với inbox của mỗi người.
+    \end{itemize}
+    \item \textbf{Hạn chế và thách thức:}
+    \begin{itemize}
+        \item \textit{Độ tin cậy (reliability):} Agent có thể đưa ra kế hoạch hoặc hành động không phù hợp nếu prompt, cấu hình tool hoặc dữ liệu không đầy đủ. Cần cơ chế giám sát và giới hạn phạm vi hành động (ví dụ chỉ gợi ý, không tự động gửi email).
+        \item \textit{An toàn và quyền riêng tư:} Agent phải tuân thủ chặt chẽ chính sách truy cập dữ liệu (ai được phép xem email nào, ghi chú nào), đặc biệt khi hệ thống mở rộng sang multi-tenant.
+        \item \textit{Trải nghiệm người dùng (UX):} Nếu agent đưa ra quá nhiều gợi ý không liên quan hoặc gây phiền hà, người dùng dễ mất niềm tin và tắt chức năng này. Cần thiết kế luồng tương tác mượt mà, cho phép người dùng điều chỉnh mức độ can thiệp.
+        \item \textit{Chi phí vận hành:} Agent thường cần nhiều lượt gọi LLM hơn so với các chức năng đơn lẻ, do phải lập kế hoạch, gọi nhiều tool và đánh giá kết quả. Điều này đặt ra bài toán tối ưu chi phí (caching, batching, chọn model phù hợp cho từng bước).
+    \end{itemize}
+\end{itemize}
+
+\subsection{Hạn chế hiện tại của LLM trong bối cảnh doanh nghiệp}
+\label{subsec:LLMLimitationsEnterprise}
+
+Mặc dù LLM mang lại nhiều cơ hội cho các hệ thống giao tiếp, vẫn tồn tại một số hạn chế cần cân nhắc khi triển khai trong bối cảnh doanh nghiệp:
+
+\begin{itemize}
+    \item \textbf{Hiện tượng ``hallucination'':} Mô hình đôi khi tạo ra thông tin không chính xác hoặc hoàn toàn bịa ra nhưng trông có vẻ hợp lý. Trong môi trường doanh nghiệp, điều này có thể dẫn đến sai sót nghiệp vụ hoặc thông tin sai lệch gửi cho khách hàng nếu không có lớp kiểm tra.
+    \item \textbf{Thiếu tính minh bạch (interpretability):} Việc giải thích tại sao mô hình đưa ra một câu trả lời cụ thể là khó, khiến việc kiểm toán (audit) và chứng minh tuân thủ trở nên phức tạp.
+    \item \textbf{Chi phí và hiệu năng:} Các mô hình mạnh như GPT-4.x, Claude 3 thường có chi phí sử dụng và độ trễ cao hơn so với các mô hình nhỏ. Cần có chiến lược chọn model tier phù hợp cho từng tác vụ (ví dụ dùng model nhỏ cho phân loại, model lớn cho tóm tắt phức tạp).
+    \item \textbf{Quản lý dữ liệu và tuân thủ:} Doanh nghiệp phải đảm bảo dữ liệu gửi tới mô hình (dù là cloud hay local) tuân thủ các quy định như GDPR, các quy định nội bộ, và không làm rò rỉ thông tin nhạy cảm.
+    \item \textbf{Phụ thuộc vào nhà cung cấp:} Trong trường hợp sử dụng Cloud AI, thay đổi về giá, chính sách hoặc sự cố dịch vụ có thể ảnh hưởng trực tiếp đến hệ thống.
+    \item \textbf{Nhu cầu kỹ năng mới:} Đội ngũ phát triển cần bổ sung kỹ năng về Prompt Engineering, MLOps, Data Governance để vận hành hệ thống AI một cách bền vững.
+\end{itemize}

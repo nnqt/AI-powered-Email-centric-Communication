@@ -1,55 +1,81 @@
-# AI-Powered Email-Centric Communication Platform
+# AI-Powered Email-Centric Communication Platform – Copilot Overview
 
-## Overview
+## Your Role
 
-You are GitHub Copilot, assisting in building a **communication management platform** centered around **Email**, with optional integration for **multi-channel messaging** (WhatsApp, Telegram, Viber, Zalo, etc.) through API-based extensions.
+You are GitHub Copilot assisting on a **monorepo** for an
+**email-centric communication platform**. The platform aims to:
 
-The system integrates, unifies, and summarizes communication data into a central timeline view for each customer/applicant, providing AI-powered summarization and auto-reply suggestions.
+- Centralize email-based communication into a unified timeline per contact.
+- Use AI to summarize threads and suggest smart replies.
+- Prepare for future multi-channel extensions (Zalo, WhatsApp, Telegram, etc.).
 
----
+When a new chat starts, you should quickly rebuild this mental model
+from the Markdown files in `.copilot/` without needing the LaTeX report.
 
-## Core Features
+## Current Implementation Focus
 
-* Unified email management dashboard.
-* Optional integration with external messaging APIs.
-* Merged contact profiles and communication timeline.
-* AI summarization and key-issue extraction.
-* AI-assisted contextual reply suggestions.
-* Modular architecture for rapid expansion.
+The project is in the **initial stage**. The immediate goal is to
+implement a minimal but clean PoC that covers these functional
+requirements (FR) from the thesis:
 
----
+- **FR-01 – Email sync (near real-time)**
+- **FR-02 – Basic email operations (read/archive/labels)**
+- **FR-03 – Contact-centric timeline view**
+- **FR-04 – Real-time UI update (timeline refresh)**
+- **FR-07 – Thread summarization (AI)**
+- **FR-08 – Smart reply suggestions (AI)**
 
-## Tech Stack
+Other FRs/NFRs exist in the thesis but are **not priority to
+implement yet**. You should design code and architecture in a way that
+they can be added later without major refactors.
 
-| Layer         | Technology                               | Notes                                           |
-| ------------- | ---------------------------------------- | ----------------------------------------------- |
-| Frontend      | Next.js (React, TypeScript)              | Modern UI + API Routes support                  |
-| Backend       | Next.js API Routes + Redis + MongoDB     | REST/Realtime data backend                      |
-| AI Service    | Python (FastAPI)                         | Independent microservice, real-time capable     |
-| Cache & Queue | Redis                                    | For caching summaries & async jobs              |
-| Database      | MongoDB                                  | Simple NoSQL for unified contact & message data |
-| Infra         | Docker Compose                           | Multi-service orchestration                     |
-| OS/Env        | Ubuntu via WSL (Windows) / Ubuntu Laptop | Cross-device development                        |
+## High-Level Architecture
 
----
+This is a **backend–frontend–AI microservice** architecture using
+Docker Compose:
 
-## Architecture Summary
+- `apps/frontend` – Next.js app (React + TypeScript).
+- `apps/backend` – Next.js API backend (REST + realtime).
+- `apps/ai-service` – FastAPI microservice for summarization and
+  smart replies.
+- `infra` – Docker Compose files, Redis and MongoDB configuration.
+- `shared` – Future home for shared models/utilities (may be empty at
+  the moment).
 
-Monorepo structure with separate modules:
+Key ideas:
 
-* `/apps/frontend` — Next.js web app
-* `/apps/backend` — Next.js API backend
-* `/apps/ai-service` — FastAPI AI microservice
-* `/infra` — Docker, Redis, Mongo setup
-* `/shared` — Common models and utilities
-* `/copilot` — AI instructions and dev docs
+- **Backend is email-centric**: it exposes APIs around email threads,
+  contacts, and timelines, not just raw messages.
+- **AI Service is independent**: it talks to the backend via HTTP
+  (and optionally WebSocket) and never touches the database directly.
+- **Redis** is used for caching and async/queue-like patterns.
+- **MongoDB** stores email threads, contacts, summaries, and metadata.
 
----
+## How You Should Help
 
-## Goals for Copilot
+When generating or editing code:
 
-1. Follow the conventions in `PROJECT_STRUCTURE.md` and `CODE_STYLE_GUIDE.md`.
-2. Understand that **AI service is independent** and communicates via REST/WebSocket.
-3. Suggest code respecting async and scalable patterns.
-4. Always write modular and documented functions.
-5. Assume Docker Compose is used for orchestration.
+1. **Respect the structure** described in
+   `PROJECT_STRUCTURE.md` and `AI_BACKEND_GUIDE.md`.
+2. **Map features to FRs**:
+   - FR-01/02 – email sync and basic operations.
+   - FR-03/04 – contact-centric timeline and realtime refresh.
+   - FR-07/08 – AI summarization and smart replies.
+3. **Favor async, scalable patterns**:
+   - Non-blocking I/O in Next.js API routes.
+   - Async FastAPI endpoints.
+   - Clear separation between HTTP handlers, services, and data layer.
+4. **Produce production-friendly code** even in PoC:
+   - Small, testable modules.
+   - Clear naming and typing.
+   - No hard-coded secrets; use environment variables.
+5. **Be explicit about assumptions** when something in the thesis is
+   not yet implemented in code.
+
+For more detailed guidance, consult:
+
+- `PROJECT_STRUCTURE.md` – repository layout and responsibilities.
+- `ARCHITECTURE_FR_GUIDE.md` – mapping between thesis requirements and
+  code modules.
+- `AI_SERVICE_GUIDE.md` – AI microservice contracts and patterns.
+- `CODE_STYLE_GUIDE.md` – language- and layer-specific conventions.

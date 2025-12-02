@@ -73,8 +73,9 @@
 
 
 %%%
-\setcounter{secnumdepth}{4}
-\setcounter{tocdepth}{3}
+% Chỉ đánh số và hiển thị tới cấp section và subsection trong mục lục
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{2}
 \makeatletter
 \newcounter {subsubsubsection}[subsubsection]
 \renewcommand\thesubsubsubsection{\thesubsubsection .\@alph\c@subsubsubsection}
