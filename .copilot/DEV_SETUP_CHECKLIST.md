@@ -6,9 +6,9 @@ test FR-01/02/03/04/07/08 locally.
 ## Prerequisites
 
 - **Node.js 20+**
-- **Python 3.10+**
+- **Python 3.12+**
 - **Docker & Docker Compose**
-- Ability to run **Redis** and **MongoDB** (typically via Docker).
+- Ability to run **MongoDB** (typically via Docker).
 
 ## Local Setup Steps
 
@@ -19,46 +19,67 @@ test FR-01/02/03/04/07/08 locally.
    cd AI-powered-Email-centric-Communication
    ```
 
-2. Create `.env` files for each service (basic example):
+2. Install root dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. Create `.env` files for each service:
 
    - `/apps/backend/.env`
    - `/apps/ai-service/.env`
-   - `/infra/.env` (if needed)
 
-3. Start infrastructure services with Docker Compose:
+4. Set up the AI service Python environment:
 
    ```bash
-   docker compose up -d mongo redis
+   npm run dev:setup:ai
    ```
 
-4. (Optional) Start backend, frontend, and AI service via Docker or
-   directly with `npm`/`uvicorn` depending on the current stage of the
-   project.
-
-5. Verify containers:
+5. Start the database (MongoDB in Docker):
 
    ```bash
-   docker ps
+   npm run dev:db
+   ```
+
+6. Start all services in parallel:
+
+   ```bash
+   npm run start:all
+   ```
+
+   This runs Backend (4000), Frontend (3000), AI Service (5000), and MongoDB concurrently.
+
+7. Verify services are running:
+
+   ```bash
+   curl http://localhost:4000/api/health
+   curl http://localhost:5000/
    ```
 
 ## Environment Variables (Example)
 
-Back these examples into `.env` files instead of hard-coding values in
-code.
+Add these to `.env` files instead of hard-coding values in code.
+
+**`apps/backend/.env`**:
 
 ```text
-# Common
-MONGO_URI=mongodb://mongo:27017/emailhub
-REDIS_URL=redis://redis:6379
-
-# Backend
-PORT=4000
-AI_SERVICE_URL=http://ai-service:5000
-
-# AI Service
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL_NAME=gpt-4.1-mini
+MONGODB_URI=mongodb://localhost:27017/emailhub
+NEXTAUTH_SECRET=your-nextauth-secret
+NEXTAUTH_URL=http://localhost:4000
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+AI_SERVICE_URL=http://localhost:5000
 ```
+
+**`apps/ai-service/.env`**:
+
+```text
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL_NAME=gemini-1.5-flash
+```
+
+> **Note**: Use `gemini-1.5-flash` for faster responses or `gemini-2.0-flash` for the latest model.
 
 ## Redis Usage
 
@@ -68,16 +89,37 @@ OPENAI_MODEL_NAME=gpt-4.1-mini
 
 ## Quick Testing
 
-- Use `curl` or `Postman` to test backend and AI endpoints once they
-  are implemented.
-- For AI service, start a dev server (e.g. `uvicorn
-main:app --reload`) and call:
+- Use `curl` or `Postman` to test backend and AI endpoints.
+- Test the AI service summarization endpoint:
 
   ```bash
-  curl -X POST http://localhost:5000/summarize -H "Content-Type: application/json" -d '{"thread_id":"test","messages":[]}'
+  curl -X POST http://localhost:5000/summarize \
+    -H "Content-Type: application/json" \
+    -d '{
+      "thread_id": "test-123",
+      "messages": [
+        {
+          "id": "m1",
+          "from": "user@example.com",
+          "to": ["support@example.com"],
+          "sent_at": "2025-01-01T10:00:00Z",
+          "text": "I need help with my account."
+        }
+      ]
+    }'
   ```
 
-- Check Docker logs if MongoDB or Redis fail to start.
+- Test the backend health endpoint:
+
+  ```bash
+  curl http://localhost:4000/api/health
+  ```
+
+- Check Docker logs if MongoDB fails to start:
+
+  ```bash
+  npm run logs:infra
+  ```
 
 ## Deployment Note
 

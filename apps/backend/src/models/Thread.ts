@@ -1,11 +1,18 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
+export interface IThreadSummary {
+  text: string;
+  key_issues: string[];
+  action_required: string[];
+}
+
 export interface IThread extends Document {
   id: string; // Gmail thread ID
   userId: mongoose.Types.ObjectId;
   historyId?: string;
   snippet?: string;
   lastMessageDate?: Date;
+  summary?: IThreadSummary;
 }
 
 const ThreadSchema: Schema<IThread> = new Schema(
@@ -15,6 +22,11 @@ const ThreadSchema: Schema<IThread> = new Schema(
     historyId: { type: String },
     snippet: { type: String },
     lastMessageDate: { type: Date },
+    summary: {
+      text: { type: String },
+      key_issues: { type: [String], default: [] },
+      action_required: { type: [String], default: [] },
+    },
   },
   { timestamps: true }
 );

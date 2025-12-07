@@ -1,4 +1,4 @@
-# Current State – December 5, 2025
+# Current State – December 8, 2025
 
 ## Implemented Features
 
@@ -36,6 +36,22 @@
     - A sign-in card ("Continue with Google") when unauthenticated.
     - An inbox view with header (user name) + `SyncButton` + `ThreadList` when authenticated.
 
+### FR-07 – Thread Summarization (Backend + AI Service + Frontend)
+
+- **AI Service** (`apps/ai-service`):
+  - `POST /summarize` endpoint returns structured JSON with `summary`, `key_issues`, and `action_required`.
+  - `core/llm_client.py` uses `GeminiSummarizationClient` to generate summaries via Google Gemini.
+  - Prompt engineering forces valid JSON output; handles markdown code block wrapping.
+- **Backend** (`apps/backend`):
+  - `Thread` model extended with `summary` field (`IThreadSummary` interface).
+  - `AIService` in `src/modules/ai/ai.service.ts` calls the AI service `/summarize` endpoint.
+  - `POST /api/threads/[threadId]/summarize` route fetches messages, calls AI service, stores summary in MongoDB.
+- **Frontend** (`apps/frontend`):
+  - `AISummaryCard` component displays summary with key issues (bullets) and action items (checklist).
+  - `useThreadDetail` hook fetches single thread + messages.
+  - Thread detail page (`/threads/[id]`) integrates summarization UI with "✨ Summarize this Thread" button.
+  - `ThreadList` items are clickable, linking to thread detail pages.
+
 ## Architecture Decisions
 
 - **Ports**:
@@ -67,19 +83,31 @@
 
 - **CORS Handling** (Backend):
 
-  - `apps/backend/src/middleware.ts` applies CORS headers for `/api/:path*`:
-    - `Access-Control-Allow-Origin: http://localhost:3000`.
-    - `Access-Control-Allow-Credentials: true`.
-    - Handles `OPTIONS` preflight with a 204 response.
+  - CORS configuration moved from `middleware.ts` to `next.config.ts` using the `headers()` function to avoid Next.js middleware warnings.
+  - `Access-Control-Allow-Origin: http://localhost:3000`.
+  - `Access-Control-Allow-Credentials: true`.
+  - Supports all standard HTTP methods and headers for API routes.
+
+- **Root Script Strategy**:
+
+  - The root `package.json` uses `npm-run-all` to orchestrate the hybrid development environment.
+  - **Hybrid Architecture**: Docker Compose runs databases (MongoDB), while apps run locally on the host.
+  - Key commands:
+    - `npm run dev:setup:ai` – Creates Python venv and installs AI service dependencies.
+    - `npm run dev:db` – Starts MongoDB in Docker.
+    - `npm run start:all` – Runs all services in parallel (DB, Backend, Frontend, AI Service).
+  - This approach provides faster iteration than full Docker builds while maintaining consistent database state.
 
 - **AI Service Provider**:
-  - `apps/ai-service` now uses **Google Gemini** via the `google-generativeai` package.
-  - `core/config.py` reads `GEMINI_API_KEY` and `GEMINI_MODEL_NAME`.
+  - `apps/ai-service` uses **Google Gemini** via the `google-generativeai` package (switched from OpenAI).
+  - `python-dotenv` is used for environment variable management, loaded at the top of `main.py`.
+  - `core/config.py` reads `GEMINI_API_KEY` and `GEMINI_MODEL_NAME` (default: `gemini-1.5-flash`).
   - `core/llm_client.py`:
     - Configures a `GenerativeModel` and exposes:
-      - `GeminiSummarizationClient.summarize_thread(...)`  returns a summary string for a thread.
-      - `GeminiReplyClient.suggest_replies(...)`  returns a list of reply option strings.
+      - `GeminiSummarizationClient.summarize_thread(...)` – returns structured JSON dict for a thread.
+      - `GeminiReplyClient.suggest_replies(...)` – returns a list of reply option strings.
     - Error handling ensures empty/blocked responses raise clear runtime errors.
+    - JSON parsing handles markdown code block wrapping from Gemini responses.
 
 ## Database Schema
 
@@ -118,7 +146,7 @@
 
 ## Next Steps / Priorities
 
-- **FR-02  Basic Email Operations (Next Priority)**
+- **FR-02 – Basic Email Operations (Next Priority)**
 
   - Implement backend routes to:
     - Mark messages/threads as read/unread.
@@ -126,7 +154,8 @@
     - Send email via Gmail API (`users.messages.send`), ensuring sent emails are reflected in MongoDB and in Gmail.
   - Extend frontend UI for read state, labels, and a basic composer.
 
-- **FR-07  Thread Summarization (Next Priority)**
-  - Finalize contracts between backend and `apps/ai-service` for `/summarize`.
-  - Implement backend integration to call the AI service after sync and store summaries in MongoDB (linked to `Thread`).
-  - Surface summaries in the inbox/timeline responses and display them in the frontend thread view.
+- **FR-08 – Smart Reply Suggestions (Next Priority)**
+
+  - Finalize `POST /suggest-reply` endpoint in AI service.
+  - Implement backend integration to call the AI service and return reply options.
+  - Add UI component in thread detail/composer to display and select suggested replies.

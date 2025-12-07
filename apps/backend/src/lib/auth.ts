@@ -3,7 +3,7 @@ import type { JWT } from "next-auth/jwt";
 import GoogleProvider from "next-auth/providers/google";
 
 import { connectToDatabase } from "./db";
-import { User } from "../models/User";
+import { User } from "@/models/User";
 
 export const authOptions: NextAuthOptions = {
   providers: [

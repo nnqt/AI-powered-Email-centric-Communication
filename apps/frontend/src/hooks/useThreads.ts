@@ -2,7 +2,13 @@
 
 import useSWR from "swr";
 
-import apiClient from "../lib/api";
+import apiClient from "@/lib/api";
+
+export interface ThreadSummary {
+  text: string;
+  key_issues: string[];
+  action_required: string[];
+}
 
 export interface ThreadDTO {
   _id: string;
@@ -13,6 +19,7 @@ export interface ThreadDTO {
   lastMessageDate?: string;
   createdAt?: string;
   updatedAt?: string;
+  summary?: ThreadSummary;
 }
 
 const fetcher = async (url: string): Promise<ThreadDTO[]> => {

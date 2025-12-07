@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 
-import apiClient from "../lib/api";
-import { useThreads } from "../hooks/useThreads";
+import apiClient from "@/lib/api";
+import { useThreads } from "@/hooks/useThreads";
 
 export function SyncButton() {
   const { status } = useSession();

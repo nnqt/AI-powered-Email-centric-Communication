@@ -128,7 +128,7 @@ emails or AI results arrive without manual refresh.
 - The backend emits events like `EMAIL_RECEIVED`, `SUMMARY_READY`,
   which the frontend interprets.
 
-### FR-07 – Thread Summarization (AI)
+### FR-07 – Thread Summarization (AI) ✅ IMPLEMENTED
 
 **Goal**: generate concise summaries for email threads to reduce
 information overload, shown directly in the thread/timeline UI.
@@ -136,14 +136,15 @@ information overload, shown directly in the thread/timeline UI.
 **Primary modules**:
 
 - `apps/backend`:
-  - Client module to call the AI service (`/summarize`).
-  - Logic to store summaries in MongoDB and expose them in timeline and
-    thread detail responses.
+  - `AIService` in `src/modules/ai/ai.service.ts` calls the AI service `/summarize`.
+  - `Thread` model includes `summary` field with `text`, `key_issues`, `action_required`.
+  - `POST /api/threads/[threadId]/summarize` route orchestrates the flow.
 - `apps/ai-service`:
-  - `POST /summarize` endpoint and underlying LLM integration.
+  - `POST /summarize` endpoint using Google Gemini (`GeminiSummarizationClient`).
+  - Returns structured JSON response.
 - `apps/frontend`:
-  - Components to display summaries within the open thread view and
-    contact timeline.
+  - `AISummaryCard` component displays summaries.
+  - Thread detail page (`/threads/[id]`) with summarization button.
 
 **Key ideas**:
 

@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
-import { useThreads } from "../../hooks/useThreads";
+import { useThreads } from "@/hooks/useThreads";
 
 export function ThreadList() {
   const { threads, isLoading, isError } = useThreads();
@@ -39,25 +40,27 @@ export function ThreadList() {
   return (
     <ul className="divide-y divide-gray-200 rounded-md border border-gray-200 bg-white">
       {threads.map((thread) => (
-        <li
-          key={thread._id}
-          className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-gray-50"
-        >
-          <div className="flex flex-1 flex-col">
-            <span className="text-xs font-medium text-gray-600">
-              Sender placeholder
-            </span>
-            <span className="line-clamp-2 text-sm text-gray-900">
-              {thread.snippet || "(No preview available)"}
-            </span>
-          </div>
-          <div className="ml-3 shrink-0 text-xs text-gray-500">
-            {thread.lastMessageDate
-              ? formatDistanceToNow(new Date(thread.lastMessageDate), {
-                  addSuffix: true,
-                })
-              : ""}
-          </div>
+        <li key={thread._id}>
+          <Link
+            href={`/threads/${thread.id}`}
+            className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-gray-50"
+          >
+            <div className="flex flex-1 flex-col">
+              <span className="text-xs font-medium text-gray-600">
+                Sender placeholder
+              </span>
+              <span className="line-clamp-2 text-sm text-gray-900">
+                {thread.snippet || "(No preview available)"}
+              </span>
+            </div>
+            <div className="ml-3 shrink-0 text-xs text-gray-500">
+              {thread.lastMessageDate
+                ? formatDistanceToNow(new Date(thread.lastMessageDate), {
+                    addSuffix: true,
+                  })
+                : ""}
+            </div>
+          </Link>
         </li>
       ))}
     </ul>

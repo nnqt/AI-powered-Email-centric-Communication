@@ -1,10 +1,10 @@
 import { google, gmail_v1 } from "googleapis";
 import mongoose from "mongoose";
 
-import { connectToDatabase } from "../../lib/db";
-import { User } from "../../models/User";
-import { Thread } from "../../models/Thread";
-import { Message } from "../../models/Message";
+import { connectToDatabase } from "@/lib/db";
+import { User } from "@/models/User";
+import { Thread } from "@/models/Thread";
+import { Message } from "@/models/Message";
 
 export class GmailService {
   private userId: string;

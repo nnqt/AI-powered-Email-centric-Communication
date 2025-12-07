@@ -9,10 +9,10 @@ and FR-08 (smart reply suggestions)**.
 The AI service is a **standalone Python FastAPI app**. It:
 
 - Exposes HTTP endpoints for summarization and smart replies.
-- Encapsulates all interaction with external LLM providers (OpenAI,
-  local models, etc.).
+- Encapsulates all interaction with **Google Gemini** via the `google-generativeai` library.
 - Is stateless from the perspective of the backend (no direct DB
   access).
+- Uses `python-dotenv` for environment variable management.
 
 The PoC only needs a minimal but clean implementation of two core
 endpoints:
@@ -117,8 +117,9 @@ them before sending through the email provider.
   - `services/` – business logic for talking to LLMs, building
     prompts, and post-processing.
   - `models/` – pydantic schemas for requests/responses.
-  - `core/config.py` – configuration, environment variables, client
-    setup (e.g. OpenAI client).
+  - `core/config.py` – configuration, environment variables (reads `GEMINI_API_KEY`, `GEMINI_MODEL_NAME`).
+  - `core/llm_client.py` – Gemini client wrapper with `GeminiSummarizationClient` and `GeminiReplyClient`.
+- Use `python-dotenv` and call `load_dotenv()` at the top of `main.py` before other imports to ensure env vars are available.
 - Keep the surface small and stable; avoid leaking provider-specific
   fields into the public API.
 
@@ -141,7 +142,8 @@ You do not have to embed full prompt text here; see the thesis and
 
 ```text
 /apps/ai-service
- ├── main.py           # FastAPI app factory and router wiring
+ ├── main.py           # FastAPI app factory, dotenv loading, router wiring
+ ├── requirements.txt  # Dependencies: fastapi, google-generativeai, python-dotenv, etc.
  ├── routes/
  │    ├── summarize.py # /summarize endpoint
  │    └── reply.py     # /suggest-reply endpoint
@@ -152,26 +154,28 @@ You do not have to embed full prompt text here; see the thesis and
  │    ├── summarize.py
  │    └── reply.py
  ├── core/
- │    ├── config.py    # settings, env vars
- │    └── llm_client.py# OpenAI/local model wrapper
+ │    ├── config.py    # Reads GEMINI_API_KEY, GEMINI_MODEL_NAME
+ │    └── llm_client.py# Google Gemini client wrapper
  └── tests/
       └── ...          # optional pytest tests for routes/services
 ```
 
 ## Provider Integration
 
-- Start with **OpenAI API** (or equivalent) for speed in the PoC.
-- Hide provider details behind `llm_client.py` so that later
+- Uses **Google Gemini** via the `google-generativeai` library (free tier available).
+- Provider details are hidden behind `llm_client.py` so that later
   migrations (e.g. to local models) do not affect route/service code.
 - Use environment variables for API keys and model names.
 
-Example config fields:
+Required environment variables:
 
 ```text
-OPENAI_API_KEY=
-OPENAI_MODEL_NAME=gpt-4.1-mini
+GEMINI_API_KEY=your-api-key
+GEMINI_MODEL_NAME=gemini-1.5-flash
 AI_SERVICE_LOG_LEVEL=INFO
 ```
+
+> **Note**: `gemini-1.5-flash` is recommended for fast responses. `gemini-2.0-flash` is also available for the latest model.
 
 ## Future Extensions (Not Required for Initial FRs)
 

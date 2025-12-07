@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
-import { Thread, IThread } from "../../models/Thread";
-import { Message, IMessage } from "../../models/Message";
-import { connectToDatabase } from "../../lib/db";
+import { Thread, IThread } from "@/models/Thread";
+import { Message, IMessage } from "@/models/Message";
+import { connectToDatabase } from "@/lib/db";
 
 export class TimelineService {
   async getThreads(userId: string, limit: number = 20): Promise<IThread[]> {

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
-import { authOptions } from "../../../../lib/auth";
-import { TimelineService } from "../../../../modules/timeline/timeline.service";
+import { authOptions } from "@/lib/auth";
+import { TimelineService } from "@/modules/timeline/timeline.service";
 
 export async function GET(
   _request: NextRequest,

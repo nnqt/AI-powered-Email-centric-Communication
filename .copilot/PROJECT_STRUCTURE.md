@@ -74,8 +74,7 @@ areas instead of adding new root folders.
    async processing.
 4. **Backend → AI Service**: send requests for summarization and smart
    replies.
-5. **AI Service → external LLMs** (optional): call OpenAI or local
-   models.
+5. **AI Service → Google Gemini**: call Gemini API for LLM capabilities.
 6. **Backend → Frontend**: push realtime updates (new emails,
    finished summaries) via WebSocket or similar.
 

@@ -7,7 +7,7 @@ implemented.
 ## General Principles
 
 - Prefer **clear, small, testable modules** over large files.
-- Use **TypeScript** for frontend and backend; **Python 3.10+** for
+- Use **TypeScript** for frontend and backend; **Python 3.12+** for
   the AI service.
 - Design APIs with **async-first** patterns (non-blocking I/O).
 - Always read sensitive configuration from environment variables; do

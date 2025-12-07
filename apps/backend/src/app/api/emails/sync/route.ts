@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
-import { authOptions } from "../../../../lib/auth";
-import { GmailService } from "../../../../modules/email/gmail.service";
+import { authOptions } from "@/lib/auth";
+import { GmailService } from "@/modules/email/gmail.service";
 
 export async function POST() {
   try {

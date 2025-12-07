@@ -1,4 +1,5 @@
-from typing import List
+import json
+from typing import List, Dict, Any
 
 import google.generativeai as genai
 
@@ -15,15 +16,18 @@ _model = genai.GenerativeModel(GEMINI_MODEL_NAME)
 
 
 class GeminiSummarizationClient:
-    async def summarize_thread(self, request: SummarizeRequest) -> str:
+    async def summarize_thread(self, request: SummarizeRequest) -> Dict[str, Any]:
         messages_text = "\n\n".join(
             f"From: {m.from_}\nTo: {', '.join(m.to)}\nSent at: {m.sent_at}\nText: {m.text}"
             for m in request.messages
         )
         prompt = (
             "You are an AI assistant that summarizes email threads for a CRM-like system. "
-            "Given the following email thread, produce a concise summary focusing on key decisions, "
-            "action items, and overall context. Just return the summary text, nothing else.\n\n"
+            "Analyze the following email thread and return a JSON object with exactly these fields:\n"
+            '- "summary": A concise summary of the thread (string)\n'
+            '- "key_issues": An array of key topics or issues discussed (array of strings)\n'
+            '- "action_required": An array of action items or next steps (array of strings)\n\n'
+            "Return ONLY valid JSON, no markdown formatting or extra text.\n\n"
             f"Thread ID: {request.thread_id}\n\nEmails:\n{messages_text}"
         )
 
@@ -35,7 +39,22 @@ class GeminiSummarizationClient:
         text = (response.text or "").strip()
         if not text:
             raise RuntimeError("Gemini summarization returned empty text")
-        return text
+
+        # Clean markdown code blocks if present
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"Failed to parse Gemini response as JSON: {text[:200]}") from exc
+
+        return {
+            "summary": data.get("summary", ""),
+            "key_issues": data.get("key_issues", []),
+            "action_required": data.get("action_required", []),
+        }
 
 
 class GeminiReplyClient:

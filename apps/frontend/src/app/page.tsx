@@ -2,8 +2,8 @@
 
 import { useSession, signIn } from "next-auth/react";
 
-import { SyncButton } from "../components/SyncButton";
-import { ThreadList } from "../features/inbox/ThreadList";
+import { SyncButton } from "@/components/SyncButton";
+import { ThreadList } from "@/features/inbox/ThreadList";
 
 export default function Home() {
   const { data: session, status } = useSession();
