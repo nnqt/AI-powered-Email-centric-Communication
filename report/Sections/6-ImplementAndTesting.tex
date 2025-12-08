@@ -1,16 +1,99 @@
 \section{Hiện thực và Thử nghiệm PoC}
 \label{sec:HienThuc}
-\subsection{Môi trường và Công nghệ}
-    % Liệt kê Tech stack
-    % Cài đặt môi trường (Docker, .env)
-\subsection{Hiện thực các chức năng chính}
-    % Trình bày code và giải thích các module quan trọng đã hiện thực
-    \subsubsection{Hiện thực Backend và Đồng bộ Email}
-    \subsubsection{Hiện thực AI Service (OpenAI)}
-    \subsubsection{Hiện thực Giao diện Timeline}
-\subsection{Thử nghiệm và Đánh giá}
-    % Cho chạy các kịch bản (Use Cases) ở Chương 2
-    \subsubsection{Đánh giá Kịch bản 1}
-    \subsubsection{Đánh giá Kịch bản 2}
-    %...
-    \subsubsection{Đánh giá kết quả tóm tắt của AI}
+
+\subsection{Môi trường triển khai và cách chạy PoC}
+\label{subsec:EnvAndRun}
+
+PoC được triển khai dưới dạng monorepo với cấu trúc thư mục chính:
+
+\begin{itemize}
+    \item \texttt{apps/frontend}: ứng dụng Next.js phục vụ giao diện người dùng (Inbox, Thread Timeline, AI Summary).
+    \item \texttt{apps/backend}: ứng dụng Next.js API đóng vai trò Backend, tích hợp Gmail API, MongoDB và AI Service.
+    \item \texttt{apps/ai-service}: dịch vụ FastAPI tách riêng cho các tác vụ AI (tóm tắt thread, gợi ý phản hồi) sử dụng Google Gemini.
+    \item \texttt{infra}: cấu hình Docker Compose cho MongoDB, Redis và các dịch vụ liên quan.
+\end{itemize}
+
+\subsubsection*{Công nghệ và phiên bản chính}
+
+Trong quá trình hiện thực, báo cáo đã sử dụng các công nghệ sau:
+
+\begin{itemize}
+    \item \textbf{Frontend}: Next.js (React + TypeScript), TailwindCSS.
+    \item \textbf{Backend}: Next.js API Routes (Node.js, TypeScript), NextAuth cho đăng nhập Google.
+    \item \textbf{AI Service}: FastAPI (Python), thư viện Google Generative AI để gọi Google Gemini.
+    \item \textbf{Cơ sở dữ liệu}: MongoDB cho lưu trữ bán cấu trúc (User, Thread, Message).
+    \item \textbf{Hạ tầng phụ trợ}: Redis cho cache và nền tảng queue/pub-sub trong tương lai; Docker Compose để khởi tạo nhanh môi trường cục bộ.
+\end{itemize}
+
+\subsubsection*{Cấu hình biến môi trường}
+
+Toàn bộ các thông tin nhạy cảm (API key, OAuth client secret, connection string) đều được cấu hình thông qua file \texttt{.env} riêng cho từng service, thay vì ghi cứng trong mã nguồn:
+\begin{itemize}
+    \item \texttt{apps/backend/.env}: chứa chuỗi kết nối MongoDB, thông tin OAuth2 của Google, URL tới AI Service.
+    \item \texttt{apps/ai-service/.env}: chứa API key và tên model của Google Gemini.
+\end{itemize}
+
+\subsubsection*{Quy trình khởi động PoC}
+
+Để phục vụ cho việc thử nghiệm, báo cáo xây dựng một số script npm tại thư mục gốc giúp đơn giản hoá quy trình khởi động. Các bước tổng quát như sau:
+\begin{enumerate}
+    \item Cài đặt dependencies Node.js ở cấp độ monorepo:
+    \begin{itemize}
+        \item \texttt{npm install}
+    \end{itemize}
+    \item Chuẩn bị môi trường Python cho AI Service:
+    \begin{itemize}
+        \item \texttt{npm run dev:setup:ai} -- tạo virtualenv và cài đặt các thư viện cần thiết theo \texttt{requirements.txt}.
+    \end{itemize}
+    \item Khởi động hạ tầng dữ liệu (MongoDB, Redis) qua Docker Compose:
+    \begin{itemize}
+        \item \texttt{npm run dev:db}
+    \end{itemize}
+    \item Chạy đồng thời Backend, Frontend và AI Service trong môi trường phát triển:
+    \begin{itemize}
+        \item \texttt{npm run start:all}
+    \end{itemize}
+\end{enumerate}
+
+Sau khi các dịch vụ khởi động thành công, có thể kiểm tra nhanh qua các endpoint sức khoẻ (health check):
+
+\begin{itemize}
+    \item Backend: \texttt{http://localhost:4000/api/health}.
+    \item AI Service: \texttt{http://localhost:5000/}.
+\end{itemize}
+
+Giao diện người dùng (Frontend) được truy cập qua địa chỉ \texttt{http://localhost:3000}, nơi người dùng có thể đăng nhập bằng tài khoản Google, bấm nút đồng bộ email, xem Inbox/Thread và yêu cầu tóm tắt nội dung cuộc trao đổi.
+
+\subsection{Tổng kết các chức năng đã hiện thực}
+\label{subsec:FRSummary}
+
+Bảng~\ref{tab:fr-impl-summary} tóm tắt mức độ hiện thực hoá các yêu cầu chức năng (FR) trong phạm vi PoC, đối chiếu với thiết kế ở các chương trước.
+
+\begin{table}[H]
+    \centering
+    \caption{Tổng kết mức độ hiện thực các yêu cầu chức năng trong PoC}
+    \label{tab:fr-impl-summary}
+    \begin{tabular}{|p{1.5cm}|p{6cm}|p{3cm}|p{3cm}|}
+        \hline
+        & \textbf{Mô tả tóm tắt} & \textbf{Trạng thái trong PoC}  \\
+        \hline
+        FR-01 & Đồng bộ Email gần thời gian thực từ Gmail về hệ thống & Đã hiện thực một phần \\
+        \hline
+        FR-02 & Soạn thảo và gửi Email trực tiếp từ nền tảng & Chưa hiện thực \\
+        \hline
+        FR-03 & Quản lý trạng thái Email (đã đọc/chưa đọc, archive, labels) & Chưa hiện thực \\
+        \hline
+        FR-04 & Xem Inbox và Thread Timeline theo từng người dùng & Đã hiện thực \\
+        \hline
+        FR-05 & Cập nhật giao diện real-time khi có email mới hoặc kết quả AI & Chưa hiện thực \\
+        \hline
+        FR-06 & Tự động khởi tạo, làm giàu và hợp nhất hồ sơ Contact bằng AI & Chưa hiện thực \\
+        \hline
+        FR-07 & Tóm tắt luồng trao đổi (Thread Summarization) bằng AI & Đã hiện thực \\
+        \hline
+        FR-08 & Gợi ý phản hồi thông minh (Smart Reply Suggestion) & Chưa hiện thực \\
+        \hline
+        FR-09 & Kiến trúc mở rộng đa kênh (Multi-channel Adapter) & Chưa hiện thực \\
+        \hline
+    \end{tabular}
+\end{table}

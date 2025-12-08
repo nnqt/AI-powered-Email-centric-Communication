@@ -30,34 +30,34 @@ Email là kênh giao tiếp bắt buộc và là nguồn dữ liệu chính củ
 Timeline là nơi thể hiện giá trị "Email-centric nhưng có ngữ cảnh".
 
 \begin{itemize}
-    \item \textbf{FR-04 – Cập nhật giao diện tức thời (real-time UI update):}
+    \item \textbf{FR-04 – Hiển thị Inbox và Timeline theo Thread:}
+    Hệ thống cần cung cấp giao diện Inbox hiển thị danh sách các thread email, sắp xếp theo thời gian của tin nhắn gần nhất. Mỗi thread hiển thị thông tin tóm tắt (snippet, người gửi, thời gian). Khi người dùng chọn một thread, hệ thống hiển thị toàn bộ lịch sử trao đổi theo dạng timeline, kết hợp với kết quả phân tích AI (nếu có). Đây là tính năng cốt lõi giúp người dùng có cái nhìn tổng quan về từng cuộc hội thoại.
+
+    \item \textbf{FR-05 – Cập nhật giao diện tức thời (real-time UI update):}
     Khi backend nhận Webhook từ Gmail hoặc khi một tác vụ AI hoàn tất tóm tắt, giao diện Timeline phải được cập nhật tự động qua WebSocket hoặc cơ chế push tương đương, giúp người dùng luôn thấy trạng thái mới nhất mà không phải F5 thủ công.
 \end{itemize}
 
 \subsubsection*{(3) Chức năng AI: tóm tắt, gợi ý phản hồi và hợp nhất hồ sơ}
 
-Module AI vận hành như một \textit{AI microservice} độc lập, giao tiếp với backend qua HTTP/REST hoặc WebSocket.
+Module AI vận hành như một \textit{AI microservice} độc lập, giao tiếp với backend qua HTTP/REST.
 
 \begin{itemize}
-    \item \textbf{FR-05 – Tự động khởi tạo và làm giàu hồ sơ Contact:}
-    Khi xuất hiện một địa chỉ email mới trong luồng dữ liệu, backend chỉ ghi nhận tối thiểu thông tin kỹ thuật (email, thời gian, header), còn AI service sẽ chạy nền để suy luận thêm metadata: tên hiển thị, ngôn ngữ thường sử dụng, domain liên quan tới tổ chức nào,… Từ đó, hệ thống tạo hoặc cập nhật một hồ sơ Contact ở trạng thái sơ bộ (draft) mà không cần thao tác thủ công từ người dùng.
-
-    \item \textbf{FR-06 – Gợi ý hợp nhất định danh (AI-assisted Contact Unification):}
-    Dựa trên lịch sử giao tiếp, nội dung email và các đặc trưng như domain, chữ ký, cách xưng hô, AI service đưa ra các gợi ý nhóm nhiều địa chỉ email khác nhau vào cùng một Contact duy nhất. Người dùng có thể xem danh sách gợi ý này trong giao diện và chấp nhận hoặc từ chối. Sau khi được chấp nhận, thao tác hợp nhất được thực hiện nền, đảm bảo toàn bộ timeline và dữ liệu liên quan được quy về một hồ sơ "360 độ".
+    \item \textbf{FR-06 – Tự động khởi tạo, làm giàu và hợp nhất hồ sơ Contact (AI-assisted Contact Management):}
+    Khi xuất hiện một địa chỉ email mới trong luồng dữ liệu, backend ghi nhận thông tin kỹ thuật cơ bản (email, thời gian, header), còn AI service chạy nền để suy luận thêm metadata: tên hiển thị, ngôn ngữ thường sử dụng, domain liên quan tới tổ chức nào. Ngoài ra, dựa trên lịch sử giao tiếp và các đặc trưng như domain, chữ ký, cách xưng hô, AI service có thể đề xuất gộp nhiều địa chỉ email khác nhau vào cùng một Contact duy nhất. Người dùng xem xét và chấp nhận/từ chối gợi ý, sau đó hệ thống thực hiện hợp nhất nền để quy về một hồ sơ.
 
     \item \textbf{FR-07 – Tóm tắt luồng trao đổi (Thread Summarization):}
-    Đối với các chuỗi email dài (thread), hệ thống định kỳ hoặc theo yêu cầu gửi nội dung thread tới AI Service để sinh ra một bản tóm tắt ngắn gọn (summary) kèm theo danh sách "Key Issues". Bản tóm tắt này được lưu lại trong DB, gắn với thread tương ứng và hiển thị trực tiếp trên giao diện Timeline để người dùng nắm nhanh "bức tranh tổng thể".
+    Đối với các chuỗi email dài (thread), hệ thống theo yêu cầu người dùng gửi nội dung thread tới AI Service để sinh ra một bản tóm tắt ngắn gọn (summary) kèm theo danh sách "Key Issues" và "Action Required". Bản tóm tắt này được lưu lại trong DB, gắn với thread tương ứng và hiển thị trực tiếp trên giao diện Timeline để người dùng nắm nhanh "bức tranh tổng thể".
 
     \item \textbf{FR-08 – Gợi ý phản hồi thông minh (Smart Reply Suggestion):}
-    Khi người dùng mở một email gần nhất trong thread, AI Service dựa trên nội dung email hiện tại cộng với ngữ cảnh lịch sử để đề xuất 2–3 phương án trả lời (reply candidates). Các gợi ý này nên ở dạng có thể chỉnh sửa lại trước khi gửi, đảm bảo vai trò AI là hỗ trợ (augmented intelligence) chứ không thay thế hoàn toàn con người.
+    Khi người dùng mở một email gần nhất trong thread, AI Service dựa trên nội dung email hiện tại cộng với ngữ cảnh lịch sử để đề xuất 2–3 phương án trả lời (reply candidates). Các gợi ý này ở dạng có thể chỉnh sửa lại trước khi gửi, đảm bảo vai trò AI là hỗ trợ (augmented intelligence) chứ không thay thế hoàn toàn con người.
 \end{itemize}
 
-\subsubsection*{(5) Mở rộng đa kênh và kiến trúc adapter}
+\subsubsection*{(4) Mở rộng đa kênh và kiến trúc adapter}
 
 Mặc dù PoC chỉ tích hợp Email, kiến trúc cần sẵn sàng cho việc bổ sung các kênh IM.
 
 \begin{itemize}
-    \item \textbf{FR-10 – Định nghĩa interface chuẩn cho Message/Conversation:}
+    \item \textbf{FR-09 – Định nghĩa interface chuẩn cho Message/Conversation:}
     Hệ thống phải xây dựng các interface trừu tượng (ví dụ: \texttt{Message}, \texttt{Conversation}) độc lập với nguồn kênh. Điều này cho phép về sau có thể thêm các adapter cho Zalo, Telegram, WhatsApp mà không phải viết lại logic lõi (core business logic). PoC có thể minh họa cấu trúc này bằng các stub hoặc module giả lập.
 \end{itemize}
 
@@ -80,7 +80,7 @@ Yêu cầu phi chức năng mô tả \textit{hệ thống cần vận hành như
 
 \begin{itemize}
     \item \textbf{Quản lý thông tin nhạy cảm qua môi trường:}
-    Các thông tin như API key của OpenAI, thông tin OAuth Client của Gmail, chuỗi kết nối (connection string) tới MongoDB và Redis phải được cấu hình qua biến môi trường (.env), không được ghi cứng trong mã nguồn. Điều này vừa tuân thủ thực hành bảo mật tốt, vừa giúp PoC dễ dàng triển khai trên nhiều môi trường khác nhau.
+    Các thông tin như API key của nhà cung cấp LLM (Google Gemini, OpenAI), thông tin OAuth Client của Gmail, chuỗi kết nối (connection string) tới MongoDB và Redis phải được cấu hình qua biến môi trường (.env), không được ghi cứng trong mã nguồn. Điều này vừa tuân thủ thực hành bảo mật tốt, vừa giúp PoC dễ dàng triển khai trên nhiều môi trường khác nhau.
 
     \item \textbf{Phân tách quyền truy cập (ở mức PoC):}
     Mặc dù PoC không đi sâu vào bài toán authentication/authorization phức tạp, kiến trúc phải sẵn sàng để gắn thêm lớp xác thực (ví dụ: OAuth2, JWT) ở các lớp API mà không cần thay đổi cấu trúc tổng thể.
@@ -99,7 +99,7 @@ Yêu cầu phi chức năng mô tả \textit{hệ thống cần vận hành như
 \subsection{Quyết định công nghệ và Chiến lược kiến trúc}
 \label{subsec:GiaiPhapCongNghe}
 
-Dựa trên yêu cầu ở trên, luận án đưa ra một số quyết định công nghệ và chiến lược kiến trúc trọng yếu.
+Dựa trên yêu cầu ở trên, báo cáo đưa ra một số quyết định công nghệ và chiến lược kiến trúc trọng yếu.
 
 \subsubsection*{(1) Backend hướng sự kiện với Node.js/Next.js}
 
@@ -116,7 +116,7 @@ Dữ liệu email là bán cấu trúc (semi-structured), các trường header 
 Module AI được tách ra thành \textbf{FastAPI service} viết bằng Python để tận dụng hệ sinh thái AI/ML. Việc tách microservice này giúp:
 
 \begin{itemize}
-    \item Tránh làm nghẽn luồng xử lý của backend khi AI phải gọi các API có độ trễ cao (OpenAI).
+    \item Tránh làm nghẽn luồng xử lý của backend khi AI phải gọi các API có độ trễ cao (Google Gemini, OpenAI).
     \item Dễ dàng thay đổi nhà cung cấp AI hoặc chuyển sang mô hình local (HuggingFace, Ollama) trong tương lai mà không ảnh hưởng tới backend.
 \end{itemize}
 

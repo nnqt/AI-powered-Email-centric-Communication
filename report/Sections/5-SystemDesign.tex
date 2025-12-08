@@ -1,18 +1,202 @@
 \section{Thiết kế Hệ thống}
 \label{sec:ThietKe}
-\subsection{Kiến trúc tổng thể}
-    % Vẽ sơ đồ kiến trúc monorepo
-    % Sơ đồ luồng dữ liệu (Data Flow)
-\subsection{Thiết kế Cơ sở dữ liệu}
-    % Sơ đồ ERD (hoặc tương đương cho MongoDB)
-    % Thiết kế schema cho Email, Contact, Thread...
-\subsection{Thiết kế Module Backend (Next.js API)}
-    % Danh sách các REST API
-    % Thiết kế WebSocket
-    % Tích hợp Redis (Cache, Pub/Sub)
-\subsection{Thiết kế Module AI Service (FastAPI)}
-    % Định nghĩa API (Pydantic models)
-    % Luồng xử lý tóm tắt
-\subsection{Thiết kế Module Frontend (Next.js)}
-    % Cấu trúc thư mục
-    % Thiết kế component (TimelineView...)
+
+\subsection{Kiến trúc tổng thể hệ thống}
+\label{subsec:OverallArchitecture}
+
+\subsubsection{Sơ đồ kiến trúc hệ thống (Overall Architecture Diagram)}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{architechture_diagram.png}
+    \caption{Kiến trúc tổng quan của hệ thống Email-centric}
+    \label{fig:overall-architecture}
+\end{figure}
+
+Hình~\ref{fig:overall-architecture} minh hoạ kiến trúc tổng thể của nền tảng Email-centric ở mức high-level. Hệ thống hoạt động dựa trên mô hình **Single Entry Point** (Điểm truy cập duy nhất) thông qua một Load Balancer, điều phối lưu lượng đến các cụm dịch vụ (Service Clusters) phi trạng thái phía sau. Các thành phần chính bao gồm:
+
+\begin{itemize}
+    \item \textbf{Load Balancer / Reverse Proxy (Nginx):} 
+    Đóng vai trò là cổng giao tiếp duy nhất giữa Client và hạ tầng bên trong. 
+    Thành phần này chịu trách nhiệm:
+    \begin{itemize}
+        \item Điều hướng (Routing) lưu lượng dựa trên đường dẫn: các yêu cầu trang web (\texttt{/}) được chuyển đến \textit{Frontend Cluster}, trong khi các yêu cầu dữ liệu (\texttt{/api}) được chuyển đến \textit{Backend Cluster}.
+        \item Cân bằng tải (Load Balancing) để phân phối đều request giữa các bản sao (replicas) của dịch vụ, ngăn chặn tình trạng quá tải cục bộ.
+    \end{itemize}
+
+    \item \textbf{Frontend Cluster (Next.js):} 
+    Bao gồm các bản sao của ứng dụng Next.js chạy song song. 
+    Việc container hóa và cluster hóa Frontend đảm bảo khả năng xử lý lượng lớn yêu cầu truy cập đồng thời, đặc biệt là các tác vụ Render phía máy chủ (Server-Side Rendering - SSR). 
+    Khi thực hiện SSR, các node Frontend cũng gọi API thông qua Load Balancer để đảm bảo tính nhất quán trong việc định tuyến nội bộ.
+
+    \item \textbf{Backend Cluster (Next.js API):} 
+    Là trung tâm xử lý logic nghiệp vụ, được thiết kế hoàn toàn \textit{Stateless} (phi trạng thái). 
+    Các node Backend không lưu trữ session người dùng cục bộ mà ủy quyền cho tầng dữ liệu. 
+    Thiết kế này cho phép hệ thống tự do thêm/bớt số lượng node Backend tùy theo tải thực tế mà không gây gián đoạn dịch vụ.
+
+    \item \textbf{AI Worker Cluster (FastAPI):} 
+    Là tập hợp các microservice worker chuyên trách xử lý các tác vụ AI nặng (tóm tắt thread, gợi ý phản hồi). 
+    Các worker này hoạt động theo cơ chế bất đồng bộ (Asynchronous): chúng không nhận request trực tiếp từ User mà "lắng nghe" và xử lý các tác vụ (jobs) từ hàng đợi trong Redis. 
+    Cơ chế này giúp tách biệt tải của AI ra khỏi luồng xử lý chính của người dùng.
+
+    \item \textbf{Data \& State Layer (Redis + MongoDB):}
+    \begin{itemize}
+        \item \textbf{Redis (Shared Cache \& Queue):} Redis lưu trữ Session chung cho toàn bộ các cluster (giải quyết bài toán Stateless), đồng thời hoạt động như một Message Broker để điều phối hàng đợi công việc giữa Backend và AI Service.
+        \item \textbf{MongoDB:} Lưu trữ bền vững (Persistent Storage) cho dữ liệu người dùng, email threads và siêu dữ liệu (metadata).
+    \end{itemize}
+\end{itemize}
+
+Kiến trúc này cũng thể hiện rõ sự tương tác với các dịch vụ bên ngoài (External Cloud Services) như Gmail API (đồng bộ dữ liệu) và Google Gemini API (xử lý ngôn ngữ tự nhiên), đảm bảo hệ thống lõi chỉ tập trung vào logic nghiệp vụ và điều phối.
+
+Sơ đồ thể hiện rõ đường đi của dữ liệu: từ Gmail API vào Backend, được lưu trong MongoDB, sau đó được Backend cung cấp cho Frontend để hiển thị Inbox/Timeline. Khi người dùng yêu cầu tóm tắt, Backend lấy dữ liệu thread từ MongoDB, gửi sang AI Service gọi Gemini, nhận kết quả tóm tắt và lưu trở lại, rồi trả về cho Frontend.
+
+\subsubsection{Biểu đồ Use Case}
+\label{subsubsec:UseCase}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{Images/use_case_diagram.png} 
+    \caption{Biểu đồ Use Case tổng thể của hệ thống (bao gồm thiết kế mở rộng đa kênh)}
+    \label{fig:usecase}
+\end{figure}
+
+Hình~\ref{fig:usecase} mô tả các use case của hệ thống, làm rõ phạm vi chức năng và sự tương tác giữa người dùng với các hệ thống bên ngoài.
+
+Các tác nhân (Actors) trong hệ thống bao gồm:
+\begin{itemize}
+    \item \textbf{Người dùng (Primary Actor):} Là người trực tiếp sử dụng hệ thống để quản lý giao tiếp (ví dụ: nhân viên tuyển dụng, nhân viên hỗ trợ).
+    \item \textbf{Gmail API (Secondary Actor):} Hệ thống bên ngoài đóng vai trò cung cấp dữ liệu email gốc và thực hiện lệnh gửi email thực tế.
+    \item \textbf{Google Gemini API (Secondary Actor):} Hệ thống trí tuệ nhân tạo bên ngoài, cung cấp khả năng xử lý ngôn ngữ tự nhiên cho các tác vụ thông minh.
+    \item \textbf{Instant Message App:} Các ứng dụng nhắn tin tức thời như Slack, Microsoft Teams, Facebook Messenger, được tích hợp để mở rộng kênh giao tiếp.
+\end{itemize}
+
+Các Use Case được tổ chức theo luồng nghiệp vụ như sau:
+
+\textbf{1. Nhóm Quản lý và Xem thông tin (Information Retrieval):}
+\begin{itemize}
+    \item \textbf{UC01 -- Đồng bộ Email:} Tương tác với Gmail API để cập nhật dữ liệu mới nhất về hệ thống.
+    \item \textbf{UC02 -- Xem Inbox \& Timeline:} Cho phép người dùng xem danh sách tổng quan các luồng trao đổi.
+    \item \textbf{UC03 -- Xem chi tiết Thread:} Là chức năng mở rộng (\textit{extend}) từ việc xem Inbox, cho phép đi sâu vào nội dung cụ thể của từng cuộc hội thoại.
+\end{itemize}
+
+\textbf{2. Nhóm Tác vụ Email (Email Actions):}
+\begin{itemize}
+    \item \textbf{UC06 -- Soạn Email:} Cung cấp trình soạn thảo văn bản (Rich Text Editor).
+    \item \textbf{UC07 -- Gửi Email:} Thực hiện đẩy email đi thông qua Gmail API. Trong thiết kế hệ thống, chức năng Soạn thảo bao hàm (\textit{include}) chức năng Gửi như một bước hoàn tất quy trình.
+\end{itemize}
+
+\textbf{3. Nhóm Tính năng AI (AI-Assisted Features):}
+\begin{itemize}
+    \item \textbf{UC04 -- Tóm tắt Thread:} Được kích hoạt từ giao diện xem chi tiết (quan hệ \textit{extend}). Hệ thống gửi ngữ cảnh sang Google Gemini API để tạo bản tóm tắt.
+    \item \textbf{UC05 -- Gợi ý phản hồi:} AI phân tích ngữ cảnh để đề xuất câu trả lời. Use case này có quan hệ bao hàm (\textit{include}) với UC06, nghĩa là khi chọn một gợi ý phản hồi, hệ thống sẽ tự động chuyển nội dung đó vào trình soạn thảo để người dùng tiếp tục chỉnh sửa.
+\end{itemize}
+
+\textbf{4. Nhóm Tích hợp Đa kênh (Multi-channel Integration - Design):}
+\begin{itemize}
+    \item \textbf{UC09 -- Tính năng hỗ trợ IM:} Thiết kế module kết nối với các nền tảng như Zalo và Microsoft Teams, nhằm gom dữ liệu chat về cùng giao diện Timeline với Email.
+\end{itemize}
+
+\subsection{Thiết kế luồng tương tác theo yêu cầu chức năng}
+\label{subsec:SequenceDesign}
+
+Các biểu đồ sequence mô tả luồng tương tác chi tiết giữa Frontend, Backend, AI Service và các thành phần hạ tầng cho một số FR trọng tâm.
+
+\subsubsection{FR-01 -- Đồng bộ Email }
+\label{subsubsec:SeqFR01}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{Images/sequence_diagram_fr1.png} 
+    \caption{Biểu đồ tuần tự cho chức năng Đồng bộ Email qua Webhook (FR-01)}
+    \label{fig:seq-fr01}
+\end{figure}
+
+Để đáp ứng yêu cầu đồng bộ gần thời gian thực (Near Real-time), hệ thống được thiết kế sử dụng cơ chế **Push Notification** thông qua Google Cloud Pub/Sub thay vì kỹ thuật Polling truyền thống. Hình~\ref{fig:seq-fr01} minh họa luồng dữ liệu khi có email mới:
+
+\begin{enumerate}
+    \item \textbf{Trigger Sự kiện:} Khi email mới đến hộp thư Gmail, Google Cloud Pub/Sub tự động gửi một thông báo (Webhook) chứa \texttt{historyId} đến điểm cuối công khai của hệ thống thông qua Load Balancer.
+    
+    \item \textbf{Xác nhận và Xử lý:} Backend nhận thông báo và phản hồi mã \texttt{200 OK} ngay lập tức để xác nhận đã nhận tin. Sau đó, một tiến trình xử lý ngầm (background process) được kích hoạt.
+    
+    \item \textbf{Đồng bộ Dữ liệu (Sync):} Backend sử dụng \texttt{historyId} để truy vấn \textit{Gmail API}, lấy danh sách các thay đổi (incremental changes) và tải về nội dung email chi tiết. Dữ liệu sau đó được lưu trữ vào \textit{MongoDB}.
+    
+    \item \textbf{Phát tán Sự kiện (Real-time update):} Sau khi lưu trữ thành công, Backend đẩy một sự kiện \texttt{EMAIL\_RECEIVED} vào \textit{Redis Pub/Sub}. Các kết nối WebSocket từ Frontend sẽ lắng nghe sự kiện này để cập nhật giao diện Timeline tức thời (FR-04) mà không cần người dùng tải lại trang.
+\end{enumerate}
+
+\subsubsection{FR-04 -- Xem Inbox và Thread Timeline}
+\label{subsubsec:SeqFR04}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Images/sequence_diagram_fr4.png} 
+    \caption{Biểu đồ tuần tự cho chức năng Xem Inbox (FR-04)}
+    \label{fig:seq-fr04}
+\end{figure}
+
+Chức năng hiển thị Inbox và Timeline được thực hiện theo mô hình \textit{Client-side Data Fetching}, tận dụng khả năng của Next.js và thư viện SWR để tối ưu trải nghiệm người dùng. Hình~\ref{fig:seq-fr04} mô tả chi tiết hai phase của quá trình này:
+
+\begin{enumerate}
+    \item \textbf{Phase 1 - Tải giao diện (Initial Load):} 
+    Khi người dùng truy cập đường dẫn, Load Balancer điều hướng yêu cầu tới \textit{Frontend Cluster}. Frontend trả về khung ứng dụng (App Shell) và các tài nguyên tĩnh (JS/CSS) để trình duyệt hiển thị giao diện sơ khởi (Skeleton UI) ngay lập tức.
+    
+    \item \textbf{Phase 2 - Lấy dữ liệu (Data Fetching):} 
+    Sau khi giao diện tải xong, trình duyệt (Client) tự động gửi yêu cầu API bất đồng bộ (\texttt{GET /api/threads}) thông qua Load Balancer tới \textit{Backend Cluster}. Backend thực hiện xác thực phiên làm việc, truy vấn dữ liệu từ \textit{MongoDB}, và trả về kết quả dưới dạng JSON để Frontend cập nhật danh sách email đầy đủ.
+\end{enumerate}
+
+Thiết kế này giúp giảm tải cho Frontend Server (không phải chờ dữ liệu từ DB mới render HTML) và tăng cảm giác phản hồi nhanh cho người dùng.
+
+\subsubsection{FR-07 -- Tóm tắt Thread}
+\label{subsubsec:SeqFR07}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{Images/sequence_diagram_fr7.png} 
+    \caption{Biểu đồ tuần tự xử lý Tóm tắt AI bất đồng bộ (FR-07)}
+    \label{fig:seq-fr07}
+\end{figure}
+
+Việc gọi API của các mô hình ngôn ngữ lớn (LLM) như Google Gemini thường có độ trễ cao (từ vài giây đến hàng chục giây tùy độ dài văn bản) và giới hạn số lượng yêu cầu (Rate Limiting). Nếu xử lý đồng bộ (Synchronous), Backend sẽ bị chiếm dụng tài nguyên kết nối trong thời gian chờ đợi, dễ dẫn đến nghẽn cổ chai.
+
+Do đó, chức năng này được thiết kế theo mô hình **Bất đồng bộ (Asynchronous)** sử dụng Redis làm hàng đợi trung gian. Hình~\ref{fig:seq-fr07} mô tả quy trình 3 phase:
+
+\begin{enumerate}
+    \item \textbf{Phase 1 - Tiếp nhận (Dispatch):} 
+    Khi nhận yêu cầu từ người dùng, Backend Cluster chỉ thực hiện việc truy xuất nội dung thread từ \textit{MongoDB}, đóng gói thành một bản tin (Job) và đẩy vào hàng đợi \textit{Redis Queue}. Backend lập tức phản hồi mã \texttt{202 Accepted} cho người dùng. Giao diện Frontend chuyển sang trạng thái "Đang xử lý" (Loading state) mà không bị treo.
+    
+    \item \textbf{Phase 2 - Xử lý nền (Processing):} 
+    Các node trong \textit{AI Worker Cluster} (FastAPI) hoạt động độc lập, liên tục "lắng nghe" hàng đợi. Khi có Job mới, Worker sẽ lấy ra xử lý, gửi ngữ cảnh tới \textit{Google Gemini API} để sinh tóm tắt, sau đó cập nhật trực tiếp kết quả vào \textit{MongoDB}. 
+    Thiết kế này cho phép tách biệt hoàn toàn tải của AI khỏi luồng phục vụ người dùng chính.
+    
+    \item \textbf{Phase 3 - Cập nhật (Notification):} 
+    Sau khi cập nhật DB thành công, Worker phát một sự kiện thông báo qua kênh Redis Pub/Sub. Backend nhận sự kiện này và đẩy thông báo xuống Frontend (thông qua WebSocket hoặc Frontend tự động kiểm tra lại) để hiển thị kết quả cuối cùng.
+\end{enumerate}
+
+\subsection{Thiết kế Cơ sở dữ liệu (Database Schema)}
+\label{subsec:DBDesign}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Images/erd_diagram.png} 
+    \caption{Lược đồ Cơ sở dữ liệu (ERD) với chiến lược Nhúng và Tham chiếu}
+    \label{fig:db-diagram}
+\end{figure}
+
+Hệ thống sử dụng \textbf{MongoDB} làm cơ sở dữ liệu chính. Để mô tả cấu trúc lưu trữ bán cấu trúc (NoSQL), lược đồ Quan hệ Thực thể (ERD) trong Hình~\ref{fig:db-diagram} minh họa các tập thực thể (Collections) và chiến lược liên kết dữ liệu.
+
+Mô hình bao gồm ba thành phần chính:
+
+\begin{enumerate}
+    \item \textbf{User (Collection):} 
+    Lưu trữ hồ sơ người dùng và các token xác thực OAuth2. Quan hệ giữa \textit{User} và \textit{Thread} là quan hệ 1-N (Một người dùng sở hữu nhiều luồng email).
+
+    \item \textbf{Thread (Collection) và chiến lược Embedding:} 
+    \textit{Thread} đại diện cho một luồng hội thoại. 
+    Để tối ưu hiệu năng đọc (Read Performance) cho tính năng hiển thị tóm tắt trên Timeline (FR-07), thực thể \textbf{Summary} (chứa kết quả AI) được thiết kế theo chiến lược \textbf{Embedding (Nhúng)}. 
+    Nghĩa là dữ liệu tóm tắt được lưu trực tiếp bên trong document của Thread thay vì tách ra bảng riêng, giúp giảm thiểu chi phí truy vấn (No Join).
+
+    \item \textbf{Message (Collection) và chiến lược Referencing:} 
+    \textit{Message} lưu trữ nội dung chi tiết của từng email.
+    Trái ngược với Summary, quan hệ giữa \textit{Thread} và \textit{Message} sử dụng chiến lược \textbf{Referencing (Tham chiếu)}. 
+    Các Message được lưu trong collection riêng biệt và liên kết thông qua khóa ngoại \texttt{threadId}. 
+    Quyết định này nhằm đảm bảo khả năng mở rộng (Scalability), tránh lỗi tràn bộ nhớ document (16MB limit của MongoDB) đối với các luồng email dài chứa nhiều nội dung HTML hoặc đính kèm.
+\end{enumerate}

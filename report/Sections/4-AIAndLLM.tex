@@ -1,8 +1,6 @@
 \section{AI và Mô hình Ngôn ngữ Lớn (LLM)}
 \label{sec:AIvaLLM}
 
-Chương này trình bày vai trò của Trí tuệ Nhân tạo (AI), đặc biệt là các Mô hình Ngôn ngữ Lớn (Large Language Models -- LLM), trong bối cảnh các hệ thống giao tiếp hiện đại. Nội dung tập trung vào việc phân loại các cách tiếp cận AI (Local vs. Cloud), các kỹ thuật làm việc với LLM (Prompt engineering, Fine-tuning, LoRA, RAG), đồng thời phân tích cách áp dụng chúng vào nền tảng quản lý giao tiếp tập trung với Email là lõi (Email-centric) đã được giới thiệu ở Chương~\ref{sec:TongQuan} và yêu cầu hệ thống ở Chương~\ref{sec:YeuCau}.
-
 \subsection{Bối cảnh AI trong các hệ thống giao tiếp}
 \label{subsec:AIContextCommunication}
 
@@ -105,7 +103,7 @@ Bảng~\ref{tab:local-vs-cloud} tóm tắt một số khía cạnh so sánh chí
     \end{tabular}
 \end{table}
 
-Đối với PoC trong báo cáo này, việc sử dụng Cloud AI (ví dụ OpenAI API) là lựa chọn hợp lý để rút ngắn thời gian phát triển, trong khi kiến trúc vẫn được thiết kế mở để có thể thay thế hoặc bổ sung Local AI trong tương lai khi nhu cầu bảo mật và tối ưu chi phí tăng cao.
+Đối với PoC trong báo cáo này, việc sử dụng Cloud AI (cụ thể là Google Gemini API) là lựa chọn hợp lý để rút ngắn thời gian phát triển và tận dụng mức chi phí linh hoạt cho cá nhân/nhóm nhỏ, trong khi kiến trúc vẫn được thiết kế mở để có thể thay thế hoặc bổ sung Local AI trong tương lai khi nhu cầu bảo mật và tối ưu chi phí tăng cao.
 
 \subsection{Các phương pháp tiếp cận LLM}
 \label{subsec:ApproachesLLM}
@@ -113,7 +111,7 @@ Bảng~\ref{tab:local-vs-cloud} tóm tắt một số khía cạnh so sánh chí
 \subsubsection{Phương pháp Prompt Engineering}
 \label{subsubsec:PromptEng}
 
-Prompt Engineering là kỹ thuật thiết kế và điều chỉnh nội dung yêu cầu (prompt) gửi tới LLM nhằm đạt được kết quả mong muốn, ổn định và dễ kiểm soát mà không cần thay đổi tham số bên trong mô hình. Các nhà cung cấp lớn như OpenAI, Google, Anthropic đều khuyến nghị coi prompt như một \textit{lớp lập trình} trên mô hình, với các kỹ thuật như chain-of-thought, few-shot learning, role specification\footnote{Xem hướng dẫn Prompt Engineering từ OpenAI và Google trong tài liệu chính thức của họ.}.
+Prompt Engineering là kỹ thuật thiết kế và điều chỉnh nội dung yêu cầu (prompt) gửi tới LLM nhằm đạt được kết quả mong muốn, ổn định và dễ kiểm soát mà không cần thay đổi tham số bên trong mô hình. Các nhà cung cấp lớn như OpenAI, Google (Gemini), Anthropic đều khuyến nghị coi prompt như một \textit{lớp lập trình} trên mô hình, với các kỹ thuật như chain-of-thought, few-shot learning, role specification\footnote{Xem hướng dẫn Prompt Engineering từ OpenAI, Google Gemini trong tài liệu chính thức của họ.}.
 
 Trong bối cảnh nền tảng Email-centric, Prompt Engineering có một số vai trò quan trọng:
 \begin{itemize}
@@ -173,7 +171,7 @@ Prompt Engineering có ưu điểm là \textbf{không cần dữ liệu huấn l
 \subsubsection{Fine-tuning và LoRA}
 \label{subsubsec:FineTuningLoRA}
 
-Fine-tuning là quá trình tiếp tục huấn luyện một mô hình đã được huấn luyện sẵn (pre-trained model) trên một tập dữ liệu hẹp hơn, mang tính miền (domain-specific) hoặc tác vụ (task-specific), nhằm điều chỉnh hành vi của mô hình phù hợp hơn với nhu cầu cụ thể. Các nền tảng như OpenAI, Google Vertex AI, AWS Bedrock đều cung cấp dịch vụ fine-tuning cho một số dòng mô hình nhất định.
+Fine-tuning là quá trình tiếp tục huấn luyện một mô hình đã được huấn luyện sẵn (pre-trained model) trên một tập dữ liệu hẹp hơn, mang tính miền (domain-specific) hoặc tác vụ (task-specific), nhằm điều chỉnh hành vi của mô hình phù hợp hơn với nhu cầu cụ thể. Các nền tảng như OpenAI, Google Vertex AI / Gemini, AWS Bedrock đều cung cấp dịch vụ fine-tuning cho một số dòng mô hình nhất định.
 
 LoRA (Low-Rank Adaptation) là một kỹ thuật fine-tuning hiệu quả, trong đó chỉ một số ma trận hạng thấp (low-rank matrices) được huấn luyện thêm và \textit{gắn} vào mô hình gốc, giúp giảm đáng kể số tham số cần cập nhật và tài nguyên tính toán so với việc tinh chỉnh toàn bộ mô hình. LoRA phổ biến trong cộng đồng mô hình mã nguồn mở (ví dụ với Llama, Mistral) do tính linh hoạt và tiết kiệm chi phí.
 
@@ -227,62 +225,6 @@ Trong hệ thống Email-centric, RAG đặc biệt phù hợp với các bài t
     \item Trả lời câu hỏi theo bối cảnh: ví dụ, ``Khách hàng A đang ở trạng thái deal nào?'' hoặc ``Lần trao đổi gần nhất với ứng viên B là gì?'' có thể được trả lời bằng cách truy vấn lịch sử giao tiếp tương ứng rồi cho LLM tóm tắt.
     \item Kết hợp nhiều nguồn: tích hợp email, ghi chú nội bộ, ticket hỗ trợ vào một kho chung để LLM có cái nhìn toàn diện khi sinh câu trả lời.
 \end{itemize}
-
-\subsection{Ứng dụng AI trong nền tảng Email-centric}
-\label{subsec:AIInEmailCentric}
-
-\subsubsection{Liên kết với các yêu cầu chức năng FR-05..FR-08}
-\label{subsubsec:MappingFR}
-
-Như đã trình bày trong Chương~\ref{sec:YeuCau}, nhóm yêu cầu chức năng liên quan trực tiếp đến AI bao gồm (tên và mã yêu cầu có thể được rút gọn ở đây):
-
-\begin{itemize}
-    \item \textbf{FR-05 -- Tự động khởi tạo và làm giàu hồ sơ Contact:} AI phân tích nội dung email để trích xuất thông tin về cá nhân/tổ chức (tên, chức vụ, công ty, vai trò trong quy trình), gợi ý hợp nhất nhiều địa chỉ email thuộc cùng một thực thể.
-    \item \textbf{FR-06 -- Tóm tắt luồng trao đổi (Conversation Summary):} AI tạo bản tóm tắt ngắn gọn cho từng thread, cập nhật theo thời gian khi có email mới.
-    \item \textbf{FR-07 -- Gợi ý phản hồi (Smart Reply Suggestions):} AI đề xuất vài phương án trả lời dựa trên nội dung email gần nhất và bối cảnh lịch sử.
-    \item \textbf{FR-08 -- Phân tích ngữ cảnh nâng cao (Advanced Context):} AI đánh giá sentiment, mức độ ưu tiên, phát hiện rủi ro hoặc cơ hội trong nội dung trao đổi.
-\end{itemize}
-
-Các yêu cầu này có thể được ánh xạ (mapping) tới các kỹ thuật AI đã trình bày như sau:
-
-\begin{itemize}
-    \item \textbf{FR-05:} chủ yếu sử dụng Prompt Engineering kết hợp với các \textit{pattern} trích xuất có cấu trúc (structured extraction) từ LLM, và có thể bổ sung RAG nếu cần tham chiếu các nguồn tri thức nội bộ (ví dụ danh sách công ty, ngành nghề).
-    \item \textbf{FR-06:} sử dụng Prompt Engineering và RAG để tóm tắt chuỗi email. RAG giúp giới hạn ngữ cảnh vào các đoạn quan trọng, giảm chi phí token và cải thiện chất lượng tóm tắt.
-    \item \textbf{FR-07:} tóm tắt luồng trao đổi (Thread Summarization) bằng cách gửi toàn bộ hoặc một phần thread email tới AI Service, nơi LLM (cloud hoặc local) áp dụng Prompt Engineering (và khi cần, RAG) để tạo ra bản tóm tắt ngắn gọn cùng các trường có cấu trúc (summary, key issues, action required...). Kết quả được lưu kèm bản ghi thread trong cơ sở dữ liệu và hiển thị trên giao diện như mô tả ở Chương~\ref{sec:YeuCau}.
-    \item \textbf{FR-08:} gợi ý phản hồi thông minh (Smart Reply Suggestions) bằng cách sử dụng LLM để sinh 2--3 phương án trả lời cho email gần nhất trong bối cảnh toàn bộ cuộc hội thoại. Prompt được thiết kế để đảm bảo giọng văn chuyên nghiệp, thân thiện, không tạo thông tin sai lệch và có thể được tinh chỉnh dần dựa trên dữ liệu nội bộ nếu doanh nghiệp muốn chuẩn hoá ``giọng thương hiệu''. Người dùng luôn là bước cuối cùng phê duyệt và chỉnh sửa trước khi gửi.
-\end{itemize}
-
-\subsubsection{Luồng xử lý tóm tắt, gợi ý phản hồi và hợp nhất hồ sơ}
-\label{subsubsec:PipelineExamples}
-
-Trong kiến trúc monorepo của hệ thống, module AI được tách thành một \textit{AI microservice} viết bằng FastAPI (Python), giao tiếp với backend Next.js thông qua HTTP/REST (và có thể mở rộng sang WebSocket). Dưới đây là ba luồng xử lý tiêu biểu:
-
-\paragraph{Luồng tóm tắt (Summarization Pipeline).}
-
-\begin{enumerate}
-    \item Backend nhận email mới (qua Gmail API hoặc một cơ chế đồng bộ khác) và lưu metadata vào MongoDB.
-    \item Backend gửi request tới AI Service tại endpoint \texttt{/summarize}, truyền vào danh sách email trong thread kèm ngữ cảnh cần tóm tắt.
-    \item AI Service áp dụng Prompt Engineering (và/hoặc RAG) để gọi Cloud AI hoặc Local AI, nhận về kết quả tóm tắt và các trường có cấu trúc (summary, key issues, action required...).
-    \item Backend lưu kết quả vào MongoDB, đồng thời cập nhật cache Redis để đẩy thay đổi lên giao diện Timeline gần thời gian thực.
-    \item Frontend nhận sự kiện (qua WebSocket hoặc long-polling) và hiển thị bản tóm tắt mới cho người dùng.
-\end{enumerate}
-
-\paragraph{Luồng gợi ý phản hồi (Smart Reply Pipeline).}
-
-\begin{enumerate}
-    \item Khi người dùng mở một email cụ thể trong giao diện, frontend gửi request tới backend yêu cầu gợi ý phản hồi.
-    \item Backend truy vấn MongoDB để lấy nội dung email và một phần lịch sử hội thoại, sau đó gửi tới AI Service tại endpoint \texttt{/suggest-reply}.
-    \item AI Service sử dụng Prompt Engineering để yêu cầu model tạo ra 2--3 phương án trả lời (ở dạng JSON). Nếu cần, dịch vụ có thể dùng thêm RAG để lấy các đoạn tri thức nội bộ (chính sách, quy định) nhằm tránh \textit{bịa thông tin}.
-    \item Backend trả các gợi ý này về cho frontend, nơi người dùng có thể chỉnh sửa rồi gửi thực tế qua Gmail API hoặc client email tương ứng.
-\end{enumerate}
-
-\paragraph{Luồng hợp nhất hồ sơ (Contact Unification).}
-
-\begin{enumerate}
-    \item Định kỳ hoặc khi có email mới, backend gom nhóm các email theo địa chỉ gửi/nhận và các heuristic đơn giản (tên hiển thị, domain công ty...).
-    \item Với các trường hợp mơ hồ (nhiều địa chỉ khác nhau nhưng có thể thuộc cùng một người), backend có thể gửi các ``candidate clusters'' tới AI Service để yêu cầu LLM đánh giá mức độ tương đồng dựa trên nội dung trao đổi (cách xưng hô, đề cập tên công ty, vai trò...).
-    \item AI trả về gợi ý ``nên hợp nhất'' hay ``nên giữ tách'', cùng với lý do tóm tắt. Người dùng cuối có thể phê duyệt các gợi ý này trên giao diện.
-\end{enumerate}
 
 \subsection{AI Agent và khả năng mở rộng trong tương lai}
 \label{subsec:AIAgent}
