@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant FE as Frontend (Next.js)
+    participant LB as Load Balancer
+    participant BE as Backend API (Next.js Routes)
+    participant G as Gmail API
+    participant DB as MongoDB
+    participant R as Redis Pub/Sub
+
+    Note over U,FE: Phase 1 - Compose & Send
+    U->>FE: Soạn email + bấm Send
+    FE->>LB: POST /api/emails/send
+    LB->>BE: Forward request
+
+    Note over BE,G: Phase 2 - Send via Gmail API
+    BE->>G: Send message (raw RFC822)
+    G-->>BE: messageId + threadId
+
+    Note over BE,DB: Phase 3 - Persist
+    BE->>G: Get message detail (optional)
+    G-->>BE: Message payload
+    BE->>DB: Upsert Thread(threadId)
+    BE->>DB: Insert Message(messageId)
+
+    Note over BE,R: Phase 4 - Real-time notify
+    BE->>R: Publish MESSAGE_SENT / THREAD_UPDATED
+    BE-->>FE: 200 OK (send result)

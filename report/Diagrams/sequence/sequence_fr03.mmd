@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant FE as Frontend (Next.js)
+    participant LB as Load Balancer
+    participant BE as Backend API (Next.js Routes)
+    participant G as Gmail API
+    participant DB as MongoDB
+    participant R as Redis Pub/Sub
+
+    Note over U,FE: Phase 1 - User action
+    U->>FE: Mark read/unread, archive, add/remove label
+    FE->>LB: PATCH /api/messages/:id/state
+    LB->>BE: Forward request
+
+    Note over BE,G: Phase 2 - Apply to Gmail
+    BE->>G: Modify message labels
+    G-->>BE: OK
+
+    Note over BE,DB: Phase 3 - Persist local state
+    BE->>DB: Update Message.labelIds
+
+    Note over BE,R: Phase 4 - Real-time notify
+    BE->>R: Publish MESSAGE_STATE_CHANGED
+    BE-->>FE: 200 OK

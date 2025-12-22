@@ -1,0 +1,50 @@
+erDiagram
+    USER ||--o{ THREAD : owns
+    USER ||--o{ MESSAGE : owns
+    THREAD ||--o{ MESSAGE : contains
+    THREAD ||--|| THREAD_SUMMARY : embeds
+
+    USER {
+        ObjectId _id PK
+        string email "required, indexed"
+        string name "optional"
+        string image "optional"
+        string googleId "required, unique"
+        string accessToken "optional"
+        string refreshToken "optional"
+        date createdAt
+        date updatedAt
+    }
+
+    THREAD {
+        ObjectId _id PK
+        string id "Gmail thread ID, required, unique, indexed"
+        ObjectId userId FK "ref USER"
+        string historyId "optional"
+        string snippet "optional"
+        date lastMessageDate "optional"
+        date createdAt
+        date updatedAt
+    }
+
+    THREAD_SUMMARY {
+        string text "optional"
+        string[] key_issues "default []"
+        string[] action_required "default []"
+    }
+
+    MESSAGE {
+        ObjectId _id PK
+        string id "Gmail message ID, required, unique, indexed"
+        ObjectId threadId FK "ref THREAD"
+        ObjectId userId FK "ref USER"
+        string from "optional"
+        string[] to "default []"
+        string subject "optional"
+        string body "optional"
+        string snippet "optional"
+        date date "optional"
+        string[] labelIds "default []"
+        date createdAt
+        date updatedAt
+    }

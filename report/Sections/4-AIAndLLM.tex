@@ -1,5 +1,208 @@
-\section{AI và Mô hình Ngôn ngữ Lớn (LLM)}
-\label{sec:AIvaLLM}
+\section{Cơ sở công nghệ và lựa chọn Tech stack}
+\label{sec:TechStack}
+
+\subsection{Frontend stack: Next.js (React) và TypeScript}
+\label{subsec:TechStackFrontend}
+
+Frontend của hệ thống là lớp giao diện tương tác trực tiếp với người dùng, chịu trách nhiệm hiển thị danh sách thread (Inbox) và nội dung trao đổi theo từng thread (Timeline). Trong bối cảnh web app hiện đại, \textbf{Next.js} là một framework dựa trên \textbf{React} cung cấp cấu trúc routing theo file, hỗ trợ kết hợp nhiều chế độ render (client/server) và tích hợp tốt với hệ sinh thái JavaScript/TypeScript. \textbf{TypeScript} là lớp kiểu tĩnh (static typing) trên JavaScript, giúp mô tả cấu trúc dữ liệu rõ ràng và giảm lỗi tích hợp khi Frontend trao đổi dữ liệu với Backend. Ngoài ra, \textbf{TailwindCSS} được sử dụng như một utility-first CSS framework giúp tăng tốc độ dựng UI và duy trì tính nhất quán về style trong giai đoạn PoC.
+
+Với các tiêu chí của đề tài (đội phát triển nhỏ, cần kiểm chứng nhanh, và khả năng mở rộng về sau), Frontend cần đảm bảo luồng điều hướng rõ ràng (Inbox $\rightarrow$ Thread detail) và có khả năng mở rộng UI khi bổ sung các chức năng AI (hiển thị summary, gợi ý reply) hoặc đa kênh.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+Bảng~\ref{tab:tech-frontend} so sánh ba lựa chọn phổ biến cho việc triển khai Frontend web app.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh các lựa chọn Frontend cho PoC Email-centric}
+    \label{tab:tech-frontend}
+    \begin{tabular}{|p{3.2cm}|p{4.1cm}|p{4.1cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Next.js (React)} & \textbf{Angular} \\
+        \hline
+        Mục tiêu phù hợp & Web app nhiều màn hình; routing rõ ràng; dễ mở rộng  & Enterprise app; quy chuẩn mạnh \\
+        \hline
+        Tốc độ phát triển PoC & Cao (routing, cấu trúc dự án sẵn) & Trung bình (boilerplate và learning curve cao hơn) \\
+        \hline
+        Hệ sinh thái & Rất rộng (React/Next.js ecosystem) & Rộng nhưng thiên về full framework \\
+        \hline
+        Độ phức tạp & Trung bình; phù hợp team nhỏ & Cao; phù hợp team lớn/chuẩn hóa chặt \\
+        \hline
+        Khả năng mở rộng & Tốt; dễ chuẩn hoá layout/routing & Tốt nhưng phụ thuộc tổ chức dự án \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Cân bằng tốt giữa tốc độ và cấu trúc & Overkill cho PoC; chi phí học/triển khai cao \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+Báo cáo chọn \textbf{Next.js (React)} và \textbf{TypeScript} cho Frontend nhằm tối ưu tốc độ phát triển PoC và đảm bảo tính nhất quán kiểu dữ liệu khi giao tiếp với Backend. TypeScript giúp giảm lỗi tích hợp do sai lệch cấu trúc dữ liệu (data shape) giữa các API và UI, đồng thời hỗ trợ refactor an toàn khi hệ thống mở rộng.
+
+\subsection{Backend orchestration: Next.js API Routes và mô hình microservice}
+\label{subsec:TechStackBackend}
+
+Backend là lớp điều phối (orchestration layer) của hệ thống: tiếp nhận request từ Frontend, gọi Gmail API để đồng bộ dữ liệu, truy vấn MongoDB/Redis và gọi AI Service khi cần xử lý ngôn ngữ tự nhiên. Đây là workload \textit{I/O-bound} (nhiều kết nối mạng, độ trễ phụ thuộc dịch vụ bên ngoài), do đó tiêu chí lựa chọn ưu tiên sự đơn giản khi triển khai, khả năng xử lý đồng thời tốt, và tích hợp chặt với Frontend.
+
+Trong PoC, Backend được xây dựng bằng \textbf{Next.js API Routes} (Node.js + TypeScript). Bên cạnh đó, phần AI được tách thành \textbf{AI microservice} riêng bằng \textbf{FastAPI} (Python) để tận dụng hệ sinh thái AI/LLM và cô lập độ trễ của LLM khỏi luồng xử lý chính.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+	\textbf{(a) So sánh framework Backend.} Bảng~\ref{tab:tech-backend-framework} tóm tắt ba lựa chọn phổ biến.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh các lựa chọn framework Backend cho PoC}
+    \label{tab:tech-backend-framework}
+    \begin{tabular}{|p{2cm}|p{4cm}|p{4cm}|p{4cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Next.js API Routes} & \textbf{NestJS/Express} & \textbf{FastAPI monolith} \\
+        \hline
+        Mục tiêu phù hợp & PoC nhanh; TypeScript end-to-end & Backend Node.js chuyên biệt; kiến trúc rõ (NestJS) & Backend Python; hợp khi AI là trung tâm \\
+        \hline
+        Tốc độ phát triển PoC & Cao (cùng ecosystem với Frontend) & Trung bình--cao (tách repo, setup nhiều hơn) & Cao cho AI; trung bình cho web app tổng thể \\
+        \hline
+        Tích hợp với Frontend & Rất tốt (cùng Next.js/TypeScript) & Tốt nhưng cần chuẩn hoá DTO riêng & Cần cầu nối kiểu dữ liệu với TS (OpenAPI/SDK) \\
+        \hline
+        I/O-bound & Tốt (Node.js event loop) & Tốt (Node.js) & Tốt (async FastAPI) \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Giảm chi phí phối hợp; phù hợp PoC & Hợp cho hệ backend lớn; có thể nặng nề cho PoC & Hợp nếu chọn Python làm lõi; kém thuận lợi cho TS end-to-end \\
+        \hline
+    \end{tabular}
+\end{table}
+
+	\textbf{(b) So sánh kiến trúc tích hợp AI.} Bảng~\ref{tab:tech-backend-ai-arch} so sánh Monolith và Microservice tách AI.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh hai lựa chọn kiến trúc tích hợp AI}
+    \label{tab:tech-backend-ai-arch}
+    \begin{tabular}{|p{3cm}|p{5cm}|p{5cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Monolith (Backend + AI chung)} & \textbf{Microservice tách AI (FastAPI)} \\
+        \hline
+        Độ cô lập độ trễ LLM & Thấp; request người dùng dễ bị chặn & Cao; Backend điều phối, AI xử lý riêng \\
+        \hline
+        Khả năng scale & Scale chung; dễ lãng phí tài nguyên & Scale độc lập theo tải AI \\
+        \hline
+        Phụ thuộc công nghệ & Thường phải chọn một hệ sinh thái chính & Cho phép kết hợp TS (web) + Python (AI) \\
+        \hline
+        Độ phức tạp vận hành & Thấp hơn ở PoC & Tăng nhẹ (giao tiếp service-to-service) \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Đơn giản nhưng kém linh hoạt về sau & Cân bằng tốt giữa PoC và định hướng mở rộng \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+PoC chọn \textbf{Next.js API Routes} làm lớp điều phối (orchestration layer) và tách \textbf{FastAPI} thành một \textit{AI microservice}. Cách tiếp cận này vừa tận dụng lợi thế TypeScript ở luồng web app, vừa tận dụng ecosystem Python cho AI, đồng thời phù hợp với định hướng kiến trúc phân tán trình bày ở Chương~\ref{sec:ThietKe}.
+
+\subsection{Cơ sở dữ liệu: NoSQL và MongoDB cho dữ liệu Email bán cấu trúc}
+\label{subsec:TechStackDatabase}
+
+Dữ liệu email có tính bán cấu trúc (semi-structured): phần header và metadata đa dạng; nội dung có thể là plain text hoặc HTML; và hệ thống cần lưu kèm kết quả AI (summary, key issues, action required). Trong hệ thống Email-centric, dữ liệu tự nhiên nhất để truy vấn thường là \textbf{Thread} và \textbf{Message}, đồng thời schema có thể thay đổi nhanh trong giai đoạn PoC khi hoàn thiện mô hình dữ liệu.
+
+	\textbf{MongoDB} là một document database lưu trữ dữ liệu dưới dạng document (gần với JSON), phù hợp khi cần lưu trữ linh hoạt, dễ mở rộng trường dữ liệu và thuận tiện khi ingest dữ liệu từ các API như Gmail. Ngược lại, các hệ quản trị quan hệ (RDBMS) như \textbf{MySQL}, \textbf{PostgreSQL}, \textbf{SQL Server} mạnh ở ràng buộc dữ liệu, transaction, và mô hình quan hệ chặt, nhưng có thể tăng độ phức tạp schema khi dữ liệu biến thiên mạnh.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+Bảng~\ref{tab:tech-database} so sánh ba lựa chọn triển khai phổ biến cho tầng dữ liệu.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh các lựa chọn cơ sở dữ liệu cho dữ liệu Email}
+    \label{tab:tech-database}
+    \begin{tabular}{|p{2cm}|p{4cm}|p{4cm}|p{4cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{MongoDB (Document)} & \textbf{PostgreSQL (RDBMS)} & \textbf{MySQL/SQL Server (RDBMS)} \\
+        \hline
+        Cấu trúc dữ liệu & Rất tốt (schema linh hoạt) & Tốt nếu thiết kế schema kỹ; cần mapping & Tốt nếu schema ổn định; cần mapping \\
+        \hline
+        Tốc độ iterate PoC & Cao (thêm trường nhanh) & Trung bình (migration/DDL) & Trung bình (migration/DDL) \\
+        \hline
+        Ràng buộc dữ liệu & Trung bình (ở mức ứng dụng) & Mạnh (constraints, transaction) & Mạnh (constraints, transaction) \\
+        \hline
+        Truy vấn quan hệ & Trung bình; join hạn chế & Rất tốt (SQL, join) & Rất tốt (SQL, join) \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Phù hợp ingest Gmail + lưu summary & Hợp nếu ưu tiên reporting/join phức tạp & Hợp cho hệ thống doanh nghiệp truyền thống \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+Báo cáo chọn \textbf{MongoDB} để lưu trữ dữ liệu email và metadata do phù hợp với dữ liệu bán cấu trúc, hỗ trợ mở rộng schema nhanh, và thuận lợi cho chiến lược \textit{embed summary} nhưng \textit{reference messages} nhằm tránh giới hạn kích thước document.
+
+\subsection{Cache/Queue: Redis cho PoC và định hướng mở rộng}
+\label{subsec:TechStackRedis}
+
+Hệ thống cần một thành phần nhẹ để hỗ trợ cache và phối hợp tác vụ bất đồng bộ trong tương lai. \textbf{Redis} là một in-memory data store phổ biến, có thể dùng cho cache và một số mô hình hàng đợi đơn giản; đồng thời Redis hỗ trợ Pub/Sub phù hợp cho các cơ chế cập nhật tức thời ở mức thiết kế.
+
+Trong bối cảnh PoC, Redis được ưu tiên vì đơn giản trong triển khai và vận hành (chạy được qua Docker), đủ đáp ứng nhu cầu cache/queue cơ bản. Trong triển khai đầy đủ, tuỳ mức yêu cầu reliability và throughput, hệ thống có thể cân nhắc message broker chuyên dụng.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+Bảng~\ref{tab:tech-queue} so sánh Redis với các lựa chọn message broker phổ biến.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh Redis, RabbitMQ và Kafka trong bối cảnh PoC}
+    \label{tab:tech-queue}
+    \begin{tabular}{|p{2cm}|p{4cm}|p{4cm}|p{4cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Redis} & \textbf{RabbitMQ} & \textbf{Kafka} \\
+        \hline
+        Triển khai PoC & Rất tốt (setup nhanh) & Tốt nhưng cần cấu hình nhiều hơn & Kém, cồng kềnh \\
+        \hline
+        Message reliability & Trung bình (tuỳ pattern) & Cao (ack/retry/routing) & Cao (log-based, replay) \\
+        \hline
+        Vận hành/giám sát & Đơn giản & Trung bình & Cao \\
+        \hline
+        Throughput/scale & Tốt ở mức vừa & Tốt & Rất tốt (streaming lớn) \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Đủ cho PoC; phù hợp cache/PubSub & Hợp cho production queue chuẩn & Hợp cho event streaming quy mô lớn \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+PoC chọn \textbf{Redis} như một nền tảng đa dụng cho cache/queue, giúp đơn giản hoá vận hành. Trong triển khai đầy đủ, Redis vẫn hữu ích cho cache và Pub/Sub, trong khi message broker chuyên dụng có thể được cân nhắc khi yêu cầu reliability và throughput tăng.
+
+\subsection{Triển khai PoC: Docker Compose và khả năng chuyển tiếp}
+\label{subsec:TechStackInfra}
+
+Mục tiêu triển khai PoC là đảm bảo môi trường chạy đồng nhất và tái lập (reproducible) trên nhiều máy, giảm rủi ro sai lệch phiên bản của MongoDB/Redis và cấu hình mạng giữa các service. \textbf{Docker} cho phép đóng gói ứng dụng và phụ thuộc thành container; \textbf{Docker Compose} cung cấp cách mô tả nhiều container và network bằng cấu hình, phù hợp với hệ thống có nhiều service.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+Bảng~\ref{tab:tech-infra} so sánh ba cách triển khai môi trường cho PoC và cho production.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh các lựa chọn triển khai môi trường}
+    \label{tab:tech-infra}
+    \begin{tabular}{|p{2cm}|p{4cm}|p{4cm}|p{4cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Docker Compose} & \textbf{Chạy local không container} & \textbf{Kubernetes} \\
+        \hline
+        Tính tái lập & Cao & Thấp--trung bình & Cao \\
+        \hline
+        Thiết lập PoC & Nhanh & Nhanh ban đầu, dễ lệch môi trường & Chậm; cấu hình nhiều \\
+        \hline
+        Vận hành/giám sát & Đơn giản & Phụ thuộc máy người dùng & Phức tạp (production-grade) \\
+        \hline
+        Khả năng mở rộng & Trung bình; đủ cho demo & Hạn chế & Rất tốt \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Phù hợp nhất cho PoC & Chỉ hợp demo nhỏ; khó tái lập & Hợp production; overkill cho PoC \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+Báo cáo chọn \textbf{Docker Compose} để mô phỏng hạ tầng tối thiểu (MongoDB, Redis) cho PoC. Khi hệ thống mở rộng, kiến trúc hiện tại có thể chuyển tiếp sang các nền tảng orchestration như Kubernetes với chi phí thay đổi thấp do các thành phần đã được container hoá.
 
 \subsection{Bối cảnh AI trong các hệ thống giao tiếp}
 \label{subsec:AIContextCommunication}
@@ -122,7 +325,7 @@ Trong bối cảnh nền tảng Email-centric, Prompt Engineering có một số
 
 \paragraph{Ví dụ prompt tóm tắt chuỗi email.}
 
-Dưới đây là một ví dụ rút gọn về prompt dùng cho tác vụ FR-06 (tóm tắt cuộc trao đổi) trong hệ thống:
+Dưới đây là một ví dụ rút gọn về prompt dùng cho tác vụ FR-07 (tóm tắt luồng trao đổi) trong hệ thống:
 
 \begin{lstlisting}[style=CStyle, language={}]
 You are an assistant that summarizes email threads for a recruiter.
@@ -144,7 +347,7 @@ Với cách thiết kế này, hệ thống có thể lấy kết quả JSON, l�
 
 \paragraph{Ví dụ prompt gợi ý phản hồi (smart reply).}
 
-Đối với FR-07 (gợi ý phản hồi), prompt có thể được thiết kế như sau:
+Đối với FR-08 (gợi ý phản hồi), prompt có thể được thiết kế như sau:
 
 \begin{lstlisting}[style=CStyle, language={}]
 You are an assistant helping a recruiter reply to candidates.

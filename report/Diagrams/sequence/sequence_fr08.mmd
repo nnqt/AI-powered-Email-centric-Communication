@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant FE as Frontend (Next.js)
+    participant LB as Load Balancer
+    participant BE as Backend API (Next.js Routes)
+    participant Q as Redis Queue
+    participant AI as AI Worker (FastAPI)
+    participant LLM as Gemini API
+    participant DB as MongoDB
+    participant C as Redis Cache (TTL)
+    participant R as Redis Pub/Sub
+
+    Note over U,FE: Phase 1 - Request suggestion
+    U->>FE: Click "Suggest reply"
+    FE->>LB: POST /api/threads/:id/suggest-reply
+    LB->>BE: Forward request
+    BE->>DB: Load thread context (latest messages)
+    DB-->>BE: Context
+
+    Note over BE,AI: Phase 2 - Async AI generation
+    BE->>Q: Enqueue SMART_REPLY(threadId, context)
+    Q-->>AI: Dequeue SMART_REPLY
+    AI->>LLM: Generate 2-3 reply candidates
+    LLM-->>AI: Reply candidates
+    AI->>C: Cache suggestions (TTL) keyed by threadId
+    AI->>R: Publish SMART_REPLY_READY(threadId)
+
+    Note over R,FE: Phase 3 - Update UI
+    R-->>BE: Event delivered
+    BE-->>FE: Push via WS (FR-05)
+    FE->>BE: GET /api/threads/:id/suggest-reply
+    BE->>C: Fetch cached suggestions
+    C-->>BE: Suggestions
+    BE-->>FE: Suggestions payload

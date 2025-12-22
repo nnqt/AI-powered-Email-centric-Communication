@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    participant BE as Backend API
+    participant Q as Redis Queue
+    participant AI as AI Worker (FastAPI)
+    participant LLM as Gemini API
+    participant DB as MongoDB
+    participant R as Redis Pub/Sub
+    participant FE as Frontend
+
+    Note over BE,DB: Phase 1 - Create basic Contact
+    BE->>DB: Create Contact(status=NEW) from new address
+    BE->>Q: Enqueue CONTACT_ENRICH(contactId)
+
+    Note over AI,LLM: Phase 2 - AI enrichment
+    Q-->>AI: Dequeue CONTACT_ENRICH
+    AI->>DB: Load related context (threads/messages)
+    DB-->>AI: Context
+    AI->>LLM: Generate enrichment metadata
+    LLM-->>AI: Metadata (name/org/signature/...)
+
+    Note over AI,DB: Phase 3 - Propose merge candidates
+    AI->>DB: Save Contact(status=PENDING, proposals=...)
+    AI->>R: Publish CONTACT_ENRICHED / MERGE_PROPOSED
+
+    Note over R,FE: Phase 4 - Human-in-the-loop decision
+    R-->>BE: Event delivered
+    BE-->>FE: Push via WS (FR-05)
+    FE->>BE: POST /api/contacts/:id/merge (approve/reject)
+    BE->>DB: Apply merge if approved
+    BE->>R: Publish CONTACT_UPDATED

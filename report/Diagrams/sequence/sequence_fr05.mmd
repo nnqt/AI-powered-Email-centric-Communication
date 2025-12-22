@@ -1,0 +1,22 @@
+sequenceDiagram
+    autonumber
+    participant FE as Frontend (Next.js)
+    participant WS as WebSocket Gateway (Backend)
+    participant R as Redis Pub/Sub
+    participant BE as Backend API (Any node)
+    participant DB as MongoDB
+
+    Note over FE,WS: Phase 1 - Establish realtime channel
+    FE->>WS: Open WebSocket (auth context)
+    WS-->>FE: WS connected
+
+    Note over BE,R: Phase 2 - Internal event emitted
+    BE->>R: Publish EVENT (EMAIL_RECEIVED / MESSAGE_SENT / AI_DONE ...)
+    R-->>WS: Deliver EVENT (fan-out)
+
+    Note over WS,FE: Phase 3 - Push to client & refresh
+    WS-->>FE: Push EVENT payload
+    FE->>BE: GET /api/threads or /api/threads/:id (re-fetch)
+    BE->>DB: Query latest data
+    DB-->>BE: Threads/messages
+    BE-->>FE: Updated view model
