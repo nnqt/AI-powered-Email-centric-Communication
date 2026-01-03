@@ -1,0 +1,519 @@
+\chapter{Cơ sở công nghệ và lựa chọn Tech stack}
+\label{sec:TechStack}
+
+\section{Frontend stack: Next.js (React) và TypeScript}
+\label{subsec:TechStackFrontend}
+
+Frontend của hệ thống là lớp giao diện tương tác trực tiếp với người dùng, chịu trách nhiệm hiển thị danh sách thread (Inbox) và nội dung trao đổi theo từng thread (Timeline). Trong bối cảnh web app hiện đại, \textbf{Next.js} là một framework dựa trên \textbf{React} cung cấp cấu trúc routing theo file, hỗ trợ kết hợp nhiều chế độ render (client/server) và tích hợp tốt với hệ sinh thái JavaScript/TypeScript. \textbf{TypeScript} là lớp kiểu tĩnh (static typing) trên JavaScript, giúp mô tả cấu trúc dữ liệu rõ ràng và giảm lỗi tích hợp khi Frontend trao đổi dữ liệu với Backend. Ngoài ra, \textbf{TailwindCSS} được sử dụng như một utility-first CSS framework giúp tăng tốc độ dựng UI và duy trì tính nhất quán về style trong giai đoạn PoC.
+
+Với các tiêu chí của đề tài (đội phát triển nhỏ, cần kiểm chứng nhanh, và khả năng mở rộng về sau), Frontend cần đảm bảo luồng điều hướng rõ ràng (Inbox $\rightarrow$ Thread detail) và có khả năng mở rộng UI khi bổ sung các chức năng AI (hiển thị summary, gợi ý reply) hoặc đa kênh.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+Bảng~\ref{tab:tech-frontend} so sánh ba lựa chọn phổ biến cho việc triển khai Frontend web app.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh các lựa chọn Frontend cho PoC Email-centric}
+    \label{tab:tech-frontend}
+    \begin{tabular}{|p{3.2cm}|p{4.1cm}|p{4.1cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Next.js (React)} & \textbf{Angular} \\
+        \hline
+        Mục tiêu phù hợp & Web app nhiều màn hình; routing rõ ràng; dễ mở rộng  & Enterprise app; quy chuẩn mạnh \\
+        \hline
+        Tốc độ phát triển PoC & Cao (routing, cấu trúc dự án sẵn) & Trung bình (boilerplate và learning curve cao hơn) \\
+        \hline
+        Hệ sinh thái & Rất rộng (React/Next.js ecosystem) & Rộng nhưng thiên về full framework \\
+        \hline
+        Độ phức tạp & Trung bình; phù hợp team nhỏ & Cao; phù hợp team lớn/chuẩn hóa chặt \\
+        \hline
+        Khả năng mở rộng & Tốt; dễ chuẩn hoá layout/routing & Tốt nhưng phụ thuộc tổ chức dự án \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Cân bằng tốt giữa tốc độ và cấu trúc & Overkill cho PoC; chi phí học/triển khai cao \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+Báo cáo chọn \textbf{Next.js (React)} và \textbf{TypeScript} cho Frontend nhằm tối ưu tốc độ phát triển PoC và đảm bảo tính nhất quán kiểu dữ liệu khi giao tiếp với Backend. TypeScript giúp giảm lỗi tích hợp do sai lệch cấu trúc dữ liệu (data shape) giữa các API và UI, đồng thời hỗ trợ refactor an toàn khi hệ thống mở rộng.
+
+\section{Backend orchestration: Next.js API Routes và mô hình microservice}
+\label{subsec:TechStackBackend}
+
+Backend là lớp điều phối (orchestration layer) của hệ thống: tiếp nhận request từ Frontend, gọi Gmail API để đồng bộ dữ liệu, truy vấn MongoDB/Redis và gọi AI Service khi cần xử lý ngôn ngữ tự nhiên. Đây là workload \textit{I/O-bound} (nhiều kết nối mạng, độ trễ phụ thuộc dịch vụ bên ngoài), do đó tiêu chí lựa chọn ưu tiên sự đơn giản khi triển khai, khả năng xử lý đồng thời tốt, và tích hợp chặt với Frontend.
+
+Trong PoC, Backend được xây dựng bằng \textbf{Next.js API Routes} (Node.js + TypeScript). Bên cạnh đó, phần AI được tách thành \textbf{AI microservice} riêng bằng \textbf{FastAPI} (Python) để tận dụng hệ sinh thái AI/LLM và cô lập độ trễ của LLM khỏi luồng xử lý chính.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+	\textbf{(a) So sánh framework Backend.} Bảng~\ref{tab:tech-backend-framework} tóm tắt ba lựa chọn phổ biến.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh các lựa chọn framework Backend cho PoC}
+    \label{tab:tech-backend-framework}
+    \begin{tabular}{|p{2cm}|p{4cm}|p{4cm}|p{4cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Next.js API Routes} & \textbf{NestJS/Express} & \textbf{FastAPI monolith} \\
+        \hline
+        Mục tiêu phù hợp & PoC nhanh; TypeScript end-to-end & Backend Node.js chuyên biệt; kiến trúc rõ (NestJS) & Backend Python; hợp khi AI là trung tâm \\
+        \hline
+        Tốc độ phát triển PoC & Cao (cùng ecosystem với Frontend) & Trung bình--cao (tách repo, setup nhiều hơn) & Cao cho AI; trung bình cho web app tổng thể \\
+        \hline
+        Tích hợp với Frontend & Rất tốt (cùng Next.js/TypeScript) & Tốt nhưng cần chuẩn hoá DTO riêng & Cần cầu nối kiểu dữ liệu với TS (OpenAPI/SDK) \\
+        \hline
+        I/O-bound & Tốt (Node.js event loop) & Tốt (Node.js) & Tốt (async FastAPI) \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Giảm chi phí phối hợp; phù hợp PoC & Hợp cho hệ backend lớn; có thể nặng nề cho PoC & Hợp nếu chọn Python làm lõi; kém thuận lợi cho TS end-to-end \\
+        \hline
+    \end{tabular}
+\end{table}
+
+	\textbf{(b) So sánh kiến trúc tích hợp AI.} Bảng~\ref{tab:tech-backend-ai-arch} so sánh Monolith và Microservice tách AI.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh hai lựa chọn kiến trúc tích hợp AI}
+    \label{tab:tech-backend-ai-arch}
+    \begin{tabular}{|p{3cm}|p{5cm}|p{5cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Monolith (Backend + AI chung)} & \textbf{Microservice tách AI (FastAPI)} \\
+        \hline
+        Độ cô lập độ trễ LLM & Thấp; request người dùng dễ bị chặn & Cao; Backend điều phối, AI xử lý riêng \\
+        \hline
+        Khả năng scale & Scale chung; dễ lãng phí tài nguyên & Scale độc lập theo tải AI \\
+        \hline
+        Phụ thuộc công nghệ & Thường phải chọn một hệ sinh thái chính & Cho phép kết hợp TS (web) + Python (AI) \\
+        \hline
+        Độ phức tạp vận hành & Thấp hơn ở PoC & Tăng nhẹ (giao tiếp service-to-service) \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Đơn giản nhưng kém linh hoạt về sau & Cân bằng tốt giữa PoC và định hướng mở rộng \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+PoC chọn \textbf{Next.js API Routes} làm lớp điều phối (orchestration layer) và tách \textbf{FastAPI} thành một \textit{AI microservice}. Cách tiếp cận này vừa tận dụng lợi thế TypeScript ở luồng web app, vừa tận dụng ecosystem Python cho AI, đồng thời phù hợp với định hướng kiến trúc phân tán trình bày ở Chương~\ref{sec:ThietKe}.
+
+\section{Cơ sở dữ liệu: NoSQL và MongoDB cho dữ liệu Email bán cấu trúc}
+\label{subsec:TechStackDatabase}
+
+Dữ liệu email có tính bán cấu trúc (semi-structured): phần header và metadata đa dạng; nội dung có thể là plain text hoặc HTML; và hệ thống cần lưu kèm kết quả AI (summary, key issues, action required). Trong hệ thống Email-centric, dữ liệu tự nhiên nhất để truy vấn thường là \textbf{Thread} và \textbf{Message}, đồng thời schema có thể thay đổi nhanh trong giai đoạn PoC khi hoàn thiện mô hình dữ liệu.
+
+	\textbf{MongoDB} là một document database lưu trữ dữ liệu dưới dạng document (gần với JSON), phù hợp khi cần lưu trữ linh hoạt, dễ mở rộng trường dữ liệu và thuận tiện khi ingest dữ liệu từ các API như Gmail. Ngược lại, các hệ quản trị quan hệ (RDBMS) như \textbf{MySQL}, \textbf{PostgreSQL}, \textbf{SQL Server} mạnh ở ràng buộc dữ liệu, transaction, và mô hình quan hệ chặt, nhưng có thể tăng độ phức tạp schema khi dữ liệu biến thiên mạnh.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+Bảng~\ref{tab:tech-database} so sánh ba lựa chọn triển khai phổ biến cho tầng dữ liệu.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh các lựa chọn cơ sở dữ liệu cho dữ liệu Email}
+    \label{tab:tech-database}
+    \begin{tabular}{|p{2cm}|p{4cm}|p{4cm}|p{4cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{MongoDB (Document)} & \textbf{PostgreSQL (RDBMS)} & \textbf{MySQL/SQL Server (RDBMS)} \\
+        \hline
+        Cấu trúc dữ liệu & Rất tốt (schema linh hoạt) & Tốt nếu thiết kế schema kỹ; cần mapping & Tốt nếu schema ổn định; cần mapping \\
+        \hline
+        Tốc độ iterate PoC & Cao (thêm trường nhanh) & Trung bình (migration/DDL) & Trung bình (migration/DDL) \\
+        \hline
+        Ràng buộc dữ liệu & Trung bình (ở mức ứng dụng) & Mạnh (constraints, transaction) & Mạnh (constraints, transaction) \\
+        \hline
+        Truy vấn quan hệ & Trung bình; join hạn chế & Rất tốt (SQL, join) & Rất tốt (SQL, join) \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Phù hợp ingest Gmail + lưu summary & Hợp nếu ưu tiên reporting/join phức tạp & Hợp cho hệ thống doanh nghiệp truyền thống \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+Báo cáo chọn \textbf{MongoDB} để lưu trữ dữ liệu email và metadata do phù hợp với dữ liệu bán cấu trúc, hỗ trợ mở rộng schema nhanh, và thuận lợi cho chiến lược \textit{embed summary} nhưng \textit{reference messages} nhằm tránh giới hạn kích thước document.
+
+\section{Cache/Queue: Redis cho PoC và định hướng mở rộng}
+\label{subsec:TechStackRedis}
+
+Hệ thống cần một thành phần nhẹ để hỗ trợ cache và phối hợp tác vụ bất đồng bộ trong tương lai. \textbf{Redis} là một in-memory data store phổ biến, có thể dùng cho cache và một số mô hình hàng đợi đơn giản; đồng thời Redis hỗ trợ Pub/Sub phù hợp cho các cơ chế cập nhật tức thời ở mức thiết kế.
+
+Trong bối cảnh PoC, Redis được ưu tiên vì đơn giản trong triển khai và vận hành (chạy được qua Docker), đủ đáp ứng nhu cầu cache/queue cơ bản. Trong triển khai đầy đủ, tuỳ mức yêu cầu reliability và throughput, hệ thống có thể cân nhắc message broker chuyên dụng.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+Bảng~\ref{tab:tech-queue} so sánh Redis với các lựa chọn message broker phổ biến.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh Redis, RabbitMQ và Kafka trong bối cảnh PoC}
+    \label{tab:tech-queue}
+    \begin{tabular}{|p{2cm}|p{4cm}|p{4cm}|p{4cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Redis} & \textbf{RabbitMQ} & \textbf{Kafka} \\
+        \hline
+        Triển khai PoC & Rất tốt (setup nhanh) & Tốt nhưng cần cấu hình nhiều hơn & Kém, cồng kềnh \\
+        \hline
+        Message reliability & Trung bình (tuỳ pattern) & Cao (ack/retry/routing) & Cao (log-based, replay) \\
+        \hline
+        Vận hành/giám sát & Đơn giản & Trung bình & Cao \\
+        \hline
+        Throughput/scale & Tốt ở mức vừa & Tốt & Rất tốt (streaming lớn) \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Đủ cho PoC; phù hợp cache/PubSub & Hợp cho production queue chuẩn & Hợp cho event streaming quy mô lớn \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+PoC chọn \textbf{Redis} như một nền tảng đa dụng cho cache/queue, giúp đơn giản hoá vận hành. Trong triển khai đầy đủ, Redis vẫn hữu ích cho cache và Pub/Sub, trong khi message broker chuyên dụng có thể được cân nhắc khi yêu cầu reliability và throughput tăng.
+
+\section{Triển khai PoC: Docker Compose và khả năng chuyển tiếp}
+\label{subsec:TechStackInfra}
+
+Mục tiêu triển khai PoC là đảm bảo môi trường chạy đồng nhất và tái lập (reproducible) trên nhiều máy, giảm rủi ro sai lệch phiên bản của MongoDB/Redis và cấu hình mạng giữa các service. \textbf{Docker} cho phép đóng gói ứng dụng và phụ thuộc thành container; \textbf{Docker Compose} cung cấp cách mô tả nhiều container và network bằng cấu hình, phù hợp với hệ thống có nhiều service.
+
+\paragraph{So sánh các lựa chọn tiếp cận.}
+
+Bảng~\ref{tab:tech-infra} so sánh ba cách triển khai môi trường cho PoC và cho production.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh các lựa chọn triển khai môi trường}
+    \label{tab:tech-infra}
+    \begin{tabular}{|p{2cm}|p{4cm}|p{4cm}|p{4cm}|}
+        \hline
+        	\textbf{Tiêu chí} & \textbf{Docker Compose} & \textbf{Chạy local không container} & \textbf{Kubernetes} \\
+        \hline
+        Tính tái lập & Cao & Thấp--trung bình & Cao \\
+        \hline
+        Thiết lập PoC & Nhanh & Nhanh ban đầu, dễ lệch môi trường & Chậm; cấu hình nhiều \\
+        \hline
+        Vận hành/giám sát & Đơn giản & Phụ thuộc máy người dùng & Phức tạp (production-grade) \\
+        \hline
+        Khả năng mở rộng & Trung bình; đủ cho demo & Hạn chế & Rất tốt \\
+        \hline
+        Nhận xét trong bối cảnh đề tài & Phù hợp nhất cho PoC & Chỉ hợp demo nhỏ; khó tái lập & Hợp production; overkill cho PoC \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Kết luận lựa chọn.}
+
+Báo cáo chọn \textbf{Docker Compose} để mô phỏng hạ tầng tối thiểu (MongoDB, Redis) cho PoC. Khi hệ thống mở rộng, kiến trúc hiện tại có thể chuyển tiếp sang các nền tảng orchestration như Kubernetes với chi phí thay đổi thấp do các thành phần đã được container hoá.
+
+\section{Bối cảnh AI trong các hệ thống giao tiếp}
+\label{subsec:AIContextCommunication}
+
+Trong Chương~\ref{sec:TongQuan}, báo cáo đã phân tích hai vấn đề cốt lõi trong môi trường giao tiếp đa kênh hiện nay: (i) Sự phân mảnh dữ liệu liên lạc giữa nhiều kênh khác nhau và (ii) Hiện tượng quá tải thông tin khi khối lượng email và tin nhắn tăng nhanh theo thời gian. Dưới góc nhìn kỹ thuật, đây là hai thách thức mà AI, đặc biệt là các mô hình xử lý ngôn ngữ tự nhiên (Natural Language Processing -- NLP), tỏ ra phù hợp để hỗ trợ.
+
+Trong khoảng 5 năm trở lại đây, sự xuất hiện của các LLM như GPT-3, GPT-4 (OpenAI), PaLM 2 và Gemini (Google), Claude (Anthropic), LLaMA/Llama 2/Llama 3 (Meta) đã tạo ra bước nhảy vọt về khả năng hiểu và sinh ngôn ngữ tự nhiên. Các mô hình này không chỉ dừng ở việc phân loại hay trích xuất thông tin đơn lẻ, mà có thể tóm tắt văn bản dài, trả lời câu hỏi có ngữ cảnh, gợi ý phản hồi, thậm chí lập kế hoạch hành động theo chuỗi bước. Các nhà cung cấp lớn như OpenAI, Google, Anthropic, Amazon Bedrock đã cung cấp các API thương mại ổn định để khai thác năng lực này trong ứng dụng thực tế.
+
+Đối với một hệ thống Email-centric, AI có thể đóng vai trò ở nhiều phương diện:
+\begin{itemize}
+    \item Ở phương diện \textbf{hiểu nội dung (Understanding)}, AI phân tích nội dung email và tin nhắn để nhận diện chủ đề chính, yêu cầu công việc, độ ưu tiên, cảm xúc.
+    \item Ở phương diện \textbf{tóm tắt (Summarization)}, AI rút gọn các chuỗi trao đổi dài thành vài đoạn ngắn, giúp người dùng nắm bối cảnh nhanh chóng mà không phải đọc lại toàn bộ.
+    \item Ở phương diện \textbf{hỗ trợ quyết định (Decision Support)}, AI gợi ý câu trả lời, soạn sẵn bản nháp email, hoặc đề xuất các công việc tiếp theo (gửi nhắc nhở, đặt lịch hẹn, yêu cầu thông tin bổ sung...).
+    \item Ở phương diện \textbf{tổ chức lại dữ liệu (Knowledge Organization)}, AI giúp gắn tag, phân cụm, hợp nhất hồ sơ liên lạc (Contact Unification) dựa trên nội dung trao đổi, thay vì chỉ dựa trên địa chỉ email tĩnh.
+\end{itemize}
+
+Tuy nhiên, để khai thác AI một cách hiệu quả và bền vững, kiến trúc hệ thống cần lựa chọn hình thức triển khai phù hợp (Local vs. Cloud), cũng như kỹ thuật tích hợp LLM tương ứng với từng yêu cầu chức năng.
+
+\section{Phân loại giải pháp AI: Local vs. Cloud}
+\label{subsec:LocalVsCloud}
+
+\subsection{Tìm hiểu về Local AI và Cloud AI}
+\label{subsubsec:DefOperation}
+
+Các giải pháp AI hiện nay có thể được chia thành hai nhóm chính:
+
+\begin{itemize}
+    \item \textbf{Cloud AI}: mô hình AI được vận hành trên hạ tầng đám mây của các nhà cung cấp lớn như OpenAI (Azure/OpenAI Service), Google Cloud (Vertex AI, Gemini API), Amazon Web Services (Amazon Bedrock, Amazon Titan), Anthropic (Claude)\footnote{Xem tài liệu chính thức của OpenAI, Google Cloud, AWS, Anthropic về các dịch vụ LLM API.}. Ứng dụng khách gửi request tới API từ xa (over-the-wire), nhận kết quả thông qua giao thức HTTP(S) hoặc WebSocket.
+    \item \textbf{Local AI / On-premise AI}: mô hình AI được tải về và chạy trên hạ tầng do tổ chức tự quản lý (máy chủ GPU nội bộ, cluster Kubernetes, hoặc thậm chí máy trạm cá nhân). Ví dụ: triển khai các mô hình mã nguồn mở như Llama 3 (Meta), Mistral, Mixtral, Phi-3 (Microsoft) thông qua các framework như Hugging Face Transformers, vLLM, Ollama hoặc các hệ thống suy luận tối ưu hóa.
+\end{itemize}
+
+Về bản chất, cả hai nhóm đều dựa trên các kiến trúc LLM tương tự (transformer-based), nhưng khác nhau ở vị trí \textit{deploy} (đám mây công cộng vs. hạ tầng tự quản lý), mô hình chi phí và cách tiếp cận về bảo mật, tuân thủ quy định (compliance).
+
+\subsection{Ưu điểm, nhược điểm và ví dụ tiêu biểu}
+\label{subsubsec:ProsConsExamples}
+
+\paragraph{Cloud AI.}
+
+Các dịch vụ Cloud AI mang lại nhiều lợi ích cho giai đoạn PoC và cả triển khai sản phẩm:
+\begin{itemize}
+    \item \textbf{Ưu điểm:}
+    \begin{itemize}
+        \item \textit{Chất lượng mô hình cao:} Các nhà cung cấp như OpenAI, Google, Anthropic liên tục huấn luyện và tinh chỉnh những mô hình mới (ví dụ GPT-4.1, GPT-4o, Gemini 1.5, Claude 3) với chất lượng vượt trội so với nhiều mô hình mã nguồn mở cùng thời điểm theo các benchmark công khai (MMLU, GSM8K, BIG-Bench).
+        \item \textit{Hạ tầng sẵn có và khả năng mở rộng:} Người dùng không phải quản lý cluster GPU, không phải lo về scaling khi số lượng request tăng, vì hạ tầng đã được ẩn sau lớp API.
+        \item \textit{Thời gian triển khai nhanh:} Việc tích hợp chỉ cần gọi API qua HTTP/REST hoặc WebSocket, phù hợp cho các đội nhỏ muốn kiểm chứng nhanh ý tưởng.
+        \item \textit{Dịch vụ đi kèm phong phú:} Nhiều nền tảng cung cấp thêm tính năng như embedding, RAG-as-a-service, function calling, tool calling, monitoring và logging tập trung.
+    \end{itemize}
+    \item \textbf{Nhược điểm:}
+    \begin{itemize}
+        \item \textit{Chi phí vận hành theo usage:} Chi phí phụ thuộc vào số token đầu vào/đầu ra, số lần gọi API và model tier. Với khối lượng email lớn hoặc cần tóm tắt lịch sử dài thường xuyên, chi phí có thể tăng nhanh nếu không có chiến lược tối ưu (cache, batch, giới hạn độ dài).
+        \item \textit{Phụ thuộc vào bên thứ ba:} Hệ thống phụ thuộc vào SLA, chính sách giá, chính sách dữ liệu và độ ổn định của nhà cung cấp.
+        \item \textit{Quan ngại về dữ liệu:} Dù các nhà cung cấp lớn thường cam kết không dùng dữ liệu của khách hàng để huấn luyện thêm mà không có opt-in, nhiều tổ chức vẫn có yêu cầu nghiêm ngặt về việc không đưa dữ liệu nhạy cảm (như hợp đồng, hồ sơ ứng viên) ra ngoài hạ tầng nội bộ.
+    \end{itemize}
+\end{itemize}
+
+\paragraph{Local AI / On-premise AI.}
+
+Local AI lại mang đến một tập ưu/nhược điểm khác:
+\begin{itemize}
+    \item \textbf{Ưu điểm:}
+    \begin{itemize}
+        \item \textit{Kiểm soát dữ liệu tốt hơn:} Tất cả dữ liệu và kết quả suy luận được xử lý trong hạ tầng nội bộ, phù hợp với các yêu cầu tuân thủ như GDPR, yêu cầu của ngành tài chính, y tế hoặc các doanh nghiệp có chính sách bảo mật nghiêm ngặt.
+        \item \textit{Mô hình chi phí linh hoạt:} Sau khi đầu tư hạ tầng (phần cứng, GPU), chi phí suy luận biên (Marginal cost) cho mỗi request có thể thấp hơn so với Cloud AI nếu khối lượng sử dụng lớn và liên tục.
+        \item \textit{Tùy biến sâu:} Tổ chức có thể tinh chỉnh mô hình (Fine-tune), cài thêm thành phần kiểm soát, lọc nội dung, hoặc kết hợp nhiều mô hình theo cách riêng.
+    \end{itemize}
+    \item \textbf{Nhược điểm:}
+    \begin{itemize}
+        \item \textit{Yêu cầu hạ tầng và chuyên môn:} Vận hành Local AI đòi hỏi kiến thức về quản trị hệ thống, tối ưu suy luận (Inference optimization), cũng như cập nhật bảo mật cho các thành phần liên quan.
+        \item \textit{Khó bắt kịp tốc độ tiến hóa của mô hình:} Các mô hình mã nguồn mở mới liên tục xuất hiện, nhưng vẫn thường chậm hơn 1--2 thế hệ so với mô hình thương mại hàng đầu về chất lượng tổng thể.
+        \item \textit{Chi phí đầu tư ban đầu cao:} Với doanh nghiệp nhỏ hoặc PoC, việc đầu tư GPU chuyên dụng có thể không kinh tế so với việc dùng API Cloud theo mức sử dụng.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Bảng so sánh Local AI và Cloud AI}
+\label{subsubsec:ComparisonTable}
+
+Bảng~\ref{tab:local-vs-cloud} tóm tắt một số khía cạnh so sánh chính giữa Cloud AI và Local AI trong bối cảnh một nền tảng Email-centric.
+
+\begin{table}[ht]
+    \centering
+    \caption{So sánh Cloud AI và Local AI trong bối cảnh hệ thống Email-centric}
+    \label{tab:local-vs-cloud}
+    \begin{tabular}{|p{3cm}|p{5.2cm}|p{5.2cm}|}
+        \hline
+        \textbf{Tiêu chí} & \textbf{Cloud AI} & \textbf{Local AI / On-premise} \\
+        \hline
+        Chi phí ban đầu & Thấp, trả theo mức sử dụng (pay-as-you-go) & Cao, đầu tư hạ tầng (GPU, server) ban đầu \\
+        \hline
+        Chi phí dài hạn & Có thể cao nếu khối lượng request lớn, cần tối ưu qua cache và batching & Có thể rẻ hơn nếu tận dụng tối đa hạ tầng đã đầu tư \\
+        \hline
+        Độ trễ (latency) & Phụ thuộc mạng Internet và vị trí data center; thường ổn định nhưng có \textit{network overhead} & Có thể thấp hơn nếu hạ tầng đặt gần ứng dụng; phụ thuộc tối ưu suy luận \\
+        \hline
+        Bảo mật và quyền riêng tư & Dữ liệu đi qua hạ tầng bên thứ ba; phụ thuộc vào cam kết và chính sách của nhà cung cấp & Dữ liệu nằm trong hạ tầng nội bộ; dễ đáp ứng các yêu cầu tuân thủ nghiêm ngặt \\
+        \hline
+        Khả năng mở rộng & Rất cao, do hạ tầng được ẩn sau API & Phụ thuộc tài nguyên vật lý; cần cơ chế scale-out thủ công hoặc qua Kubernetes \\
+        \hline
+        Cập nhật mô hình & Tự động được hưởng lợi từ các phiên bản model mới & Cần chủ động cập nhật mô hình, kiểm thử lại hệ thống \\
+        \hline
+        Mức độ kiểm soát & Ít kiểm soát nội bộ đối với kiến trúc và tham số mô hình & Kiểm soát sâu, có thể tinh chỉnh, thêm guardrail và pipeline riêng \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Đối với PoC trong báo cáo này, việc sử dụng Cloud AI (cụ thể là Google Gemini API) là lựa chọn hợp lý để rút ngắn thời gian phát triển và tận dụng mức chi phí linh hoạt cho cá nhân/nhóm nhỏ, trong khi kiến trúc vẫn được thiết kế mở để có thể thay thế hoặc bổ sung Local AI trong tương lai khi nhu cầu bảo mật và tối ưu chi phí tăng cao.
+
+\section{Các phương pháp tiếp cận LLM}
+\label{subsec:ApproachesLLM}
+
+\subsection{Phương pháp Prompt Engineering}
+\label{subsubsec:PromptEng}
+
+Prompt Engineering là kỹ thuật thiết kế và điều chỉnh nội dung yêu cầu (prompt) gửi tới LLM nhằm đạt được kết quả mong muốn, ổn định và dễ kiểm soát mà không cần thay đổi tham số bên trong mô hình. Các nhà cung cấp lớn như OpenAI, Google (Gemini), Anthropic đều khuyến nghị coi prompt như một \textit{lớp lập trình} trên mô hình, với các kỹ thuật như chain-of-thought, few-shot learning, role specification\footnote{Xem hướng dẫn Prompt Engineering từ OpenAI, Google Gemini trong tài liệu chính thức của họ.}.
+
+Trong bối cảnh nền tảng Email-centric, Prompt Engineering có một số vai trò quan trọng:
+\begin{itemize}
+    \item Ràng buộc mô hình tạo ra các tóm tắt email ngắn gọn, tập trung vào các key issues, tránh \textit{hallucination}.
+    \item Yêu cầu mô hình trả về kết quả ở dạng JSON có cấu trúc (ví dụ: summary, sentiment, key\_issues, action\_required) để backend dễ xử lý tiếp.
+    \item Hướng mô hình sinh gợi ý phản hồi (smart reply) phù hợp với vai trò và ngữ cảnh giao tiếp (tuyển dụng, chăm sóc khách hàng, hỗ trợ kỹ thuật...).
+\end{itemize}
+
+\paragraph{Ví dụ prompt tóm tắt chuỗi email.}
+
+Dưới đây là một ví dụ rút gọn về prompt dùng cho tác vụ FR-07 (tóm tắt luồng trao đổi) trong hệ thống:
+
+\begin{lstlisting}[style=CStyle, language={}]
+You are an assistant that summarizes email threads for a recruiter.
+
+Input: a list of emails in chronological order.
+
+Task:
+- Produce a concise summary (3-5 sentences) focusing on:
+  * current status of the conversation
+  * key decisions and agreements
+  * open questions or pending actions
+- Return JSON with fields: `summary`, `key_issues`, `action_required`.
+
+Emails:
+{{thread_text}}
+\end{lstlisting}
+
+Với cách thiết kế này, hệ thống có thể lấy kết quả JSON, lưu trực tiếp vào MongoDB (cùng với bản ghi email thread) và đẩy một bản tóm tắt ngắn lên giao diện Timeline.
+
+\paragraph{Ví dụ prompt gợi ý phản hồi (smart reply).}
+
+Đối với FR-08 (gợi ý phản hồi), prompt có thể được thiết kế như sau:
+
+\begin{lstlisting}[style=CStyle, language={}]
+You are an assistant helping a recruiter reply to candidates.
+
+Given the latest email from the candidate and the conversation context,
+propose 2-3 short, polite reply options.
+
+Requirements:
+- Keep each reply under 150 words.
+- Match the tone: professional, friendly, concise.
+- Do NOT invent facts (salary, company policy) if they are not present.
+
+Return JSON: { "replies": ["...", "...", "..."] }.
+
+Context:
+{{conversation_context}}
+
+Latest email:
+{{latest_email}}
+\end{lstlisting}
+
+Prompt Engineering có ưu điểm là \textbf{không cần dữ liệu huấn luyện riêng} và \textbf{triển khai nhanh}, rất phù hợp với giai đoạn PoC. Tuy nhiên, nhược điểm là kết quả đôi khi thiếu ổn định, phụ thuộc vào model version và khó đảm bảo hành vi tuyệt đối nhất quán trong mọi trường hợp.
+
+\subsection{Fine-tuning và LoRA}
+\label{subsubsec:FineTuningLoRA}
+
+Fine-tuning là quá trình tiếp tục huấn luyện một mô hình đã được huấn luyện sẵn (pre-trained model) trên một tập dữ liệu hẹp hơn, mang tính miền (domain-specific) hoặc tác vụ (task-specific), nhằm điều chỉnh hành vi của mô hình phù hợp hơn với nhu cầu cụ thể. Các nền tảng như OpenAI, Google Vertex AI / Gemini, AWS Bedrock đều cung cấp dịch vụ fine-tuning cho một số dòng mô hình nhất định.
+
+LoRA (Low-Rank Adaptation) là một kỹ thuật fine-tuning hiệu quả, trong đó chỉ một số ma trận hạng thấp (low-rank matrices) được huấn luyện thêm và \textit{gắn} vào mô hình gốc, giúp giảm đáng kể số tham số cần cập nhật và tài nguyên tính toán so với việc tinh chỉnh toàn bộ mô hình. LoRA phổ biến trong cộng đồng mô hình mã nguồn mở (ví dụ với Llama, Mistral) do tính linh hoạt và tiết kiệm chi phí.
+
+\paragraph{Quy trình fine-tuning tổng quát.}
+
+Quy trình điển hình gồm các bước:
+\begin{enumerate}
+    \item Thu thập và làm sạch dữ liệu huấn luyện phù hợp với tác vụ (ví dụ: cặp \texttt{email thread} -- \texttt{summary chuẩn}, hoặc \texttt{email} -- \texttt{reply chất lượng cao}).
+    \item Chuyển đổi dữ liệu về định dạng mà nhà cung cấp yêu cầu (JSONL, CSV, v.v.).
+    \item Cấu hình bài toán fine-tuning (model base, số epoch, learning rate, batch size, tiêu chí dừng...).
+    \item Chạy quá trình huấn luyện trên hạ tầng cloud hoặc local GPU.
+    \item Đánh giá mô hình mới trên tập kiểm thử (validation/test set) và so sánh với mô hình gốc.
+    \item Triển khai (deploy) mô hình đã tinh chỉnh vào pipeline suy luận của hệ thống.
+\end{enumerate}
+
+\paragraph{Khi nào nên dùng fine-tuning / LoRA với hệ thống này.}
+
+\begin{itemize}
+    \item \textbf{Nên dùng nếu:}
+    \begin{itemize}
+        \item Doanh nghiệp có lượng lớn dữ liệu nội bộ chất lượng cao (email được gắn nhãn, các bản tóm tắt chuẩn, reply chuẩn theo quy định), đủ để huấn luyện.
+        \item Cần hành vi rất đặc thù, ví dụ giọng văn thương hiệu, quy tắc nghiệp vụ cố định, hoặc phải tuân thủ các \textit{template} chặt chẽ.
+        \item Mô hình mặc định dù đã sử dụng Prompt Engineering nhưng vẫn cho kết quả không đủ ổn định.
+    \end{itemize}
+    \item \textbf{Không nên (hoặc chưa cần) dùng nếu:}
+    \begin{itemize}
+        \item Hệ thống đang ở giai đoạn PoC, dữ liệu chưa đủ nhiều và chưa được gắn nhãn kỹ.
+        \item Chi phí và độ phức tạp để triển khai, giám sát một mô hình fine-tuned là quá lớn so với lợi ích tăng thêm.
+        \item Prompt Engineering kết hợp với RAG đã cho kết quả đáp ứng yêu cầu.
+    \end{itemize}
+\end{itemize}
+
+Đối với nền tảng Email-centric trong báo cáo này, ưu tiên \textbf{Prompt Engineering + RAG} trên các mô hình có sẵn, trong khi fine-tuning và LoRA được xem như hướng mở rộng khi hệ thống đã đi vào vận hành thực tế và tích lũy đủ dữ liệu.
+
+\subsection{Retrieval-Augmented Generation (RAG)}
+\label{subsubsec:RAG}
+
+RAG (Retrieval-Augmented Generation) là kiến trúc kết hợp giữa mô hình sinh ngôn ngữ (LLM) và một hệ thống truy vấn tri thức (retrieval system). Thay vì yêu cầu mô hình ``ghi nhớ'' tất cả tri thức trong tham số, RAG tách riêng phần tri thức thành một kho lưu trữ (ví dụ: vector database, Elasticsearch, hoặc đơn giản là collection trong MongoDB), sau đó:
+\begin{enumerate}
+    \item Nhận input (ví dụ: câu hỏi, yêu cầu tóm tắt, yêu cầu phân tích).
+    \item Truy vấn (retrieve) các đoạn văn bản liên quan trong kho dữ liệu (email lịch sử, log trao đổi, tài liệu hướng dẫn...).
+    \item Kết hợp input ban đầu với các đoạn trích liên quan thành một prompt đầy đủ.
+    \item Gửi prompt này tới LLM để sinh câu trả lời/tóm tắt, đảm bảo kết quả dựa trên tri thức cập nhật và chính xác hơn.
+\end{enumerate}
+
+RAG được nhiều công ty lớn (như Microsoft, Meta, Google) khuyến nghị như một chiến lược chính để xây dựng ứng dụng AI doanh nghiệp, vì cho phép cập nhật tri thức liên tục mà không cần fine-tuning mô hình gốc.
+
+Trong hệ thống Email-centric, RAG đặc biệt phù hợp với các bài toán:
+\begin{itemize}
+    \item Tóm tắt chuỗi email dài: thay vì đưa toàn bộ lịch sử vào prompt, hệ thống có thể chỉ truy vấn các đoạn email quan trọng (dựa trên thời gian, người gửi, từ khóa) rồi đưa vào LLM.
+    \item Trả lời câu hỏi theo bối cảnh: ví dụ, ``Khách hàng A đang ở trạng thái deal nào?'' hoặc ``Lần trao đổi gần nhất với ứng viên B là gì?'' có thể được trả lời bằng cách truy vấn lịch sử giao tiếp tương ứng rồi cho LLM tóm tắt.
+    \item Kết hợp nhiều nguồn: tích hợp email, ghi chú nội bộ, ticket hỗ trợ vào một kho chung để LLM có cái nhìn toàn diện khi sinh câu trả lời.
+\end{itemize}
+
+\section{AI Agent và khả năng mở rộng trong tương lai}
+\label{subsec:AIAgent}
+
+\subsection{Khái niệm và kiến trúc tổng quát}
+\label{subsubsec:AgentConcept}
+
+AI Agent là một mô hình (hoặc tập hợp mô hình) AI không chỉ sinh văn bản đơn lẻ, mà còn có khả năng \textbf{lập kế hoạch}, \textbf{tương tác với môi trường} và \textbf{sử dụng công cụ} để hoàn thành một mục tiêu ở mức cao (high-level goal). Nhiều nghiên cứu và sản phẩm gần đây (OpenAI o1, ReAct, AutoGPT, LangChain Agents, Microsoft AutoGen) đề xuất kiến trúc agent trong đó LLM đóng vai trò bộ não (reasoning engine), còn các ``tool'' là các API hoặc hàm có thể gọi được (function calling / tool calling).
+
+Một kiến trúc agent điển hình bao gồm các thành phần:
+\begin{itemize}
+    \item \textbf{Planner:} mô-đun (thường là LLM) có nhiệm vụ phân rã yêu cầu lớn thành chuỗi các bước nhỏ hơn, có thể thực thi được.
+    \item \textbf{Tools / Actions:} tập các hành động mà agent có thể thực thi, ví dụ gọi API backend để truy vấn email, tạo contact, gửi nhắc nhở, ghi chú timeline.
+    \item \textbf{Memory:} cơ chế lưu trữ trạng thái dài hạn hoặc ngắn hạn (short-term / long-term memory), bao gồm lịch sử trao đổi với người dùng, các hành động đã thực hiện, kết quả trung gian.
+    \item \textbf{Environment:} thế giới bên ngoài mà agent tương tác, ở đây là hệ thống Email-centric, cơ sở dữ liệu, Redis, các dịch vụ khác.
+    \item \textbf{Feedback Loop:} cơ chế đánh giá kết quả và điều chỉnh kế hoạch nếu cần (tự đánh giá hoặc có sự can thiệp của con người -- human-in-the-loop).
+\end{itemize}
+
+Trong bối cảnh doanh nghiệp, các agent thường được thiết kế dưới dạng \textit{co-pilot} cho nhân viên, nghĩa là agent hỗ trợ một phần công việc chứ không tự động hoá hoàn toàn, nhằm đảm bảo yếu tố an toàn, tuân thủ và trải nghiệm người dùng.
+
+\subsection{Kịch bản ứng dụng trong nền tảng Email-centric}
+\label{subsubsec:AgentScenarios}
+
+Dựa trên kiến trúc của hệ thống PoC, một số kịch bản agent tiềm năng có thể bao gồm:
+
+\paragraph{Agent quản lý inbox (Inbox Management Agent).}
+
+Agent này có mục tiêu hỗ trợ người dùng xử lý hộp thư đến một cách hiệu quả hơn:
+\begin{itemize}
+    \item Phân loại email theo mức độ ưu tiên (gấp, quan trọng, có thể đọc sau) dựa trên nội dung, lịch sử trao đổi và role của người gửi.
+    \item Gợi ý nhóm email theo ``topic'' hoặc ``deal'' để dễ theo dõi.
+    \item Đề xuất hành động tiếp theo (trả lời, chuyển tiếp, tạo task nội bộ, đặt lịch họp) cho từng email hoặc nhóm email.
+\end{itemize}
+
+Lúc này, planner sẽ đọc một batch email trong inbox, quyết định email nào cần gọi tool \texttt{summarizeThread}, tool nào gọi \texttt{suggestReply}, và khi nào cần ping người dùng để xác nhận.
+
+\paragraph{Agent follow-up (Follow-up Agent).}
+
+Agent follow-up chịu trách nhiệm theo dõi các thread đang treo (pending) và nhắc nhở người dùng gửi follow-up đúng thời điểm:
+\begin{itemize}
+    \item Theo dõi những email chưa nhận được phản hồi sau một khoảng thời gian cấu hình.
+    \item Sinh bản nháp email follow-up gợi ý, phù hợp ngữ cảnh (ví dụ nhắc nhẹ nhàng, hỏi thêm thông tin, chốt lịch).
+    \item Đề xuất lịch follow-up dựa trên mức độ ưu tiên của deal hoặc ứng viên.
+\end{itemize}
+
+Agent có thể dùng RAG để nhìn lại toàn bộ bối cảnh thread, đảm bảo follow-up không gây khó chịu (spam) và mang lại giá trị.
+
+\paragraph{Agent tạo ghi chú và báo cáo (Note-taking \\ Reporting Agent).}
+
+Agent này tập trung chuyển đổi các cuộc trao đổi rời rạc thành ghi chú và báo cáo có cấu trúc:
+\begin{itemize}
+    \item Tự động tạo ``meeting notes'' sau các cuộc trao đổi email dài hoặc sau khi người dùng gắn tag ``meeting'' cho một thread.
+    \item Tổng hợp nhật ký giao tiếp (communication timeline) theo từng contact hoặc account (khách hàng, ứng viên), phục vụ cho việc họp nội bộ hoặc báo cáo quản lý.
+\end{itemize}
+
+\subsection{Ưu điểm, hạn chế và thách thức triển khai}
+\label{subsubsec:AgentChallenges}
+
+Việc đưa AI Agent vào nền tảng Email-centric mang đến nhiều cơ hội nhưng cũng không ít thách thức:
+
+\begin{itemize}
+    \item \textbf{Ưu điểm:}
+    \begin{itemize}
+        \item Tăng mức độ tự động hoá công việc lặp lại (lọc email, nhắc follow-up, tạo ghi chú), giúp người dùng tập trung vào các quyết định mang tính chiến lược.
+        \item Khai thác tốt hơn tri thức ẩn trong lịch sử giao tiếp (implicit knowledge), nhờ khả năng tổng hợp và lập kế hoạch của agent.
+        \item Tạo ra trải nghiệm ``trợ lý cá nhân'' (personal assistant) gắn liền với inbox của mỗi người.
+    \end{itemize}
+    \item \textbf{Hạn chế và thách thức:}
+    \begin{itemize}
+        \item \textit{Độ tin cậy (reliability):} Agent có thể đưa ra kế hoạch hoặc hành động không phù hợp nếu prompt, cấu hình tool hoặc dữ liệu không đầy đủ. Cần cơ chế giám sát và giới hạn phạm vi hành động (ví dụ chỉ gợi ý, không tự động gửi email).
+        \item \textit{An toàn và quyền riêng tư:} Agent phải tuân thủ chặt chẽ chính sách truy cập dữ liệu (ai được phép xem email nào, ghi chú nào), đặc biệt khi hệ thống mở rộng sang multi-tenant.
+        \item \textit{Trải nghiệm người dùng (UX):} Nếu agent đưa ra quá nhiều gợi ý không liên quan hoặc gây phiền hà, người dùng dễ mất niềm tin và tắt chức năng này. Cần thiết kế luồng tương tác mượt mà, cho phép người dùng điều chỉnh mức độ can thiệp.
+        \item \textit{Chi phí vận hành:} Agent thường cần nhiều lượt gọi LLM hơn so với các chức năng đơn lẻ, do phải lập kế hoạch, gọi nhiều tool và đánh giá kết quả. Điều này đặt ra bài toán tối ưu chi phí (caching, batching, chọn model phù hợp cho từng bước).
+    \end{itemize}
+\end{itemize}
+
+\section{Hạn chế hiện tại của LLM trong bối cảnh doanh nghiệp}
+\label{subsec:LLMLimitationsEnterprise}
+
+Mặc dù LLM mang lại nhiều cơ hội cho các hệ thống giao tiếp, vẫn tồn tại một số hạn chế cần cân nhắc khi triển khai trong bối cảnh doanh nghiệp:
+
+\begin{itemize}
+    \item \textbf{Hiện tượng ``hallucination'':} Mô hình đôi khi tạo ra thông tin không chính xác hoặc hoàn toàn bịa ra nhưng trông có vẻ hợp lý. Trong môi trường doanh nghiệp, điều này có thể dẫn đến sai sót nghiệp vụ hoặc thông tin sai lệch gửi cho khách hàng nếu không có lớp kiểm tra.
+    \item \textbf{Thiếu tính minh bạch (interpretability):} Việc giải thích tại sao mô hình đưa ra một câu trả lời cụ thể là khó, khiến việc kiểm toán (audit) và chứng minh tuân thủ trở nên phức tạp.
+    \item \textbf{Chi phí và hiệu năng:} Các mô hình mạnh như GPT-4.x, Claude 3 thường có chi phí sử dụng và độ trễ cao hơn so với các mô hình nhỏ. Cần có chiến lược chọn model tier phù hợp cho từng tác vụ (ví dụ dùng model nhỏ cho phân loại, model lớn cho tóm tắt phức tạp).
+    \item \textbf{Quản lý dữ liệu và tuân thủ:} Doanh nghiệp phải đảm bảo dữ liệu gửi tới mô hình (dù là cloud hay local) tuân thủ các quy định như GDPR, các quy định nội bộ, và không làm rò rỉ thông tin nhạy cảm.
+    \item \textbf{Phụ thuộc vào nhà cung cấp:} Trong trường hợp sử dụng Cloud AI, thay đổi về giá, chính sách hoặc sự cố dịch vụ có thể ảnh hưởng trực tiếp đến hệ thống.
+    \item \textbf{Nhu cầu kỹ năng mới:} Đội ngũ phát triển cần bổ sung kỹ năng về Prompt Engineering, MLOps, Data Governance để vận hành hệ thống AI một cách bền vững.
+\end{itemize}

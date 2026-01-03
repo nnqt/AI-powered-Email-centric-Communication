@@ -1,0 +1,43 @@
+\begin{thebibliography}{99}
+
+\bibitem{aws-microservices-whitepaper}
+AWS Whitepaper: \textit{Implementing Microservices on AWS}.
+\newblock \url{https://docs.aws.amazon.com/whitepapers/latest/microservices-on-aws/microservices-on-aws.html}.
+\newblock (Truy cập: 22/12/2025).
+
+\bibitem{aws-well-architected}
+AWS Well-Architected (t\h{o}ng quan).
+\newblock \url{https://aws.amazon.com/architecture/well-architected/}.
+\newblock (Truy cập: 22/12/2025).
+
+\bibitem{aws-bedrock}
+Amazon Bedrock (t\h{o}ng quan s\h{a}n ph\h{a}m).
+\newblock \url{https://aws.amazon.com/bedrock/}.
+\newblock (Truy cập: 22/12/2025).
+
+\bibitem{aws-whitepapers-index}
+AWS Whitepapers \& guides (ch\h{i} m\d{u}c t\h{o}ng).
+\newblock \url{https://aws.amazon.com/whitepapers/}.
+\newblock (Truy cập: 22/12/2025).
+
+\bibitem{gcp-microservices}
+Google Cloud: \textit{What is Microservices Architecture?}.
+\newblock \url{https://cloud.google.com/learn/what-is-microservices-architecture}.
+\newblock (Truy cập: 22/12/2025).
+
+\bibitem{google-gemini-api-docs}
+Google AI for Developers: \textit{Gemini API documentation}.
+\newblock \url{https://ai.google.dev/gemini-api/docs}.
+\newblock (Truy cập: 22/12/2025).
+
+\bibitem{vertex-genai-overview}
+Vertex AI: \textit{Overview of Generative AI on Vertex AI}.
+\newblock \url{https://docs.cloud.google.com/vertex-ai/docs/generative-ai/overview}.
+\newblock (Truy cập: 22/12/2025).
+
+\bibitem{gcp-ai-ml-resources}
+Google Cloud Architecture Center: \textit{AI and machine learning resources}.
+\newblock \url{https://docs.cloud.google.com/architecture/ai-ml}.
+\newblock (Truy cập: 22/12/2025).
+
+\end{thebibliography}

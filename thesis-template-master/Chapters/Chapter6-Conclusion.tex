@@ -1,0 +1,104 @@
+\chapter{Tổng kết}
+\label{sec:KetLuan}
+
+Chương này tổng kết toàn bộ kết quả thực hiện trong giai đoạn 1 (14 tuần), đồng thời đề xuất kế hoạch cho giai đoạn 2 (14 tuần) theo định hướng mở rộng đa kênh (multi-channel). Các kế hoạch được trình bày dưới dạng biểu đồ Gantt (PNG sẽ được chèn sau), trong đó mã Mermaid được lưu riêng để thuận tiện export.
+
+\section{Tổng quan giai đoạn 1 (14 tuần)}
+
+Trong giai đoạn 1, kỳ vọng ban đầu của đồ án tương đối lớn: vừa phải khảo sát thị trường, nghiên cứu nền tảng AI/LLM và công nghệ web, vừa thiết kế hệ thống chi tiết và triển khai PoC bao phủ nhiều yêu cầu chức năng (FR).
+
+
+    \textbf{Kế hoạch ban đầu (Planned).} Trong 14 tuần, dự kiến dành khoảng \textbf{30\% thời gian cho triển khai PoC}, tương đương \textbf{4 tuần}. Phần còn lại dành cho nghiên cứu, thiết kế và viết báo cáo.
+
+
+    \textbf{Thực tế (Actual).} Do quản lý thời gian chưa tốt và khối lượng phần lý thuyết/báo cáo lớn hơn dự kiến, thời gian còn lại cho triển khai PoC chỉ khoảng \textbf{10\%}, tương đương \textbf{1 tuần}
+
+Vì vậy, PoC thực tế chỉ tập trung hoàn thiện một phần các luồng cốt lõi (FR-01/FR-04/FR-07) như đã tổng kết ở Chương~\ref{sec:HienThuc}.
+
+\section{Kế hoạch ban đầu giai đoạn 1 (Planned)}
+
+Kế hoạch ban đầu được tổ chức theo 5 nhóm công việc chính: (i) nghiên cứu đề tài và khảo sát giải pháp thị trường, (ii) nghiên cứu công nghệ và các phương pháp tiếp cận AI/LLM, microservices và web app, (iii) thiết kế hệ thống (kiến trúc và database), (iv) triển khai PoC, và (v) viết báo cáo.
+
+Để phù hợp với bố cục trang, biểu đồ Gantt được chia thành 2 phần: Tuần 1--7 và Tuần 8--14.
+
+\subsubsection*{Gantt (Planned) -- Tuần 1--7}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/gantt_gd1_planned_w1_7.png}
+    \caption{Biểu đồ Gantt giai đoạn 1 (Planned) -- Tuần 1--7}
+    \label{fig:gantt-gd1-planned-w1-7}
+\end{figure}
+
+\subsubsection*{Gantt (Planned) -- Tuần 8--14}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/gantt_gd1_planned_w8_14.png}
+    \caption{Biểu đồ Gantt giai đoạn 1 (Planned) -- Tuần 8--14}
+    \label{fig:gantt-gd1-planned-w8-14}
+\end{figure}
+
+\section{Kết quả thực tế giai đoạn 1 (Actual) và khó khăn}
+
+\subsection{Những gì đã thực hiện}
+Các kết quả chính trong giai đoạn 1 có thể tổng hợp theo 5 nhóm công việc như sau:
+\begin{itemize}
+    \item \textbf{Nghiên cứu đề tài và khảo sát thị trường:} tổng hợp các hướng tiếp cận Email client/CRM hỗ trợ AI; rút ra các yêu cầu thực tiễn như đồng bộ dữ liệu, phân loại luồng hội thoại, và trợ lý tóm tắt/phản hồi.
+    \item \textbf{Nghiên cứu công nghệ liên quan:} tổng hợp các phương pháp tiếp cận AI/LLM (Prompt Engineering, fine-tuning), đánh giá lựa chọn microservices, và lựa chọn tech stack web app phù hợp cho PoC.
+    \item \textbf{Thiết kế hệ thống:} hoàn thiện thiết kế kiến trúc các module chính và thiết kế database (User--Thread--Message, embed Summary), cùng các biểu đồ tuần tự cho các FR trọng yếu.
+    \item \textbf{Triển khai PoC:} hiện thực các luồng cốt lõi gồm đồng bộ email (FR-01) ở mức PoC, hiển thị Inbox/Thread Timeline (FR-04) và tóm tắt thread bằng AI (FR-07). Các FR còn lại chủ yếu dừng ở mức thiết kế/đề xuất.
+    \item \textbf{Viết báo cáo:} hoàn thiện phần tổng quan, phân tích yêu cầu, nền tảng công nghệ, thiết kế hệ thống và hiện thực PoC.
+\end{itemize}
+
+\subsection{Khó khăn và nguyên nhân dẫn đến kế hoạch không như dự kiến}
+Theo Grantt chart của giai đoạn 1, khó khăn chính không nằm ở một điểm cụ thể, mà nằm ở \textbf{quản lý phạm vi và phân bổ thời gian}:
+\begin{itemize}
+    \item \textbf{Kỳ vọng ban đầu quá rộng} so với năng lực thời gian của 14 tuần, trong khi nhiều hạng mục có độ bất định cao (Gmail integration, mô hình dữ liệu, và pipeline AI bất đồng bộ).
+    \item \textbf{Thời lượng cho phần lý thuyết và viết báo cáo bị kéo dài}, làm thời gian triển khai PoC bị co từ 4 tuần (kế hoạch) xuống còn 1 tuần (thực tế).
+    \item \textbf{Chi phí tích hợp (integration cost)} giữa nhiều thành phần (Next.js, OAuth, Gmail API, MongoDB, AI Service) khiến triển khai end-to-end cần nhiều buffer hơn dự kiến.
+\end{itemize}
+
+\subsubsection*{Gantt (Actual) -- Tuần 1--7}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/gantt_gd1_actual_w1_7.png}
+    \caption{Biểu đồ Gantt giai đoạn 1 (Actual) -- Tuần 1--7}
+    \label{fig:gantt-gd1-actual-w1-7}
+\end{figure}
+
+\subsubsection*{Gantt (Actual) -- Tuần 8--14}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/gantt_gd1_actual_w8_14.png}
+    \caption{Biểu đồ Gantt giai đoạn 1 (Actual) -- Tuần 8--14}
+    \label{fig:gantt-gd1-actual-w8-14}
+\end{figure}
+
+\section{Kế hoạch giai đoạn 2 (14 tuần)}
+
+Giai đoạn 2 được lập kế hoạch theo hướng \textbf{cân bằng giữa hoàn thiện phạm vi FR và các hạng mục mở rộng/kiểm thử}. 
+
+\subsubsection*{Gantt (Giai đoạn 2) -- Tuần 1--7 (50\%: hoàn tất FR-01..FR-09)}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/gantt_gd2_plan_w1_7.png}
+    \caption{Biểu đồ Gantt giai đoạn 2 (Plan) -- Tuần 1--7 (50\% hoàn tất FR)}
+    \label{fig:gantt-gd2-plan-w1-7}
+\end{figure}
+
+\subsubsection*{Gantt (Giai đoạn 2) -- Tuần 8--14 (50\%: mở rộng, kiểm thử, tổng kết)}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{Images/gantt_gd2_plan_w8_14.png}
+    \caption{Biểu đồ Gantt giai đoạn 2 (Plan) -- Tuần 8--14 (50\% future, testing, report)}
+    \label{fig:gantt-gd2-plan-w8-14}
+\end{figure}
+
+\section{Rủi ro giai đoạn 2 (Risks)}
+
+Các rủi ro chính trong giai đoạn 2 và hướng giảm thiểu bao gồm:
+\begin{itemize}
+    \item \textbf{Rủi ro mở rộng phạm vi do multi-channel (scope creep):} dễ phát sinh yêu cầu tích hợp thêm nhiều kênh khi chưa ổn định lõi email. \textit{Giảm thiểu:} khoá phạm vi theo milestone 14 tuần; trong giai đoạn 2 chỉ triển khai FR-09 ở mức adapter baseline, ưu tiên hoàn tất FR-01..FR-08.
+    \item \textbf{Rủi ro giới hạn Gmail API (quota/rate limit) và lỗi đồng bộ:} có thể ảnh hưởng trải nghiệm nếu sync không ổn định. \textit{Giảm thiểu:} throttling/backoff, lưu historyId đúng cách, bổ sung cơ chế retry và logging.
+    \item \textbf{Rủi ro chi phí/độ trễ LLM:} các tác vụ FR-06/FR-07/FR-08 có thể tốn thời gian và chi phí token. \textit{Giảm thiểu:} chạy bất đồng bộ (queue), cache kết quả theo TTL, giới hạn context và chuẩn hoá prompt.
+    \item \textbf{Rủi ro bảo mật và quyền riêng tư:} dữ liệu email nhạy cảm và token OAuth cần được xử lý chặt chẽ. \textit{Giảm thiểu:} giới hạn log, quản lý secret qua env, phân quyền truy cập dữ liệu theo userId, và cân nhắc chính sách lưu trữ/xoá dữ liệu trong các giai đoạn tiếp theo.
+\end{itemize}
