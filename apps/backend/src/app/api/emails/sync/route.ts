@@ -79,7 +79,7 @@ export async function GET() {
     await connectToDatabase();
 
     const user = await User.findById(userId).lean();
-    
+
     return NextResponse.json({
       hasMore: !!user?.gmailNextPageToken,
       nextPageToken: user?.gmailNextPageToken,

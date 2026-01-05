@@ -41,7 +41,9 @@ export function useThreads(limit: number = 20) {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
 
-  const url = cursor ? `/api/threads?limit=${limit}&cursor=${cursor}` : `/api/threads?limit=${limit}`;
+  const url = cursor
+    ? `/api/threads?limit=${limit}&cursor=${cursor}`
+    : `/api/threads?limit=${limit}`;
 
   const { data, error, isLoading, mutate } = useSWR<PaginatedThreadsResponse>(
     url,

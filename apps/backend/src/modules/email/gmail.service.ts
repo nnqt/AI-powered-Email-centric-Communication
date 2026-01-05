@@ -71,26 +71,26 @@ export class GmailService {
       const participants = new Set<string>();
       let threadSubject = "";
       let threadSnippet = "";
-      
+
       for (const msg of thread.messages || []) {
         const headers = msg.payload?.headers || [];
         const getHeader = (name: string) =>
           headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
             ?.value || "";
-        
+
         const from = getHeader("From");
         const toRaw = getHeader("To");
         const subject = getHeader("Subject");
-        
+
         if (from) participants.add(from);
         if (toRaw) {
           toRaw.split(",").forEach((email) => participants.add(email.trim()));
         }
-        
+
         if (!threadSubject && subject) {
           threadSubject = subject;
         }
-        
+
         // Use message snippet as thread snippet (from last message)
         if (msg.snippet) {
           threadSnippet = msg.snippet;
