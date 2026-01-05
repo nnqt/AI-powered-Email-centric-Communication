@@ -55,6 +55,9 @@ export default function ThreadDetailPage() {
     );
   }
 
+  console.log("Messages:", messages);
+  console.log("Thread:", thread);
+
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-4xl px-4 py-8">
@@ -65,7 +68,6 @@ export default function ThreadDetailPage() {
         >
           ← Back to Inbox
         </button>
-
         <header className="mb-6">
           <h1 className="text-xl font-semibold text-gray-900">
             {messages?.[0]?.subject || "Thread Detail"}
@@ -74,13 +76,11 @@ export default function ThreadDetailPage() {
             {messages?.length || 0} message(s)
           </p>
         </header>
-
         <AISummaryCard
           summary={thread.summary}
           onGenerate={handleSummarize}
           isGenerating={isGenerating}
         />
-
         <section className="space-y-4">
           {messages?.map((msg) => (
             <article

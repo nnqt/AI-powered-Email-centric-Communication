@@ -18,7 +18,9 @@ export class GmailService {
 
     const user = await User.findById(this.userId).lean();
     if (!user || !user.refreshToken) {
-      throw new Error("No refresh token found for user");
+      const error = new Error("No refresh token found for user");
+      (error as any).code = "UNAUTHORIZED";
+      throw error;
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID || "";
@@ -36,13 +38,18 @@ export class GmailService {
     return google.gmail({ version: "v1", auth: oauth2Client });
   }
 
-  public async syncEmails(): Promise<{ syncedMessages: number }> {
+  public async syncEmails(pageToken?: string): Promise<{
+    syncedMessages: number;
+    nextPageToken?: string;
+    hasMore: boolean;
+  }> {
     const gmail = await this.getGmailClient();
 
-    // List recent threads (limit 10 for PoC)
+    // List threads with pagination (50 per batch for better UX)
     const listRes = await gmail.users.threads.list({
       userId: "me",
-      maxResults: 10,
+      maxResults: 50,
+      pageToken: pageToken || undefined,
     });
 
     const threads = listRes.data.threads || [];
@@ -60,13 +67,45 @@ export class GmailService {
       const thread = threadRes.data;
       if (!thread.id) continue;
 
+      // Extract participants, subject, and snippet from messages
+      const participants = new Set<string>();
+      let threadSubject = "";
+      let threadSnippet = "";
+      
+      for (const msg of thread.messages || []) {
+        const headers = msg.payload?.headers || [];
+        const getHeader = (name: string) =>
+          headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
+            ?.value || "";
+        
+        const from = getHeader("From");
+        const toRaw = getHeader("To");
+        const subject = getHeader("Subject");
+        
+        if (from) participants.add(from);
+        if (toRaw) {
+          toRaw.split(",").forEach((email) => participants.add(email.trim()));
+        }
+        
+        if (!threadSubject && subject) {
+          threadSubject = subject;
+        }
+        
+        // Use message snippet as thread snippet (from last message)
+        if (msg.snippet) {
+          threadSnippet = msg.snippet;
+        }
+      }
+
       const threadDoc = await Thread.findOneAndUpdate(
         { id: thread.id },
         {
           id: thread.id,
           userId: new mongoose.Types.ObjectId(this.userId),
           historyId: thread.historyId,
-          snippet: thread.snippet,
+          snippet: thread.snippet || threadSnippet,
+          participants: Array.from(participants),
+          subject: threadSubject,
           lastMessageDate: thread.messages?.[thread.messages.length - 1]
             ?.internalDate
             ? new Date(
@@ -120,7 +159,20 @@ export class GmailService {
       }
     }
 
-    return { syncedMessages };
+    // Store nextPageToken for future syncs
+    const nextPageToken = listRes.data.nextPageToken;
+    const hasMore = !!nextPageToken;
+
+    await User.findByIdAndUpdate(this.userId, {
+      gmailNextPageToken: nextPageToken || null,
+      gmailSyncComplete: !hasMore,
+    });
+
+    return {
+      syncedMessages,
+      nextPageToken,
+      hasMore,
+    };
   }
 }
 

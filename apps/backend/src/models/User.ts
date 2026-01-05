@@ -7,6 +7,8 @@ export interface IUser extends Document {
   googleId: string;
   accessToken?: string;
   refreshToken?: string;
+  gmailNextPageToken?: string;
+  gmailSyncComplete?: boolean;
 }
 
 const UserSchema: Schema<IUser> = new Schema(

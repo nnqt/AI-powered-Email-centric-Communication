@@ -1,12 +1,29 @@
 "use client";
 
 import { useSession, signIn } from "next-auth/react";
+import { useEffect } from "react";
 
 import { SyncButton } from "@/components/SyncButton";
 import { ThreadList } from "@/features/inbox/ThreadList";
+import { useToast } from "@/components/Toast";
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (session?.expires) {
+      // showToast("Your session has expired. Please sign in again.", "error");
+    }
+  }, [session, showToast]);
+
+  if (status === "loading") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+        <p className="text-gray-600">Loading...</p>
+      </main>
+    );
+  }
 
   if (status === "unauthenticated") {
     return (

@@ -12,6 +12,8 @@ export interface IThread extends Document {
   historyId?: string;
   snippet?: string;
   lastMessageDate?: Date;
+  participants?: string[]; // List of email addresses in this thread
+  subject?: string; // Subject from first message
   summary?: IThreadSummary;
 }
 
@@ -22,6 +24,8 @@ const ThreadSchema: Schema<IThread> = new Schema(
     historyId: { type: String },
     snippet: { type: String },
     lastMessageDate: { type: Date },
+    participants: { type: [String], default: [] },
+    subject: { type: String },
     summary: {
       text: { type: String },
       key_issues: { type: [String], default: [] },

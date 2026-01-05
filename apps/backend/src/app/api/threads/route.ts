@@ -23,11 +23,12 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const limitParam = url.searchParams.get("limit");
     const limit = limitParam ? parseInt(limitParam, 10) || 20 : 20;
+    const cursor = url.searchParams.get("cursor") || undefined;
 
     const service = new TimelineService();
-    const threads = await service.getThreads(userId, limit);
+    const result = await service.getThreads(userId, limit, cursor);
 
-    return NextResponse.json(threads);
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error("Failed to fetch threads", error);
     return NextResponse.json(

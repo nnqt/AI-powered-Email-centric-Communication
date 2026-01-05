@@ -45,7 +45,7 @@ export function AISummaryCard({
     );
   }
 
-  if (!summary) {
+  if (!summary || !summary.text) {
     return (
       <div className="mb-4">
         <button
@@ -62,9 +62,18 @@ export function AISummaryCard({
 
   return (
     <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
-      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-purple-800">
-        <span>✨</span> AI Summary
-      </h3>
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-purple-800">
+          <span>✨</span> AI Summary
+        </h3>
+        <button
+          type="button"
+          onClick={onGenerate}
+          className="text-xs text-purple-600 hover:text-purple-800 hover:underline"
+        >
+          Regenerate
+        </button>
+      </div>
       <p className="mb-3 text-sm text-gray-700">{summary.text}</p>
 
       {summary.key_issues.length > 0 && (
