@@ -23,6 +23,8 @@ export interface ThreadDTO {
   createdAt?: string;
   updatedAt?: string;
   summary?: ThreadSummary;
+  isRead?: boolean;
+  isArchived?: boolean;
 }
 
 export interface PaginatedThreadsResponse {
@@ -47,7 +49,7 @@ export function useThreads(limit: number = 20) {
 
   const { data, error, isLoading, mutate } = useSWR<PaginatedThreadsResponse>(
     url,
-    fetcher
+    fetcher,
   );
 
   const goToNextPage = () => {

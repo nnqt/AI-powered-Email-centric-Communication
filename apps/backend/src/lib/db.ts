@@ -1,11 +1,5 @@
 import mongoose from "mongoose";
 
-const MONGO_URI = process.env.MONGO_URI || "";
-
-if (!MONGO_URI) {
-  throw new Error("MONGO_URI environment variable is not set");
-}
-
 interface MongooseGlobal {
   conn: typeof mongoose | null;
   promise: Promise<typeof mongoose> | null;
@@ -22,6 +16,11 @@ const cached = globalForMongoose.mongoose;
 export async function connectToDatabase(): Promise<typeof mongoose> {
   if (cached.conn) {
     return cached.conn;
+  }
+
+  const MONGO_URI = process.env.MONGO_URI;
+  if (!MONGO_URI) {
+    throw new Error("MONGO_URI environment variable is not set");
   }
 
   if (!cached.promise) {

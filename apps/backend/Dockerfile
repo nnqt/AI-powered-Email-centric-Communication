@@ -1,7 +1,17 @@
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+RUN apk add --no-cache curl
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 EXPOSE 4000
-CMD ["npm", "run", "dev"]
+ENV PORT=4000
+ENV HOSTNAME=0.0.0.0
+CMD ["node", "server.js"]

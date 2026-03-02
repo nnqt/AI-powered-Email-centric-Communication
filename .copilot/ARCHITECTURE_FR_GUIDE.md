@@ -6,14 +6,14 @@ where to implement new features.
 
 The current implementation focus is on:
 
-- FR-01 – Email sync (near real-time)
-- FR-02 – Basic email operations (read/archive/labels)
-- FR-03 – Contact-centric timeline view
-- FR-04 – Real-time UI update (timeline refresh)
-- FR-07 – Thread summarization (AI)
-- FR-08 – Smart reply suggestions (AI)
+- FR-01 – Email sync ✅ IMPLEMENTED
+- FR-02 – Basic email operations ✅ IMPLEMENTED
+- FR-03 – Contact-centric timeline view ✅ IMPLEMENTED
+- FR-07 – Thread summarization (AI) ✅ IMPLEMENTED
+- FR-08 – Smart reply suggestions (AI) ✅ IMPLEMENTED
+- FR-04 – Real-time UI update (WebSocket) ⏳ Next priority
 
-Other FRs/NFRs exist but are not yet implemented.
+Other FRs/NFRs exist but are out of scope for current PoC.
 
 ## Mapping FRs to Modules
 
@@ -40,43 +40,31 @@ such as Gmail (or any API-based provider) with minimal delay.
 - Store messages in MongoDB, keyed by thread/conversation id.
 - Design the sync logic to be idempotent (safe to run multiple times).
 
-### FR-02 – Basic Email Operations
+### FR-02 – Basic Email Operations ✅ IMPLEMENTED
 
 **Goal**: allow basic operations such as mark read/unread, archive,
-labeling, and composing/sending emails directly from the web app while
-keeping the provider (e.g. Gmail) in sync.
+and composing/sending emails directly from the web app while keeping
+Gmail in sync.
 
 **Primary modules**:
 
 - `apps/backend`:
-  - Routes for operations, e.g. `POST /api/emails/:id/read`,
-    `POST /api/emails/:id/archive`, `POST /api/emails/:id/label`.
-  - Route for sending email, e.g. `POST /api/emails/send` that accepts
-    recipients, subject, HTML body, and attachments, then calls the
-    provider API and stores the sent message in MongoDB.
-  - Email provider client functions to propagate changes back to the
-    email provider (including send).
+  - `apps/backend/src/modules/email/gmail.service.ts` — `markRead()`, `archiveThread()`, `sendEmail()`.
+  - `apps/backend/src/models/Thread.ts` — `isRead` (Boolean), `isArchived` (Boolean) fields.
+  - `apps/backend/src/app/api/threads/[threadId]/read/route.ts` — `PATCH` toggle read.
+  - `apps/backend/src/app/api/threads/[threadId]/archive/route.ts` — `PATCH` archive.
+  - `apps/backend/src/app/api/emails/send/route.ts` — `POST` send email.
 - `apps/frontend`:
-  - Inbox UI with per-thread state (read/unread, labels).
-  - Thread detail UI with buttons/menus for these actions.
-  - A dedicated **Compose Email** page or drawer (e.g. `/compose`)
-    that provides:
-    - Rich text editing (bold, italic, bullet list, quote) using a
-      suitable editor library.
-    - Attachment selection UI (even if attachment handling is
-      simplified in the PoC).
-    - Integration with `POST /api/emails/send` and navigation back to
-      the appropriate thread/inbox on success.
+  - `apps/frontend/src/components/ComposeDrawer.tsx` — bottom slide-up compose/reply drawer.
+  - `apps/frontend/src/features/inbox/ThreadList.tsx` — unread dot + bold + optimistic read/archive actions.
+  - `apps/frontend/src/app/page.tsx` — Compose button.
+  - `apps/frontend/src/app/threads/[id]/page.tsx` — Reply button + auto-mark-read.
 
 **Key ideas**:
 
-- The backend acts as the source of truth for state; provider updates
-  are mirrored.
-- Sent emails from the web app must appear both in the PoC inbox and
-  in the provider (e.g. Gmail "Sent"), so they share the same
-  thread/message ids where possible.
-- API routes should be small wrappers around domain functions
-  (services) that handle both DB and provider calls.
+- Backend là source of truth; mọi thay đổi đều được ghi vào MongoDB VÀ phản ánh lên Gmail API.
+- Optimistic UI: frontend cập nhật state ngay lập tức, revert nếu API call thất bại.
+- `sendEmail` upsert Thread + Message để sent email xuất hiện trong PoC inbox lẫn Gmail "Sent".
 
 ### FR-03 – Contact-Centric Timeline View
 
@@ -153,29 +141,29 @@ information overload, shown directly in the thread/timeline UI.
 - AI calls should be async and non-blocking for the main request path
   when possible.
 
-### FR-08 – Smart Reply Suggestions (AI)
+### FR-08 – Smart Reply Suggestions (AI) ✅ IMPLEMENTED
 
 **Goal**: propose 2–3 reply options for the latest email in a thread,
-surfaced in the composer UI of the thread view.
+surfaced in the thread view so the user can click to pre-fill the composer.
 
 **Primary modules**:
 
 - `apps/backend`:
-  - Endpoint such as `POST /api/threads/:id/replies`.
-  - Client code to call `POST /suggest-reply` on the AI service.
+  - `apps/backend/src/modules/ai/ai.service.ts` — `suggestReplies(threadId, latestMessage, context?, maxReplies)`.
+  - `apps/backend/src/app/api/threads/[threadId]/suggest-reply/route.ts` — `POST`, no body needed; resolves thread+messages internally.
 - `apps/ai-service`:
-  - `POST /suggest-reply` endpoint.
+  - `apps/ai-service/routes/reply.py` — `POST /suggest-reply`.
+  - `apps/ai-service/services/smart_reply.py` — `SmartReplyService`.
+  - `apps/ai-service/core/llm_client.py` — `GeminiReplyClient`.
 - `apps/frontend`:
-  - UI element in the email composer showing suggested replies when a
-    thread is open.
+  - `apps/frontend/src/components/SmartReplyBar.tsx` — chip buttons + generate/regenerate.
+  - `apps/frontend/src/app/threads/[id]/page.tsx` — wired between `AISummaryCard` and messages.
 
 **Key ideas**:
 
-- Suggestions are helpers, not automatic sends; the user always edits
-  and confirms.
-- The AI service should receive enough context (latest message + short
-
-* history/summary) to generate relevant replies.
+- Suggestions helpers, not automatic sends — user always edits và confirms via `ComposeDrawer`.
+- AI service nhận `latest_message` + `conversation_context` (từ `thread.summary.text` nếu có) để generate relevant replies.
+- `SmartReplyBar` mounts lazy — chỉ gọi API khi user click "Generate suggestions".
 
 ## Design Principles
 

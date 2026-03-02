@@ -1,4 +1,4 @@
-import pino from 'pino';
+import pino from "pino";
 
 type LogContext = Record<string, unknown>;
 
@@ -7,16 +7,19 @@ class Logger {
   private timers: Map<string, number>;
 
   constructor() {
+    const isDev = process.env.NODE_ENV === "development";
     this.logger = pino({
-      level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          colorize: process.env.NODE_ENV === 'development',
-          ignore: 'pid,hostname',
-          translateTime: 'yyyy-mm-dd HH:MM:ss'
-        }
-      }
+      level: isDev ? "debug" : "info",
+      ...(isDev && {
+        transport: {
+          target: "pino-pretty",
+          options: {
+            colorize: true,
+            ignore: "pid,hostname",
+            translateTime: "yyyy-mm-dd HH:MM:ss",
+          },
+        },
+      }),
     });
     this.timers = new Map();
   }

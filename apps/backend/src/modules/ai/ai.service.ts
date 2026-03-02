@@ -23,6 +23,22 @@ interface SummarizeResponse {
   action_required: string[];
 }
 
+interface SuggestReplyRequest {
+  thread_id: string;
+  conversation_context?: string;
+  latest_message: {
+    id: string;
+    from_: string;
+    text: string;
+  };
+  max_replies: number;
+}
+
+interface SuggestReplyResponse {
+  thread_id: string;
+  replies: string[];
+}
+
 export class AIService {
   async summarizeThread(
     threadId: string,
@@ -32,7 +48,7 @@ export class AIService {
       to: string[];
       date?: Date;
       body?: string;
-    }>
+    }>,
   ): Promise<IThreadSummary> {
     const payload: SummarizeRequest = {
       thread_id: threadId,
@@ -49,7 +65,7 @@ export class AIService {
       const response = await axios.post<SummarizeResponse>(
         `${AI_SERVICE_URL}/summarize`,
         payload,
-        { timeout: 30000 }
+        { timeout: 30000 },
       );
 
       return {
@@ -62,8 +78,63 @@ export class AIService {
       throw new Error(
         `AI summarization failed: ${
           error.response?.data?.detail || error.message
-        }`
+        }`,
+      );
+    }
+  }
+
+  async suggestReplies(
+    threadId: string,
+    latestMessage: { id: string; from?: string; text: string },
+    context?: string,
+    maxReplies = 3,
+  ): Promise<string[]> {
+    const payload: SuggestReplyRequest = {
+      thread_id: threadId,
+      conversation_context: context,
+      latest_message: {
+        id: latestMessage.id,
+        from_: latestMessage.from || "",
+        text: latestMessage.text,
+      },
+      max_replies: maxReplies,
+    };
+
+    try {
+      const response = await axios.post<SuggestReplyResponse>(
+        `${AI_SERVICE_URL}/suggest-reply`,
+        payload,
+        { timeout: 30000 },
+      );
+      return response.data.replies;
+    } catch (error: any) {
+      console.error("AI suggest-reply failed:", error.message);
+      throw new Error(
+        `AI suggest-reply failed: ${
+          error.response?.data?.detail || error.message
+        }`,
       );
     }
   }
 }
+
+interface SummarizeMessage {
+  id: string;
+  from: string;
+  to: string[];
+  sent_at: string;
+  text: string;
+}
+
+interface SummarizeRequest {
+  thread_id: string;
+  messages: SummarizeMessage[];
+}
+
+interface SummarizeResponse {
+  thread_id: string;
+  summary: string;
+  key_issues: string[];
+  action_required: string[];
+}
+

@@ -2,14 +2,19 @@ services:
   frontend:
     build:
       context: ../apps/frontend
+      args:
+        - BACKEND_INTERNAL_URL=http://backend:4000
     ports:
       - "3000:3000"
     depends_on:
-      - backend
-    environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://localhost:4000
+      backend:
+        condition: service_healthy
     env_file:
       - ../apps/frontend/.env
+    environment:
+      - NODE_ENV=production
+      - BACKEND_INTERNAL_URL=http://backend:4000
+    restart: unless-stopped
     networks:
       - app-network
 
@@ -19,15 +24,27 @@ services:
     ports:
       - "4000:4000"
     depends_on:
-      - mongo
-      - redis
-      - ai-service
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
     env_file:
       - ../apps/backend/.env
     environment:
+      - NODE_ENV=production
       - MONGO_URI=mongodb://mongo:27017/emailhub
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_URL=http://ai-service:5000
+      - FRONTEND_URL=http://localhost:3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
     networks:
       - app-network
 
@@ -38,31 +55,52 @@ services:
       - "5000:5000"
     env_file:
       - ../apps/ai-service/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
     networks:
       - app-network
 
   mongo:
-    image: mongo:latest
-    restart: always
+    image: mongo:7
+    restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - app-network
 
   redis:
-    image: redis:latest
-    restart: always
+    image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     networks:
       - app-network
 
 networks:
   app-network:
+    driver: bridge
 
 volumes:
   mongo_data:

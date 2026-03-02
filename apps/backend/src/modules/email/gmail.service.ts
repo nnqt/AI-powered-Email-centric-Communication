@@ -30,7 +30,7 @@ export class GmailService {
     const oauth2Client = new google.auth.OAuth2(
       clientId,
       clientSecret,
-      redirectUri
+      redirectUri,
     );
 
     oauth2Client.setCredentials({ refresh_token: user.refreshToken });
@@ -111,12 +111,12 @@ export class GmailService {
             ? new Date(
                 parseInt(
                   thread.messages[thread.messages.length - 1].internalDate!,
-                  10
-                )
+                  10,
+                ),
               )
             : undefined,
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
 
       const threadId = threadDoc._id;
@@ -152,7 +152,7 @@ export class GmailService {
               : undefined,
             labelIds: msg.labelIds || [],
           },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
+          { upsert: true, new: true, setDefaultsOnInsert: true },
         );
 
         syncedMessages += 1;
@@ -160,7 +160,7 @@ export class GmailService {
     }
 
     // Store nextPageToken for future syncs
-    const nextPageToken = listRes.data.nextPageToken;
+    const nextPageToken = listRes.data.nextPageToken ?? undefined;
     const hasMore = !!nextPageToken;
 
     await User.findByIdAndUpdate(this.userId, {
@@ -173,6 +173,134 @@ export class GmailService {
       nextPageToken,
       hasMore,
     };
+  }
+
+  public async markRead(gmailThreadId: string, read: boolean): Promise<void> {
+    const gmail = await this.getGmailClient();
+    if (read) {
+      await gmail.users.threads.modify({
+        userId: "me",
+        id: gmailThreadId,
+        requestBody: { removeLabelIds: ["UNREAD"] },
+      });
+    } else {
+      await gmail.users.threads.modify({
+        userId: "me",
+        id: gmailThreadId,
+        requestBody: { addLabelIds: ["UNREAD"] },
+      });
+    }
+    await Thread.findOneAndUpdate({ id: gmailThreadId }, { isRead: read });
+  }
+
+  public async archiveThread(gmailThreadId: string): Promise<void> {
+    const gmail = await this.getGmailClient();
+    await gmail.users.threads.modify({
+      userId: "me",
+      id: gmailThreadId,
+      requestBody: { removeLabelIds: ["INBOX"] },
+    });
+    await Thread.findOneAndUpdate({ id: gmailThreadId }, { isArchived: true });
+  }
+
+  public async sendEmail(params: {
+    to: string;
+    subject: string;
+    body: string;
+    threadId?: string; // Gmail thread ID to reply into
+  }): Promise<{ gmailMessageId: string; gmailThreadId: string }> {
+    const gmail = await this.getGmailClient();
+    await connectToDatabase();
+
+    const user = await User.findById(this.userId).lean();
+    if (!user) throw new Error("User not found");
+
+    // Build RFC 2822 message
+    const fromHeader = user.email;
+    const inReplyToHeader = params.threadId
+      ? `\r\nIn-Reply-To: ${params.threadId}`
+      : "";
+    const mime = [
+      `From: ${fromHeader}`,
+      `To: ${params.to}`,
+      `Subject: ${params.subject}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/plain; charset="UTF-8"`,
+      `Content-Transfer-Encoding: 7bit`,
+      inReplyToHeader,
+      ``,
+      params.body,
+    ]
+      .filter((line) => line !== undefined)
+      .join("\r\n");
+
+    const encoded = Buffer.from(mime)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    const res = await gmail.users.messages.send({
+      userId: "me",
+      requestBody: {
+        raw: encoded,
+        threadId: params.threadId || undefined,
+      },
+    });
+
+    const msgId = res.data.id!;
+    const gThreadId = res.data.threadId!;
+
+    // Fetch the sent message to upsert in DB
+    const msgRes = await gmail.users.messages.get({
+      userId: "me",
+      id: msgId,
+      format: "full",
+    });
+
+    const msg = msgRes.data;
+    const headers = msg.payload?.headers || [];
+    const getHeader = (name: string) =>
+      headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
+        ?.value || "";
+
+    // Upsert Thread
+    const threadDoc = await Thread.findOneAndUpdate(
+      { id: gThreadId },
+      {
+        id: gThreadId,
+        userId: new mongoose.Types.ObjectId(this.userId),
+        subject: getHeader("Subject") || params.subject,
+        participants: [params.to, fromHeader ?? ""],
+        snippet: msg.snippet || params.body.slice(0, 100),
+        lastMessageDate: msg.internalDate
+          ? new Date(parseInt(msg.internalDate, 10))
+          : new Date(),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+
+    const body = extractMessageBody(msg.payload);
+    await Message.findOneAndUpdate(
+      { id: msgId },
+      {
+        id: msgId,
+        threadId: threadDoc._id,
+        userId: new mongoose.Types.ObjectId(this.userId),
+        from: fromHeader ?? "",
+        to: [params.to],
+        subject: getHeader("Subject") || params.subject,
+        body,
+        snippet: msg.snippet,
+        date: msg.internalDate
+          ? new Date(parseInt(msg.internalDate, 10))
+          : new Date(),
+        labelIds: msg.labelIds || [],
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+
+    return { gmailMessageId: msgId, gmailThreadId: gThreadId };
   }
 }
 
@@ -203,7 +331,7 @@ function extractMessageBody(payload?: gmail_v1.Schema$MessagePart): string {
 
 function findPartByMimeType(
   parts: gmail_v1.Schema$MessagePart[],
-  mimeType: string
+  mimeType: string,
 ): gmail_v1.Schema$MessagePart | undefined {
   for (const part of parts) {
     if (part.mimeType === mimeType) return part;
@@ -218,7 +346,7 @@ function findPartByMimeType(
 function decodeBase64Url(data: string): string {
   const buff = Buffer.from(
     data.replace(/-/g, "+").replace(/_/g, "/"),
-    "base64"
+    "base64",
   );
   return buff.toString("utf-8");
 }

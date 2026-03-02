@@ -1,13 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "standalone",
   reactCompiler: true,
   async rewrites() {
+    const backendUrl =
+      process.env.BACKEND_INTERNAL_URL || "http://localhost:4000";
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:4000/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },

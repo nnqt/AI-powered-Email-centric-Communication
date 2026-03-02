@@ -15,6 +15,8 @@ export interface IThread extends Document {
   participants?: string[]; // List of email addresses in this thread
   subject?: string; // Subject from first message
   summary?: IThreadSummary;
+  isRead?: boolean;
+  isArchived?: boolean;
 }
 
 const ThreadSchema: Schema<IThread> = new Schema(
@@ -31,8 +33,10 @@ const ThreadSchema: Schema<IThread> = new Schema(
       key_issues: { type: [String], default: [] },
       action_required: { type: [String], default: [] },
     },
+    isRead: { type: Boolean, default: false },
+    isArchived: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Thread: Model<IThread> =

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 
 import { useThreadDetail } from "@/hooks/useThreadDetail";
 import { AISummaryCard } from "@/components/AISummaryCard";
+import { ComposeDrawer } from "@/components/ComposeDrawer";
+import { SmartReplyBar } from "@/components/SmartReplyBar";
 import apiClient from "@/lib/api";
 
 export default function ThreadDetailPage() {
@@ -16,6 +18,19 @@ export default function ThreadDetailPage() {
   const { thread, messages, isLoading, isError, mutate } =
     useThreadDetail(threadId);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [initialBody, setInitialBody] = useState("");
+
+  // Auto-mark as read when thread loads and is unread
+  useEffect(() => {
+    if (thread && thread.isRead === false) {
+      apiClient
+        .patch(`/api/threads/${threadId}/read`, { read: true })
+        .catch(() => {
+          /* non-critical */
+        });
+    }
+  }, [thread?.isRead, threadId]);
 
   const handleSummarize = async () => {
     setIsGenerating(true);
@@ -27,6 +42,22 @@ export default function ThreadDetailPage() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleOpenReply = (prefillBody = "") => {
+    setInitialBody(prefillBody);
+    setComposeOpen(true);
+  };
+
+  const getReplyTo = () => {
+    if (!messages || messages.length === 0) return "";
+    const lastMsg = messages[messages.length - 1];
+    return lastMsg.from || "";
+  };
+
+  const getReplySubject = () => {
+    const subj = messages?.[0]?.subject || thread?.subject || "";
+    return subj.startsWith("Re:") ? subj : `Re: ${subj}`;
   };
 
   if (isLoading) {
@@ -55,9 +86,6 @@ export default function ThreadDetailPage() {
     );
   }
 
-  console.log("Messages:", messages);
-  console.log("Thread:", thread);
-
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-4xl px-4 py-8">
@@ -68,19 +96,40 @@ export default function ThreadDetailPage() {
         >
           ← Back to Inbox
         </button>
-        <header className="mb-6">
-          <h1 className="text-xl font-semibold text-gray-900">
-            {messages?.[0]?.subject || "Thread Detail"}
-          </h1>
-          <p className="text-sm text-gray-500">
-            {messages?.length || 0} message(s)
-          </p>
+
+        <header className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {messages?.[0]?.subject || thread.subject || "Thread Detail"}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {messages?.length || 0} message(s)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleOpenReply()}
+            className="flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Reply
+          </button>
         </header>
+
         <AISummaryCard
           summary={thread.summary}
           onGenerate={handleSummarize}
           isGenerating={isGenerating}
         />
+
+        <SmartReplyBar threadId={threadId} onSelect={handleOpenReply} />
+
         <section className="space-y-4">
           {messages?.map((msg) => (
             <article
@@ -114,6 +163,16 @@ export default function ThreadDetailPage() {
           ))}
         </section>
       </div>
+
+      <ComposeDrawer
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        initialTo={getReplyTo()}
+        initialSubject={getReplySubject()}
+        initialBody={initialBody}
+        replyToThreadId={thread.id}
+        onSent={() => mutate()}
+      />
     </main>
   );
 }

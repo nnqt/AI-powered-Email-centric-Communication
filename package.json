@@ -13,7 +13,17 @@
     "dev:db": "cd infra && docker compose up -d mongo",
     "stop:infra": "cd infra && docker compose down",
     "logs:infra": "cd infra && docker compose logs -f",
-    "start:all": "npm-run-all -p dev:db dev:backend dev:frontend dev:ai"
+    "start:all": "npm-run-all -p dev:db dev:backend dev:frontend dev:ai",
+    "docker:build": "cd infra && docker compose build",
+    "docker:up": "cd infra && docker compose up -d",
+    "docker:up:build": "cd infra && docker compose up -d --build",
+    "docker:down": "cd infra && docker compose down",
+    "docker:logs": "cd infra && docker compose logs -f",
+    "docker:logs:backend": "cd infra && docker compose logs -f backend",
+    "docker:logs:frontend": "cd infra && docker compose logs -f frontend",
+    "docker:logs:ai": "cd infra && docker compose logs -f ai-service",
+    "docker:restart": "cd infra && docker compose restart",
+    "docker:ps": "cd infra && docker compose ps"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5"

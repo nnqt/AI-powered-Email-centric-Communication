@@ -1,15 +1,17 @@
 "use client";
 
 import { useSession, signIn } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { SyncButton } from "@/components/SyncButton";
 import { ThreadList } from "@/features/inbox/ThreadList";
 import { useToast } from "@/components/Toast";
+import { ComposeDrawer } from "@/components/ComposeDrawer";
 
 export default function Home() {
   const { data: session, status } = useSession();
   const { showToast } = useToast();
+  const [composeOpen, setComposeOpen] = useState(false);
 
   useEffect(() => {
     if (session?.expires) {
@@ -58,13 +60,31 @@ export default function Home() {
               {session?.user?.name ? `Signed in as ${session.user.name}` : ""}
             </p>
           </div>
-          <SyncButton />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setComposeOpen(true)}
+              className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path
+                  fillRule="evenodd"
+                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Compose
+            </button>
+            <SyncButton />
+          </div>
         </header>
 
         <section>
           <ThreadList />
         </section>
       </div>
+
+      <ComposeDrawer open={composeOpen} onClose={() => setComposeOpen(false)} />
     </main>
   );
 }

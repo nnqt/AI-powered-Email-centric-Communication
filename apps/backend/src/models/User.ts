@@ -19,10 +19,12 @@ const UserSchema: Schema<IUser> = new Schema(
     googleId: { type: String, required: true, unique: true },
     accessToken: { type: String },
     refreshToken: { type: String },
+    gmailNextPageToken: { type: String, default: null },
+    gmailSyncComplete: { type: Boolean, default: false },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export const User: Model<IUser> =

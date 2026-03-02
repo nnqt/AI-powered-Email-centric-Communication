@@ -1,161 +1,295 @@
-# Current State – December 8, 2025
+# Current State – March 3, 2026
+
+## Deployment Mode
+
+All services run fully via **Docker Compose** (`infra/docker-compose.yml`).
+
+```
+Browser → http://localhost:3000  (frontend container)
+       → /api/* rewrites → http://backend:4000  (internal Docker network)
+       → Google OAuth callback → http://localhost:4000/api/auth/callback/google
+       → AI calls → http://ai-service:5000
+       → MongoDB → mongo:27017
+       → Redis  → redis:6379
+```
+
+**Start everything:**
+
+```bash
+cd infra
+docker compose build --no-cache
+docker compose up -d
+```
+
+---
+
+## Services & Ports
+
+| Service    | Host port | Internal Docker URL              |
+| ---------- | --------- | -------------------------------- |
+| Frontend   | 3000      | —                                |
+| Backend    | 4000      | `http://backend:4000`            |
+| AI Service | 5000      | `http://ai-service:5000`         |
+| MongoDB    | 27017     | `mongodb://mongo:27017/emailhub` |
+| Redis      | 6379      | `redis://redis:6379`             |
+
+---
 
 ## Implemented Features
 
-### Authentication
+### Authentication (NextAuth v4)
 
-- Google OAuth via NextAuth v4 in `apps/backend`.
-- `User` records are upserted on sign-in with Google profile + tokens.
-- NextAuth `jwt` and `session` callbacks load the MongoDB `_id` and expose it as `session.user.id` for API routes.
+- Google OAuth provider in `apps/backend/src/lib/auth.ts`.
+- On sign-in: upsert `User` in MongoDB with `googleId`, `email`, `name`, `image`, `accessToken`, `refreshToken`.
+- `jwt` callback:
+  - Stores `accessToken`, `refreshToken`, `expiresAt` in JWT on initial sign-in.
+  - Auto-refreshes Google access token when within 5 min of expiry via `https://oauth2.googleapis.com/token`.
+  - Sets `token.error = "RefreshTokenError"` if refresh fails.
+  - Loads `User._id` from MongoDB and stores as `token.id`.
+- `session` callback: exposes `session.user.id` (MongoDB `_id`) and propagates `session.error`.
+- Frontend (`apps/frontend/src/app/page.tsx`): `session.error === "RefreshTokenError"` → shows toast + sign-out.
+- `apps/backend/src/types/next-auth.d.ts` extends types with `id`, `error` on `Session` and `JWT`.
 
-### FR-01 – Email Sync (Backend)
+**Google Cloud Console required config:**
 
-- `GmailService` in `apps/backend/src/modules/email/gmail.service.ts`:
-  - Uses `googleapis` + OAuth2 with stored `refreshToken` to access the Gmail API.
-  - Fetches recent threads (`users.threads.list`, limit 10) and full thread data (`users.threads.get`).
-  - Parses Gmail payloads (multipart/alternative) to extract the best HTML or text body.
-  - Upserts `Thread` and `Message` documents with MongoDB `findOneAndUpdate` (idempotent sync).
-- Sync API route `POST /api/emails/sync`:
-  - Uses `getServerSession` to ensure the caller is authenticated.
-  - Reads `session.user.id` (Mongo `_id`) and invokes `GmailService.syncEmails(userId)`.
-  - Returns `{ syncedMessages }` JSON.
+- Authorized JavaScript origins: `http://localhost:3000`, `http://localhost:4000`
+- Authorized redirect URIs: `http://localhost:4000/api/auth/callback/google`
 
-### FR-03 – Inbox / Timeline (Backend + Frontend)
+### FR-01 – Email Sync
 
-- `TimelineService` in `apps/backend/src/modules/timeline/timeline.service.ts`:
-  - `getThreads(userId, limit)` returns the users threads sorted by `lastMessageDate` (newest first) for inbox view.
-  - `getThreadDetails(userId, threadId)` returns a single thread plus its messages, sorted chronologically.
-- Backend timeline APIs:
-  - `GET /api/threads`  returns a JSON list of threads for the authenticated user (optional `?limit=`).
-  - `GET /api/threads/[threadId]`  returns `{ thread, messages }` for the authenticated owner; 404 if not found.
-- Frontend inbox UI in `apps/frontend`:
-  - `useThreads` hook (`src/hooks/useThreads.ts`) uses SWR + `apiClient` to fetch `/api/threads` and exposes `{ threads, isLoading, isError, mutate }`.
-  - `ThreadList` component (`src/features/inbox/ThreadList.tsx`) renders an inbox list with snippet and relative `lastMessageDate` using `date-fns`.
-  - `SyncButton` component (`src/components/SyncButton.tsx`) checks `useSession`, calls `POST /api/emails/sync`, and triggers `mutate()` to refresh the inbox.
-  - Home page (`src/app/page.tsx`) shows:
-    - A sign-in card ("Continue with Google") when unauthenticated.
-    - An inbox view with header (user name) + `SyncButton` + `ThreadList` when authenticated.
+`GmailService` (`apps/backend/src/modules/email/gmail.service.ts`):
 
-### FR-07 – Thread Summarization (Backend + AI Service + Frontend)
+- `syncEmails(pageToken?)`: fetches up to 50 threads per call using `users.threads.list`.
+- Extracts `participants` (From + To headers), `subject`, `snippet` (fallback to last `msg.snippet`).
+- Upserts `Thread` and `Message` documents (idempotent).
+- Stores `nextPageToken` in `User.gmailNextPageToken`; sets `gmailSyncComplete = true` when done.
+- Returns `{ syncedMessages, nextPageToken, hasMore }`.
 
-- **AI Service** (`apps/ai-service`):
-  - `POST /summarize` endpoint returns structured JSON with `summary`, `key_issues`, and `action_required`.
-  - `core/llm_client.py` uses `GeminiSummarizationClient` to generate summaries via Google Gemini.
-  - Prompt engineering forces valid JSON output; handles markdown code block wrapping.
-- **Backend** (`apps/backend`):
-  - `Thread` model extended with `summary` field (`IThreadSummary` interface).
-  - `AIService` in `src/modules/ai/ai.service.ts` calls the AI service `/summarize` endpoint.
-  - `POST /api/threads/[threadId]/summarize` route fetches messages, calls AI service, stores summary in MongoDB.
-- **Frontend** (`apps/frontend`):
-  - `AISummaryCard` component displays summary with key issues (bullets) and action items (checklist).
-  - `useThreadDetail` hook fetches single thread + messages.
-  - Thread detail page (`/threads/[id]`) integrates summarization UI with "✨ Summarize this Thread" button.
-  - `ThreadList` items are clickable, linking to thread detail pages.
+API routes:
 
-## Architecture Decisions
+- `POST /api/emails/sync` – body `{ pageToken? }` → calls `syncEmails(pageToken)`. Auth errors → 401.
+- `GET /api/emails/sync` – returns `{ hasMore, nextPageToken, syncComplete }` from User record.
 
-- **Ports**:
+`SyncButton` (`apps/frontend/src/components/SyncButton.tsx`):
 
-  - Backend Next.js app (`apps/backend`) runs on port **4000**.
-  - Frontend Next.js app (`apps/frontend`) runs on port **3000**.
+- On mount: `GET /api/emails/sync` to preload `hasMore` / `nextPageToken`.
+- Button text: `"Syncing..."` / `"Sync More Emails"` / `"Sync Inbox"`.
+- Auto-retry once on network error (2s delay). Auth errors handled by axios interceptor.
+- Success/error feedback via `useToast()`.
 
-- **Proxy / Rewrites**:
+### FR-03 – Inbox / Timeline
 
-  - `apps/frontend/next.config.ts` defines `rewrites()` so any request to `/api/:path*` on port 3000 is proxied to `http://localhost:4000/api/:path*`.
-  - Frontend code calls relative `/api/...` paths; the proxy hides the backend origin.
+`TimelineService` (`apps/backend/src/modules/timeline/timeline.service.ts`):
 
-- **API Client**:
+- `getThreads(userId, limit=20, cursor?)`: cursor-based pagination using composite key `"lastMessageDate_id"`.
+- `getThreadDetails(userId, threadId)`: trả về thread + toàn bộ messages.
+- Returns `PaginatedThreadsResult { threads, total, hasNext, hasPrev }`.
 
-  - `apps/frontend/src/lib/api.ts` configures an axios instance with:
-    - `baseURL` = `process.env.NEXT_PUBLIC_BACKEND_URL` (points to backend, but requests still go through the Next.js rewrite when called as `/api/...`).
-    - `withCredentials: true` so cookies/session are sent with each request.
+API routes:
 
-- **Auth Session Shape**:
+- `GET /api/threads?limit=&cursor=` – paginated thread list.
+- `GET /api/threads/[threadId]` – single thread + messages.
 
-  - `apps/backend/src/types/next-auth.d.ts` extends NextAuth types so `session.user.id` (MongoDB `_id` as string) and `token.id` are available.
-  - `authOptions` (in `apps/backend/src/lib/auth.ts`):
-    - `jwt` callback:
-      - Connects to MongoDB.
-      - Finds the `User` by `token.email`.
-      - Stores `_id.toString()` as `token.id`.
-    - `session` callback:
-      - Copies `token.id` into `session.user.id`.
+`useThreads` hook (`apps/frontend/src/hooks/useThreads.ts`):
 
-- **CORS Handling** (Backend):
+- SWR-based, manages `cursor` state.
+- `ThreadDTO` bao gồm `isRead?: boolean`, `isArchived?: boolean`.
+- Exposes `{ threads, total, hasNext, hasPrev, currentPage, goToNextPage, goToPrevPage, mutate }`.
 
-  - CORS configuration moved from `middleware.ts` to `next.config.ts` using the `headers()` function to avoid Next.js middleware warnings.
-  - `Access-Control-Allow-Origin: http://localhost:3000`.
-  - `Access-Control-Allow-Credentials: true`.
-  - Supports all standard HTTP methods and headers for API routes.
+`ThreadList` (`apps/frontend/src/features/inbox/ThreadList.tsx`):
 
-- **Root Script Strategy**:
+- Gmail-style pagination header: `"1–20 of 1,234"` + ← Newer / Older → buttons.
+- Sender từ `thread.participants[0]` (strips `<email>` nếu có display name).
+- Unread dot màu indigo + sender/subject hiện **bold** khi `isRead === false`.
+- Hover hover-group hiện 2 action icon: toggle read/unread, archive — cả hai dùng **optimistic UI** với `mutate()` revert on error.
+- Snippet preview; relative time via `date-fns`.
 
-  - The root `package.json` uses `npm-run-all` to orchestrate the hybrid development environment.
-  - **Hybrid Architecture**: Docker Compose runs databases (MongoDB), while apps run locally on the host.
-  - Key commands:
-    - `npm run dev:setup:ai` – Creates Python venv and installs AI service dependencies.
-    - `npm run dev:db` – Starts MongoDB in Docker.
-    - `npm run start:all` – Runs all services in parallel (DB, Backend, Frontend, AI Service).
-  - This approach provides faster iteration than full Docker builds while maintaining consistent database state.
+### FR-07 – Thread Summarization
 
-- **AI Service Provider**:
-  - `apps/ai-service` uses **Google Gemini** via the `google-generativeai` package (switched from OpenAI).
-  - `python-dotenv` is used for environment variable management, loaded at the top of `main.py`.
-  - `core/config.py` reads `GEMINI_API_KEY` and `GEMINI_MODEL_NAME` (default: `gemini-1.5-flash`).
-  - `core/llm_client.py`:
-    - Configures a `GenerativeModel` and exposes:
-      - `GeminiSummarizationClient.summarize_thread(...)` – returns structured JSON dict for a thread.
-      - `GeminiReplyClient.suggest_replies(...)` – returns a list of reply option strings.
-    - Error handling ensures empty/blocked responses raise clear runtime errors.
-    - JSON parsing handles markdown code block wrapping from Gemini responses.
+AI Service (`apps/ai-service`):
+
+- `POST /summarize` → `{ summary, key_issues, action_required }` via Google Gemini (`gemini-2.0-flash`).
+- `GeminiSummarizationClient` và `GeminiReplyClient` trong `core/llm_client.py`.
+- Handles markdown code block wrapping trong Gemini JSON output.
+
+Backend:
+
+- `AIService.summarizeThread()` (`apps/backend/src/modules/ai/ai.service.ts`) — gọi AI service via axios.
+- `POST /api/threads/[threadId]/summarize` → lưu result vào `thread.summary` trong MongoDB.
+
+Frontend:
+
+- `AISummaryCard` (`apps/frontend/src/components/AISummaryCard.tsx`):
+  - Shows `"Summarize this Thread"` button khi `!summary || !summary.text`.
+  - Hiển thị summary + key issues + action items khi có kết quả.
+  - `"Regenerate"` link để re-trigger.
+
+### FR-02 – Basic Email Operations
+
+`GmailService` (`apps/backend/src/modules/email/gmail.service.ts`):
+
+- `markRead(gmailThreadId, read)`: add/remove `UNREAD` Gmail label + update `Thread.isRead` trong DB.
+- `archiveThread(gmailThreadId)`: remove `INBOX` label + set `Thread.isArchived = true`.
+- `sendEmail({ to, subject, body, threadId? })`: RFC 2822 MIME encode → `users.messages.send` → upsert Thread + Message vào MongoDB.
+
+API routes:
+
+- `PATCH /api/threads/[threadId]/read` – body `{ read: boolean }`.
+- `PATCH /api/threads/[threadId]/archive`.
+- `POST /api/emails/send` – body `{ to, subject, body, threadId? }`.
+
+Frontend:
+
+- `ComposeDrawer` (`apps/frontend/src/components/ComposeDrawer.tsx`): bottom slide-up drawer, ESC + backdrop close, gọi `POST /api/emails/send`, hiển thị error inline.
+- Inbox `page.tsx`: nút "Compose" (indigo, + icon) → `setComposeOpen(true)` → mở `ComposeDrawer`.
+- Thread detail `page.tsx`: nút "Reply" → mở `ComposeDrawer` pre-filled `to`, `subject`, `replyToThreadId`. `useEffect` auto-marks thread as read khi component mount.
+
+### FR-08 – Smart Reply Suggestions
+
+AI Service (`apps/ai-service`):
+
+- `POST /suggest-reply` → `{ thread_id, replies[] }` via `GeminiReplyClient.suggest_replies()`.
+- Parse numbered list từ Gemini text response thành `string[]`.
+
+Backend:
+
+- `AIService.suggestReplies(threadId, latestMessage, context?, maxReplies=3)` — POST `${AI_SERVICE_URL}/suggest-reply`, trả về `string[]`.
+- `POST /api/threads/[threadId]/suggest-reply` — tự resolve thread+messages từ DB qua `TimelineService`, no request body needed, trả về `{ threadId, replies[] }`.
+
+Frontend:
+
+- `SmartReplyBar` (`apps/frontend/src/components/SmartReplyBar.tsx`): nút "Generate suggestions" → spinner → 2-3 chip buttons (truncated 60 chars). "↻ Regenerate" sau khi đã generate.
+- Click chip → `onSelect(reply)` → `handleOpenReply(reply)` → mở `ComposeDrawer` với `initialBody` pre-filled.
+- Đặt giữa `AISummaryCard` và danh sách messages trong thread detail page.
+
+### Toast Notification System
+
+- `Toast.tsx` (`apps/frontend/src/components/Toast.tsx`): `ToastProvider` + `useToast()` hook.
+- Slide-in animation, auto-dismiss 5s, types: `success | error | info`.
+- Wrapped in `apps/frontend/src/app/layout.tsx`.
+
+### Auth Error Handling (Frontend)
+
+- `apps/frontend/src/lib/api.ts` axios response interceptor:
+  - 401 → `signOut({ redirect: false })` + `window.location.href = "/"`.
+  - 403 → rejects with `isForbiddenError: true`.
+
+---
+
+## Architecture & Key Decisions
+
+### Docker / Build
+
+- Each app has its **own build context** (`apps/frontend`, `apps/backend`, `apps/ai-service`). No cross-references.
+- **Frontend Dockerfile**: `ARG BACKEND_INTERNAL_URL=http://backend:4000` baked at build time because `rewrites()` in `next.config.ts` is evaluated at build, not runtime.
+- **Backend / Frontend**: multi-stage builds, `output: "standalone"` → `node server.js`.
+- **AI Service**: single-stage Python 3.11-slim, `uvicorn main:app --host 0.0.0.0 --port 5000`.
+- `curl` installed in backend and ai-service runner images for Docker healthchecks.
+- `depends_on` with `condition: service_healthy` for correct start order.
+
+### Production Runtime Fixes Applied
+
+| File                                 | Issue                                                                                      | Fix                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------- | ---------- | --------------------------------- |
+| `src/lib/axiosClient.ts`             | Top-level `throw` failed Next.js build-time page collection                                | `                                             |            | 'http://localhost:5000'` fallback |
+| `src/lib/db.ts`                      | Same top-level `throw` for `MONGO_URI`                                                     | Moved validation inside `connectToDatabase()` |
+| `src/lib/logger.ts`                  | `pino-pretty` uses worker threads, crashes in standalone                                   | Only loaded when `NODE_ENV === 'development'` |
+| `src/modules/email/gmail.service.ts` | `nextPageToken` typed `string                                                              | null                                          | undefined` | `?? undefined` coercion           |
+| `src/models/User.ts`                 | `gmailNextPageToken`, `gmailSyncComplete` in TS interface but missing from Mongoose schema | Added to schema                               |
+
+### Frontend → Backend Proxy
+
+`apps/frontend/next.config.ts` rewrites:
+
+- Docker: `BACKEND_INTERNAL_URL=http://backend:4000` (build arg in Dockerfile)
+- Local dev: falls back to `http://localhost:4000`
+
+### Required `.env` values
+
+`apps/backend/.env`:
+
+```
+PORT=4000
+NEXTAUTH_URL=http://localhost:4000
+NEXTAUTH_SECRET=<secret>
+GOOGLE_CLIENT_ID=<id>
+GOOGLE_CLIENT_SECRET=<secret>
+MONGO_URI=mongodb://localhost:27017/emailhub   # overridden to mongo:27017 by docker-compose
+REDIS_URL=redis://localhost:6379               # overridden to redis:6379 by docker-compose
+AI_SERVICE_URL=http://localhost:5000           # overridden to ai-service:5000 by docker-compose
+```
+
+`apps/frontend/.env`:
+
+```
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<same as backend>
+NEXT_PUBLIC_BACKEND_URL=http://localhost:4000
+```
+
+`apps/ai-service/.env`:
+
+```
+GEMINI_API_KEY=<key>
+GEMINI_MODEL_NAME=gemini-2.0-flash
+```
+
+---
 
 ## Database Schema
 
 ### User (`apps/backend/src/models/User.ts`)
 
-- `email: string` (required, indexed).
-- `name?: string`.
-- `image?: string`.
-- `googleId: string` (required, unique; maps to Google account).
-- `accessToken?: string` (latest Google access token).
-- `refreshToken?: string` (critical for background Gmail sync).
-- Timestamps: `createdAt`, `updatedAt` (managed by Mongoose).
+| Field                    | Type    | Notes                         |
+| ------------------------ | ------- | ----------------------------- |
+| `email`                  | String  | required, indexed             |
+| `name`                   | String  | optional                      |
+| `image`                  | String  | optional                      |
+| `googleId`               | String  | required, unique              |
+| `accessToken`            | String  | latest Google access token    |
+| `refreshToken`           | String  | for token refresh + Gmail API |
+| `gmailNextPageToken`     | String  | null when fully synced        |
+| `gmailSyncComplete`      | Boolean | true when no more Gmail pages |
+| `createdAt`, `updatedAt` | Date    | Mongoose timestamps           |
 
 ### Thread (`apps/backend/src/models/Thread.ts`)
 
-- `id: string`  Gmail **thread ID** (required, unique, indexed).
-- `userId: ObjectId`  reference to `User` (owner of the thread).
-- `historyId?: string`  Gmail history marker for incremental sync.
-- `snippet?: string`  short preview from Gmail.
-- `lastMessageDate?: Date`  timestamp of the most recent message in the thread.
-- Timestamps: `createdAt`, `updatedAt`.
+| Field                    | Type     | Notes                                       |
+| ------------------------ | -------- | ------------------------------------------- |
+| `id`                     | String   | Gmail thread ID, required, unique           |
+| `userId`                 | ObjectId | ref: User                                   |
+| `historyId`              | String   | Gmail history marker                        |
+| `snippet`                | String   | preview text                                |
+| `lastMessageDate`        | Date     | for sorting + pagination cursor             |
+| `participants`           | String[] | From + To across all messages               |
+| `subject`                | String   | first message Subject header                |
+| `summary`                | Object   | `{ text, key_issues[], action_required[] }` |
+| `isRead`                 | Boolean  | default false                               |
+| `isArchived`             | Boolean  | default false                               |
+| `createdAt`, `updatedAt` | Date     | Mongoose timestamps                         |
 
 ### Message (`apps/backend/src/models/Message.ts`)
 
-- `id: string`  Gmail **message ID** (required, unique, indexed).
-- `threadId: ObjectId`  reference to `Thread` (parent conversation).
-- `userId: ObjectId`  reference to `User` (owner).
-- `from?: string`  raw "From" header.
-- `to: string[]`  parsed list from the "To" header.
-- `subject?: string`  from "Subject" header.
-- `body?: string`  decoded HTML or text content from Gmail payload.
-- `snippet?: string`  Gmail snippet.
-- `date?: Date`  message date from `internalDate`.
-- `labelIds: string[]`  Gmail label IDs.
-- Timestamps: `createdAt`, `updatedAt`.
+| Field                    | Type     | Notes                              |
+| ------------------------ | -------- | ---------------------------------- |
+| `id`                     | String   | Gmail message ID, required, unique |
+| `threadId`               | ObjectId | ref: Thread                        |
+| `userId`                 | ObjectId | ref: User                          |
+| `from`                   | String   | raw From header                    |
+| `to`                     | String[] | parsed To header                   |
+| `subject`                | String   | Subject header                     |
+| `body`                   | String   | decoded HTML or text               |
+| `snippet`                | String   | Gmail message snippet              |
+| `date`                   | Date     | from `internalDate`                |
+| `labelIds`               | String[] | Gmail label IDs                    |
+| `createdAt`, `updatedAt` | Date     | Mongoose timestamps                |
 
-## Next Steps / Priorities
+---
 
-- **FR-02 – Basic Email Operations (Next Priority)**
+## Known Issues / Next Steps
 
-  - Implement backend routes to:
-    - Mark messages/threads as read/unread.
-    - Archive / add labels.
-    - Send email via Gmail API (`users.messages.send`), ensuring sent emails are reflected in MongoDB and in Gmail.
-  - Extend frontend UI for read state, labels, and a basic composer.
+### FR-04 – WebSocket Realtime (Next Priority)
 
-- **FR-08 – Smart Reply Suggestions (Next Priority)**
-
-  - Finalize `POST /suggest-reply` endpoint in AI service.
-  - Implement backend integration to call the AI service and return reply options.
-  - Add UI component in thread detail/composer to display and select suggested replies.
+- Tích hợp `socket.io` custom server vào backend (Next.js custom server).
+- Redis pub/sub: backend emit `EMAIL_SYNCED`, `SUMMARY_READY` events.
+- Frontend socket client subscribe theo userId → gọi SWR `mutate()` khi nhận event để tự động refresh `ThreadList` và thread detail page.
