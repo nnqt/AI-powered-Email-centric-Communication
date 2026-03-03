@@ -7,10 +7,11 @@ import { connectToDatabase } from "@/lib/db";
 import { Thread } from "@/models/Thread";
 import { Message } from "@/models/Message";
 import { AIService } from "@/modules/ai/ai.service";
+import { emitToUser } from "@/lib/socketServer";
 
 export async function POST(
   _request: NextRequest,
-  context: { params: Promise<{ threadId: string }> }
+  context: { params: Promise<{ threadId: string }> },
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,7 +24,7 @@ export async function POST(
     if (!userId) {
       return NextResponse.json(
         { error: "Missing user id in session" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -49,7 +50,7 @@ export async function POST(
     if (messages.length === 0) {
       return NextResponse.json(
         { error: "No messages in thread" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -63,12 +64,15 @@ export async function POST(
         to: m.to,
         date: m.date,
         body: m.body,
-      }))
+      })),
     );
 
     // Update thread with summary
     thread.summary = summary;
     await thread.save();
+
+    // Notify frontend that AI summary is ready for this thread
+    emitToUser(userId, "SUMMARY_READY", { threadId });
 
     return NextResponse.json({
       thread_id: threadId,
@@ -83,7 +87,7 @@ export async function POST(
         error: "Failed to summarize thread",
         details: error.message || String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -64,6 +64,7 @@ docker compose up -d
 - Upserts `Thread` and `Message` documents (idempotent).
 - Stores `nextPageToken` in `User.gmailNextPageToken`; sets `gmailSyncComplete = true` when done.
 - Returns `{ syncedMessages, nextPageToken, hasMore }`.
+- **Architecture note**: Gmail Pub/Sub webhook (< 5s push) is the production target per thesis FR-01 requirement. PoC dùng manual sync trigger do hạn chế setup local (cần public HTTPS URL). Architecture đã được thiết kế để thêm webhook handler sau này mà không cần refactor.
 
 API routes:
 
@@ -77,7 +78,7 @@ API routes:
 - Auto-retry once on network error (2s delay). Auth errors handled by axios interceptor.
 - Success/error feedback via `useToast()`.
 
-### FR-03 – Inbox / Timeline
+### FR-04 – Inbox / Timeline
 
 `TimelineService` (`apps/backend/src/modules/timeline/timeline.service.ts`):
 
@@ -124,7 +125,7 @@ Frontend:
   - Hiển thị summary + key issues + action items khi có kết quả.
   - `"Regenerate"` link để re-trigger.
 
-### FR-02 – Basic Email Operations
+### FR-03 – Read/Unread/Archive ✅ IMPLEMENTED | FR-02 – Compose/Send 🔄 PARTIAL (plain text; rich text + attachment pending)
 
 `GmailService` (`apps/backend/src/modules/email/gmail.service.ts`):
 
@@ -162,6 +163,47 @@ Frontend:
 - Click chip → `onSelect(reply)` → `handleOpenReply(reply)` → mở `ComposeDrawer` với `initialBody` pre-filled.
 - Đặt giữa `AISummaryCard` và danh sách messages trong thread detail page.
 
+### FR-05 – WebSocket Realtime
+
+**Architecture**: Socket.IO + Redis adapter, custom Next.js server thay thế `output: "standalone"`.
+
+Custom server (`apps/backend/server.ts`):
+
+- Tạo `http.createServer` wrapper quanh Next.js `getRequestHandler()`.
+- Attach `Socket.IO` server với `path: "/socket.io"`, CORS từ `FRONTEND_URL`.
+- Kết nối Redis adapter (`@socket.io/redis-adapter`) → hỗ trợ multi-instance broadcasting.
+- Lưu `io` instance vào `global.__io` để API routes truy cập.
+- Client gửi event `join(userId)` → join room `user:<userId>`.
+
+Helper (`apps/backend/src/lib/socketServer.ts`):
+
+- `getIO()`: đọc `global.__io`.
+- `emitToUser(userId, event, payload)`: emit về room `user:<userId>`, silent nếu `io` chưa init.
+
+Backend routes emit events:
+
+| Event           | Route                                    | Payload              |
+| --------------- | ---------------------------------------- | -------------------- |
+| `EMAIL_SYNCED`  | `POST /api/emails/sync`                  | `{ count, hasMore }` |
+| `SUMMARY_READY` | `POST /api/threads/[threadId]/summarize` | `{ threadId }`       |
+| `EMAIL_SENT`    | `POST /api/emails/send`                  | `{ threadId }`       |
+
+Frontend hook (`apps/frontend/src/hooks/useSocket.ts`):
+
+- Singleton socket kết nối trực tiếp `NEXT_PUBLIC_BACKEND_SOCKET_URL` (baked tại build time).
+- `useSocket(userId, listeners)`: join room khi connect/reconnect, đăng ký listeners qua stable ref để tránh stale closures.
+
+Frontend wiring:
+
+- `apps/frontend/src/app/page.tsx`: `EMAIL_SYNCED` → `mutate(/api/threads/*)` + toast. `EMAIL_SENT` → mutate.
+- `apps/frontend/src/app/threads/[id]/page.tsx`: `SUMMARY_READY` (match threadId) → `mutate()` refresh AISummaryCard.
+
+Dockerfile backend:
+
+- Không còn `output: "standalone"`.
+- Build stage: `npm run build` = `next build && tsc -p tsconfig.server.json` → `dist-server/server.js`.
+- Runner: copy đủ `node_modules`, `.next`, `dist-server/server.js` → `CMD ["node", "server.js"]`.
+
 ### Toast Notification System
 
 - `Toast.tsx` (`apps/frontend/src/components/Toast.tsx`): `ToastProvider` + `useToast()` hook.
@@ -181,11 +223,12 @@ Frontend:
 ### Docker / Build
 
 - Each app has its **own build context** (`apps/frontend`, `apps/backend`, `apps/ai-service`). No cross-references.
-- **Frontend Dockerfile**: `ARG BACKEND_INTERNAL_URL=http://backend:4000` baked at build time because `rewrites()` in `next.config.ts` is evaluated at build, not runtime.
-- **Backend / Frontend**: multi-stage builds, `output: "standalone"` → `node server.js`.
-- **AI Service**: single-stage Python 3.11-slim, `uvicorn main:app --host 0.0.0.0 --port 5000`.
-- `curl` installed in backend and ai-service runner images for Docker healthchecks.
-- `depends_on` with `condition: service_healthy` for correct start order.
+- **Base images**: `node:22-alpine` (frontend, backend), `python:3.12-alpine` (ai-service) — Node 22 LTS + Alpine để giảm CVEs.
+- **Frontend Dockerfile**: multi-stage, `output: "standalone"` → `node server.js`. `ARG BACKEND_INTERNAL_URL` + `ARG NEXT_PUBLIC_BACKEND_SOCKET_URL` baked tại build time.
+- **Backend Dockerfile**: multi-stage, **không dùng `output: "standalone"`** — dùng custom `server.ts` (socket.io). Builder compile `server.ts` → `dist-server/server.js` via `tsc -p tsconfig.server.json`. Runner copy `node_modules` + `.next` + `dist-server/server.js`.
+- **AI Service Dockerfile**: multi-stage alpine — builder stage cài `gcc`/`musl-dev` để compile C extensions (`uvloop`, `httptools`); runner stage sạch chỉ nhận `/install`, không giữ build tools.
+- `curl` installed trong backend và ai-service runner images cho Docker healthchecks.
+- `depends_on` với `condition: service_healthy` cho đúng start order.
 
 ### Production Runtime Fixes Applied
 
@@ -193,7 +236,7 @@ Frontend:
 | ------------------------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------- | ---------- | --------------------------------- |
 | `src/lib/axiosClient.ts`             | Top-level `throw` failed Next.js build-time page collection                                | `                                             |            | 'http://localhost:5000'` fallback |
 | `src/lib/db.ts`                      | Same top-level `throw` for `MONGO_URI`                                                     | Moved validation inside `connectToDatabase()` |
-| `src/lib/logger.ts`                  | `pino-pretty` uses worker threads, crashes in standalone                                   | Only loaded when `NODE_ENV === 'development'` |
+| `src/lib/logger.ts`                  | `pino-pretty` uses worker threads, crashes in production bundled builds                    | Only loaded when `NODE_ENV === 'development'` |
 | `src/modules/email/gmail.service.ts` | `nextPageToken` typed `string                                                              | null                                          | undefined` | `?? undefined` coercion           |
 | `src/models/User.ts`                 | `gmailNextPageToken`, `gmailSyncComplete` in TS interface but missing from Mongoose schema | Added to schema                               |
 
@@ -288,8 +331,17 @@ GEMINI_MODEL_NAME=gemini-2.0-flash
 
 ## Known Issues / Next Steps
 
-### FR-04 – WebSocket Realtime (Next Priority)
+**FR hoàn thành (theo thesis)**: FR-01, FR-03, FR-04, FR-05, FR-07, FR-08.
 
-- Tích hợp `socket.io` custom server vào backend (Next.js custom server).
-- Redis pub/sub: backend emit `EMAIL_SYNCED`, `SUMMARY_READY` events.
-- Frontend socket client subscribe theo userId → gọi SWR `mutate()` khi nhận event để tự động refresh `ThreadList` và thread detail page.
+**FR đang pending**:
+
+| FR    | Description                                                                         | Plan         |
+| ----- | ----------------------------------------------------------------------------------- | ------------ |
+| FR-02 | Rich text editor (Tiptap) + file attachment trong `ComposeDrawer`                   | Bước kế tiếp |
+| FR-06 | AI Contact Management: auto-create khi sync + manual + AI enrich + merge suggestion | Sau FR-02    |
+| FR-09 | Multi-channel: abstract `IChannelAdapter` + Telegram Bot (grammy)                   | Sau FR-06    |
+
+**Quyết định kiến trúc**:
+
+- FR-01 Gmail Pub/Sub webhook: không implement trong PoC (cần public HTTPS + Google Cloud setup). Architecture sẵn sàng thêm webhook handler sau.
+- FR-09 channel được chọn: **Telegram Bot** (grammy) — free, không cần approval, TypeScript SDK tốt.

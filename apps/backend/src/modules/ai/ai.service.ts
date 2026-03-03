@@ -39,6 +39,42 @@ interface SuggestReplyResponse {
   replies: string[];
 }
 
+interface EnrichContactRequest {
+  email: string;
+  name?: string;
+  conversation_snippet?: string;
+}
+
+interface EnrichContactResponse {
+  email: string;
+  display_name: string | null;
+  org: string | null;
+  language: string | null;
+}
+
+interface ContactSnippet {
+  contact_id: string;
+  email: string;
+  name?: string;
+  alternate_emails?: string[];
+  sample_threads?: string[];
+}
+
+interface MergeSuggestion {
+  source_id: string;
+  target_id: string;
+  source_email: string;
+  target_email: string;
+  confidence: number;
+  reason: string;
+}
+
+interface SuggestMergeResponse {
+  suggestions: MergeSuggestion[];
+}
+
+export type { EnrichContactResponse, MergeSuggestion };
+
 export class AIService {
   async summarizeThread(
     threadId: string,
@@ -116,25 +152,50 @@ export class AIService {
       );
     }
   }
-}
 
-interface SummarizeMessage {
-  id: string;
-  from: string;
-  to: string[];
-  sent_at: string;
-  text: string;
-}
+  async enrichContact(
+    email: string,
+    name?: string,
+    conversationSnippet?: string,
+  ): Promise<EnrichContactResponse> {
+    const payload: EnrichContactRequest = {
+      email,
+      name,
+      conversation_snippet: conversationSnippet,
+    };
 
-interface SummarizeRequest {
-  thread_id: string;
-  messages: SummarizeMessage[];
-}
+    try {
+      const response = await axios.post<EnrichContactResponse>(
+        `${AI_SERVICE_URL}/enrich-contact`,
+        payload,
+        { timeout: 30000 },
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("AI enrich-contact failed:", error.message);
+      throw new Error(
+        `AI enrich-contact failed: ${
+          error.response?.data?.detail || error.message
+        }`,
+      );
+    }
+  }
 
-interface SummarizeResponse {
-  thread_id: string;
-  summary: string;
-  key_issues: string[];
-  action_required: string[];
+  async suggestMerges(contacts: ContactSnippet[]): Promise<MergeSuggestion[]> {
+    try {
+      const response = await axios.post<SuggestMergeResponse>(
+        `${AI_SERVICE_URL}/suggest-merge`,
+        { contacts },
+        { timeout: 60000 },
+      );
+      return response.data.suggestions;
+    } catch (error: any) {
+      console.error("AI suggest-merge failed:", error.message);
+      throw new Error(
+        `AI suggest-merge failed: ${
+          error.response?.data?.detail || error.message
+        }`,
+      );
+    }
+  }
 }
-

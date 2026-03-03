@@ -2,16 +2,47 @@
 
 import { useSession, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { SyncButton } from "@/components/SyncButton";
 import { ThreadList } from "@/features/inbox/ThreadList";
 import { useToast } from "@/components/Toast";
 import { ComposeDrawer } from "@/components/ComposeDrawer";
+import { useSocket } from "@/hooks/useSocket";
+import { useSWRConfig } from "swr";
 
 export default function Home() {
   const { data: session, status } = useSession();
   const { showToast } = useToast();
+  const router = useRouter();
   const [composeOpen, setComposeOpen] = useState(false);
+  const { mutate } = useSWRConfig();
+
+  const userId = (session?.user as any)?.id as string | undefined;
+
+  // Realtime: refresh thread list when server pushes events
+  useSocket(userId, {
+    EMAIL_SYNCED: (payload: { count: number; hasMore: boolean }) => {
+      mutate(
+        (key: unknown) =>
+          typeof key === "string" && key.startsWith("/api/threads"),
+        undefined,
+        { revalidate: true },
+      );
+      showToast(
+        `Synced ${payload.count} email${payload.count !== 1 ? "s" : ""}`,
+        "success",
+      );
+    },
+    EMAIL_SENT: () => {
+      mutate(
+        (key: unknown) =>
+          typeof key === "string" && key.startsWith("/api/threads"),
+        undefined,
+        { revalidate: true },
+      );
+    },
+  });
 
   useEffect(() => {
     if (session?.expires) {
@@ -61,6 +92,13 @@ export default function Home() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.push("/contacts")}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Contacts
+            </button>
             <button
               type="button"
               onClick={() => setComposeOpen(true)}

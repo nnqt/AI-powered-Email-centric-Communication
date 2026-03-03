@@ -3,23 +3,36 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
+import { useSession } from "next-auth/react";
 
 import { useThreadDetail } from "@/hooks/useThreadDetail";
 import { AISummaryCard } from "@/components/AISummaryCard";
 import { ComposeDrawer } from "@/components/ComposeDrawer";
 import { SmartReplyBar } from "@/components/SmartReplyBar";
+import { useSocket } from "@/hooks/useSocket";
 import apiClient from "@/lib/api";
 
 export default function ThreadDetailPage() {
   const params = useParams();
   const router = useRouter();
   const threadId = params.id as string;
+  const { data: session } = useSession();
+  const userId = (session?.user as any)?.id as string | undefined;
 
   const { thread, messages, isLoading, isError, mutate } =
     useThreadDetail(threadId);
   const [isGenerating, setIsGenerating] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [initialBody, setInitialBody] = useState("");
+
+  // Realtime: refresh thread detail when AI finishes summarizing this thread
+  useSocket(userId, {
+    SUMMARY_READY: (payload: { threadId: string }) => {
+      if (payload.threadId === threadId) {
+        mutate();
+      }
+    },
+  });
 
   // Auto-mark as read when thread loads and is unread
   useEffect(() => {

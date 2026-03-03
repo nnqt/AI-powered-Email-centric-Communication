@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { GmailService } from "@/modules/email/gmail.service";
+import { emitToUser } from "@/lib/socketServer";
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json(
         { error: "Missing user id in session" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -26,6 +27,12 @@ export async function POST(request: Request) {
 
     const service = new GmailService(userId);
     const result = await service.syncEmails(pageToken);
+
+    // Notify connected frontend clients that sync completed
+    emitToUser(userId, "EMAIL_SYNCED", {
+      count: result.syncedMessages,
+      hasMore: result.hasMore,
+    });
 
     return NextResponse.json(result);
   } catch (error: any) {
@@ -44,7 +51,7 @@ export async function POST(request: Request) {
           message:
             "Your Google account authorization has expired. Please sign in again.",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -53,7 +60,7 @@ export async function POST(request: Request) {
         error: "Failed to sync emails",
         details: error.message || String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -70,7 +77,7 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json(
         { error: "Missing user id in session" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -89,7 +96,7 @@ export async function GET() {
     console.error("Failed to get sync status", error);
     return NextResponse.json(
       { error: "Failed to get sync status" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

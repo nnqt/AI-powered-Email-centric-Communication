@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routes import summarize as summarize_routes
 from routes import reply as reply_routes
+from routes import contact as contact_routes
 
 
 app = FastAPI(
@@ -32,4 +33,5 @@ async def root():
 
 app.include_router(summarize_routes.router)
 app.include_router(reply_routes.router)
+app.include_router(contact_routes.router)
 

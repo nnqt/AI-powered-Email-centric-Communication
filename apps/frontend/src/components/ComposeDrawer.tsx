@@ -1,19 +1,57 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Placeholder from "@tiptap/extension-placeholder";
 
 import apiClient from "@/lib/api";
 
 export interface ComposeDrawerProps {
   open: boolean;
   onClose: () => void;
-  /** Pre-filled when replying to a thread */
   initialTo?: string;
   initialSubject?: string;
   initialBody?: string;
-  /** Gmail thread ID – when set, the email is sent as a reply */
   replyToThreadId?: string;
   onSent?: (gmailThreadId: string) => void;
+}
+
+interface AttachmentChip {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+}
+
+function ToolbarButton({
+  onClick,
+  active,
+  title,
+  children,
+}: {
+  onClick: () => void;
+  active?: boolean;
+  title?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        onClick();
+      }}
+      title={title}
+      className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+        active
+          ? "bg-gray-600 text-white"
+          : "text-gray-400 hover:bg-gray-600 hover:text-white"
+      }`}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function ComposeDrawer({
@@ -27,28 +65,42 @@ export function ComposeDrawer({
 }: ComposeDrawerProps) {
   const [to, setTo] = useState(initialTo);
   const [subject, setSubject] = useState(initialSubject);
-  const [body, setBody] = useState(initialBody);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<AttachmentChip[]>([]);
+  const [uploading, setUploading] = useState(false);
   const toRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset fields when drawer opens with new props
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({ placeholder: "Write your message…" }),
+    ],
+    editorProps: {
+      attributes: {
+        class:
+          "min-h-[160px] max-h-[300px] overflow-y-auto px-4 py-3 text-sm text-gray-900 outline-none prose prose-sm max-w-none",
+      },
+    },
+    content: "",
+  });
+
   useEffect(() => {
     if (open) {
       setTo(initialTo);
       setSubject(initialSubject);
-      setBody(initialBody);
       setError(null);
-      // Focus "To" if empty, otherwise focus body
+      setAttachments([]);
+      editor?.commands.setContent(
+        initialBody ? `<p>${initialBody.replace(/\n/g, "</p><p>")}</p>` : "",
+      );
       setTimeout(() => {
-        if (!initialTo) {
-          toRef.current?.focus();
-        }
+        if (!initialTo) toRef.current?.focus();
       }, 150);
     }
-  }, [open, initialTo, initialSubject, initialBody]);
+  }, [open, initialTo, initialSubject, initialBody]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close on ESC
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -57,8 +109,37 @@ export function ComposeDrawer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await apiClient.post<AttachmentChip>(
+          "/api/emails/attachments",
+          form,
+          { headers: { "Content-Type": "multipart/form-data" } },
+        );
+        setAttachments((prev) => [...prev, res.data]);
+      }
+    } catch {
+      setError("Failed to upload attachment.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeAttachment = (id: string) =>
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+
   const handleSend = async () => {
-    if (!to.trim() || !subject.trim() || !body.trim()) {
+    const htmlBody = editor?.getHTML() ?? "";
+    const plainText = editor?.getText() ?? "";
+
+    if (!to.trim() || !subject.trim() || !plainText.trim()) {
       setError("To, Subject, and Body are required.");
       return;
     }
@@ -70,7 +151,8 @@ export function ComposeDrawer({
         {
           to: to.trim(),
           subject: subject.trim(),
-          body: body.trim(),
+          htmlBody,
+          attachmentIds: attachments.map((a) => a.id),
           threadId: replyToThreadId || undefined,
         },
       );
@@ -85,9 +167,14 @@ export function ComposeDrawer({
     }
   };
 
+  function formatBytes(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
   return (
     <>
-      {/* Backdrop */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/20"
@@ -96,7 +183,6 @@ export function ComposeDrawer({
         />
       )}
 
-      {/* Drawer */}
       <div
         role="dialog"
         aria-modal="true"
@@ -104,7 +190,7 @@ export function ComposeDrawer({
         className={`fixed bottom-0 right-4 z-50 flex w-full max-w-lg flex-col rounded-t-xl border border-gray-200 bg-white shadow-2xl transition-transform duration-300 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
-        style={{ maxHeight: "75vh" }}
+        style={{ maxHeight: "80vh" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between rounded-t-xl bg-gray-800 px-4 py-2">
@@ -127,8 +213,8 @@ export function ComposeDrawer({
           </button>
         </div>
 
-        {/* Fields */}
-        <div className="flex flex-col divide-y divide-gray-100 overflow-y-auto">
+        {/* To / Subject */}
+        <div className="flex flex-col divide-y divide-gray-100">
           <div className="flex items-center px-4 py-2">
             <label className="w-12 shrink-0 text-xs text-gray-500">To</label>
             <input
@@ -152,20 +238,111 @@ export function ComposeDrawer({
               className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
             />
           </div>
-          <div className="flex-1 px-4 py-3">
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Write your message…"
-              rows={8}
-              className="w-full resize-none bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
-            />
-          </div>
         </div>
+
+        {/* Formatting toolbar */}
+        <div className="flex items-center gap-0.5 border-y border-gray-700 bg-gray-800 px-3 py-1.5">
+          <ToolbarButton
+            onClick={() => editor?.chain().focus().toggleBold().run()}
+            active={editor?.isActive("bold")}
+            title="Bold"
+          >
+            <strong>B</strong>
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            active={editor?.isActive("italic")}
+            title="Italic"
+          >
+            <em>I</em>
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor?.chain().focus().toggleBulletList().run()}
+            active={editor?.isActive("bulletList")}
+            title="Bullet list"
+          >
+            ≡
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+            active={editor?.isActive("blockquote")}
+            title="Blockquote"
+          >
+            "
+          </ToolbarButton>
+          <div className="mx-1 h-4 w-px bg-gray-600" />
+          <ToolbarButton
+            onClick={() => editor?.chain().focus().undo().run()}
+            title="Undo"
+          >
+            ↩
+          </ToolbarButton>
+          <ToolbarButton
+            onClick={() => editor?.chain().focus().redo().run()}
+            title="Redo"
+          >
+            ↪
+          </ToolbarButton>
+        </div>
+
+        {/* Tiptap editor */}
+        <div className="flex-1 overflow-y-auto">
+          <EditorContent editor={editor} />
+        </div>
+
+        {/* Attachment chips */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 border-t border-gray-100 px-4 py-2">
+            {attachments.map((att) => (
+              <div
+                key={att.id}
+                className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700"
+              >
+                <span className="max-w-[140px] truncate">{att.name}</span>
+                <span className="text-gray-400">({formatBytes(att.size)})</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(att.id)}
+                  className="ml-0.5 text-gray-400 hover:text-gray-700"
+                  aria-label={`Remove ${att.name}`}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-gray-100 px-4 py-2">
-          {error ? <p className="text-xs text-red-600">{error}</p> : <span />}
+          <div className="flex items-center gap-2">
+            {error ? (
+              <p className="text-xs text-red-600">{error}</p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex items-center gap-1 rounded text-xs text-gray-400 hover:text-gray-700 disabled:opacity-50"
+                title="Attach file"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                  />
+                </svg>
+                {uploading ? "Uploading…" : "Attach"}
+              </button>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleSend}
@@ -175,6 +352,14 @@ export function ComposeDrawer({
             {sending ? "Sending…" : "Send"}
           </button>
         </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
     </>
   );

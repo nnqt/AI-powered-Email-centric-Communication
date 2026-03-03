@@ -1,10 +1,16 @@
 import { google, gmail_v1 } from "googleapis";
 import mongoose from "mongoose";
+import { readFile, unlink } from "fs/promises";
+import path from "path";
 
 import { connectToDatabase } from "@/lib/db";
 import { User } from "@/models/User";
 import { Thread } from "@/models/Thread";
 import { Message } from "@/models/Message";
+import { ContactService } from "@/modules/contacts/contact.service";
+
+const UPLOAD_DIR = "/tmp/email-attachments";
+const contactService = new ContactService();
 
 export class GmailService {
   private userId: string;
@@ -119,6 +125,12 @@ export class GmailService {
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
 
+      // Auto-create contacts for each participant (FR-06)
+      await contactService.upsertParticipants(
+        this.userId,
+        Array.from(participants),
+      );
+
       const threadId = threadDoc._id;
 
       for (const msg of thread.messages || []) {
@@ -206,7 +218,12 @@ export class GmailService {
   public async sendEmail(params: {
     to: string;
     subject: string;
-    body: string;
+    /** Plain text fallback (for backwards compat) */
+    body?: string;
+    /** HTML body from Tiptap – takes precedence over body */
+    htmlBody?: string;
+    /** IDs returned by POST /api/emails/attachments */
+    attachmentIds?: string[];
     threadId?: string; // Gmail thread ID to reply into
   }): Promise<{ gmailMessageId: string; gmailThreadId: string }> {
     const gmail = await this.getGmailClient();
@@ -215,24 +232,83 @@ export class GmailService {
     const user = await User.findById(this.userId).lean();
     if (!user) throw new Error("User not found");
 
-    // Build RFC 2822 message
+    const htmlContent = params.htmlBody ?? params.body ?? "";
     const fromHeader = user.email;
-    const inReplyToHeader = params.threadId
+    const threadHeader = params.threadId
       ? `\r\nIn-Reply-To: ${params.threadId}`
       : "";
-    const mime = [
-      `From: ${fromHeader}`,
-      `To: ${params.to}`,
-      `Subject: ${params.subject}`,
-      `MIME-Version: 1.0`,
-      `Content-Type: text/plain; charset="UTF-8"`,
-      `Content-Transfer-Encoding: 7bit`,
-      inReplyToHeader,
-      ``,
-      params.body,
-    ]
-      .filter((line) => line !== undefined)
-      .join("\r\n");
+
+    // Load attachment metadata from disk
+    type AttachmentInfo = { name: string; mimeType: string; data: Buffer };
+    const attachments: AttachmentInfo[] = [];
+    for (const id of params.attachmentIds ?? []) {
+      try {
+        const metaPath = path.join(UPLOAD_DIR, `${id}.json`);
+        const meta = JSON.parse(await readFile(metaPath, "utf-8")) as {
+          name: string;
+          mimeType: string;
+          path: string;
+        };
+        const data = await readFile(meta.path);
+        attachments.push({ name: meta.name, mimeType: meta.mimeType, data });
+      } catch {
+        /* skip missing attachments (already cleaned up, etc.) */
+      }
+    }
+
+    let mime: string;
+
+    if (attachments.length === 0) {
+      // Simple single-part HTML message
+      mime = [
+        `From: ${fromHeader}`,
+        `To: ${params.to}`,
+        `Subject: ${params.subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: text/html; charset="UTF-8"`,
+        `Content-Transfer-Encoding: 7bit`,
+        threadHeader,
+        ``,
+        htmlContent,
+      ]
+        .filter((line) => line !== undefined)
+        .join("\r\n");
+    } else {
+      // Multipart/mixed for attachments
+      const boundary = `----=_Part_${crypto.randomUUID().replace(/-/g, "")}`;
+      const parts: string[] = [
+        `--${boundary}`,
+        `Content-Type: text/html; charset="UTF-8"`,
+        `Content-Transfer-Encoding: 7bit`,
+        ``,
+        htmlContent,
+      ];
+      for (const att of attachments) {
+        const b64 = att.data.toString("base64").replace(/.{76}/g, "$&\r\n");
+        parts.push(
+          `--${boundary}`,
+          `Content-Type: ${att.mimeType}; name="${att.name}"`,
+          `Content-Transfer-Encoding: base64`,
+          `Content-Disposition: attachment; filename="${att.name}"`,
+          ``,
+          b64,
+        );
+      }
+      parts.push(`--${boundary}--`);
+
+      mime = [
+        `From: ${fromHeader}`,
+        `To: ${params.to}`,
+        `Subject: ${params.subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: multipart/mixed; boundary="${boundary}"`,
+        threadHeader,
+        ``,
+        parts.join("\r\n"),
+      ]
+        .filter((line) => line !== undefined)
+        .join("\r\n");
+    }
 
     const encoded = Buffer.from(mime)
       .toString("base64")
@@ -250,6 +326,16 @@ export class GmailService {
 
     const msgId = res.data.id!;
     const gThreadId = res.data.threadId!;
+
+    // Clean up temp attachment files
+    for (const id of params.attachmentIds ?? []) {
+      try {
+        await unlink(path.join(UPLOAD_DIR, id));
+        await unlink(path.join(UPLOAD_DIR, `${id}.json`));
+      } catch {
+        /* ignore cleanup errors */
+      }
+    }
 
     // Fetch the sent message to upsert in DB
     const msgRes = await gmail.users.messages.get({
@@ -272,7 +358,8 @@ export class GmailService {
         userId: new mongoose.Types.ObjectId(this.userId),
         subject: getHeader("Subject") || params.subject,
         participants: [params.to, fromHeader ?? ""],
-        snippet: msg.snippet || params.body.slice(0, 100),
+        snippet:
+          msg.snippet || htmlContent.replace(/<[^>]*>/g, "").slice(0, 100),
         lastMessageDate: msg.internalDate
           ? new Date(parseInt(msg.internalDate, 10))
           : new Date(),

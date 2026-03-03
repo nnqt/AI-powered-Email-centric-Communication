@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { GmailService } from "@/modules/email/gmail.service";
+import { emitToUser } from "@/lib/socketServer";
 
 // POST /api/emails/send
 // Body: { to: string; subject: string; body: string; threadId?: string }
@@ -19,11 +20,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { to, subject, body: emailBody, threadId } = body;
+    const {
+      to,
+      subject,
+      body: emailBody,
+      htmlBody,
+      attachmentIds,
+      threadId,
+    } = body as {
+      to: string;
+      subject: string;
+      body?: string;
+      htmlBody?: string;
+      attachmentIds?: string[];
+      threadId?: string;
+    };
 
-    if (!to || !subject || !emailBody) {
+    if (!to || !subject || (!emailBody && !htmlBody)) {
       return NextResponse.json(
-        { error: "Missing required fields: to, subject, body" },
+        { error: "Missing required fields: to, subject, body or htmlBody" },
         { status: 422 },
       );
     }
@@ -33,7 +48,14 @@ export async function POST(request: NextRequest) {
       to,
       subject,
       body: emailBody,
+      htmlBody,
+      attachmentIds,
       threadId,
+    });
+
+    // Notify frontend that a new email was sent (so thread list can refresh)
+    emitToUser(userId, "EMAIL_SENT", {
+      threadId: result.gmailThreadId ?? threadId,
     });
 
     return NextResponse.json({ success: true, ...result }, { status: 201 });
