@@ -1,14 +1,15 @@
 "use client";
 
 import { useSession, signIn } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import apiClient from "@/lib/api";
 import { SyncButton } from "@/components/SyncButton";
 import { ThreadList } from "@/features/inbox/ThreadList";
 import { useToast } from "@/components/Toast";
 import { ComposeDrawer } from "@/components/ComposeDrawer";
-import { useSocket } from "@/hooks/useSocket";
+import { useSocket, useBackgroundSync } from "@/hooks/useSocket";
 import { useSWRConfig } from "swr";
 
 export default function Home() {
@@ -19,30 +20,44 @@ export default function Home() {
   const { mutate } = useSWRConfig();
 
   const userId = (session?.user as any)?.id as string | undefined;
+  const autoSyncFired = useRef(false);
+
+  // Auto-sync on first authenticated load
+  useEffect(() => {
+    if (status !== "authenticated" || autoSyncFired.current) return;
+    autoSyncFired.current = true;
+    apiClient.post("/api/emails/sync").catch(() => {});
+  }, [status]);
+
+  const revalidateThreads = () =>
+    mutate(
+      (key: unknown) =>
+        typeof key === "string" && key.startsWith("/api/threads"),
+      undefined,
+      { revalidate: true },
+    );
 
   // Realtime: refresh thread list when server pushes events
   useSocket(userId, {
     EMAIL_SYNCED: (payload: { count: number; hasMore: boolean }) => {
-      mutate(
-        (key: unknown) =>
-          typeof key === "string" && key.startsWith("/api/threads"),
-        undefined,
-        { revalidate: true },
-      );
-      showToast(
-        `Synced ${payload.count} email${payload.count !== 1 ? "s" : ""}`,
-        "success",
-      );
+      revalidateThreads();
+      if (payload.count > 0) {
+        showToast(
+          `Synced ${payload.count} email${payload.count !== 1 ? "s" : ""}`,
+          "success",
+        );
+      }
+    },
+    NEW_THREAD: () => {
+      revalidateThreads();
     },
     EMAIL_SENT: () => {
-      mutate(
-        (key: unknown) =>
-          typeof key === "string" && key.startsWith("/api/threads"),
-        undefined,
-        { revalidate: true },
-      );
+      revalidateThreads();
     },
   });
+
+  // Polling fallback: silently revalidate every 60 s in case socket events are missed
+  useBackgroundSync(revalidateThreads, 60_000, status === "authenticated");
 
   useEffect(() => {
     if (session?.expires) {

@@ -32,11 +32,18 @@ interface SuggestReplyRequest {
     text: string;
   };
   max_replies: number;
+  format?: "email" | "message";
+}
+
+interface ReplyItem {
+  subject: string | null;
+  body: string;
 }
 
 interface SuggestReplyResponse {
   thread_id: string;
-  replies: string[];
+  format: string;
+  replies: ReplyItem[];
 }
 
 interface EnrichContactRequest {
@@ -73,7 +80,7 @@ interface SuggestMergeResponse {
   suggestions: MergeSuggestion[];
 }
 
-export type { EnrichContactResponse, MergeSuggestion };
+export type { EnrichContactResponse, MergeSuggestion, ReplyItem };
 
 export class AIService {
   async summarizeThread(
@@ -124,7 +131,8 @@ export class AIService {
     latestMessage: { id: string; from?: string; text: string },
     context?: string,
     maxReplies = 3,
-  ): Promise<string[]> {
+    format: "email" | "message" = "message",
+  ): Promise<{ format: string; replies: ReplyItem[] }> {
     const payload: SuggestReplyRequest = {
       thread_id: threadId,
       conversation_context: context,
@@ -134,6 +142,7 @@ export class AIService {
         text: latestMessage.text,
       },
       max_replies: maxReplies,
+      format,
     };
 
     try {
@@ -142,7 +151,10 @@ export class AIService {
         payload,
         { timeout: 30000 },
       );
-      return response.data.replies;
+      return {
+        format: response.data.format,
+        replies: response.data.replies,
+      };
     } catch (error: any) {
       console.error("AI suggest-reply failed:", error.message);
       throw new Error(

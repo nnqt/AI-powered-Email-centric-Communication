@@ -64,6 +64,7 @@ docker compose up -d
 - Upserts `Thread` and `Message` documents (idempotent).
 - Stores `nextPageToken` in `User.gmailNextPageToken`; sets `gmailSyncComplete = true` when done.
 - Returns `{ syncedMessages, nextPageToken, hasMore }`.
+- **Performance fix**: thread fetches run in parallel batches of 10 via `Promise.allSettled` (was sequential for-loop over 50 threads). Inner `Message.findOneAndUpdate` calls per thread also parallelized. Contact upsert is fire-and-forget (non-blocking).
 - **Architecture note**: Gmail Pub/Sub webhook (< 5s push) is the production target per thesis FR-01 requirement. PoC dùng manual sync trigger do hạn chế setup local (cần public HTTPS URL). Architecture đã được thiết kế để thêm webhook handler sau này mà không cần refactor.
 
 API routes:
@@ -77,6 +78,8 @@ API routes:
 - Button text: `"Syncing..."` / `"Sync More Emails"` / `"Sync Inbox"`.
 - Auto-retry once on network error (2s delay). Auth errors handled by axios interceptor.
 - Success/error feedback via `useToast()`.
+
+**Auto-sync on load**: `apps/frontend/src/app/page.tsx` fires `POST /api/emails/sync` automatically on first authenticated session load via `useEffect` + `useRef` guard (fires once only).
 
 ### FR-04 – Inbox / Timeline
 
@@ -105,27 +108,75 @@ API routes:
 - Hover hover-group hiện 2 action icon: toggle read/unread, archive — cả hai dùng **optimistic UI** với `mutate()` revert on error.
 - Snippet preview; relative time via `date-fns`.
 
-### FR-07 – Thread Summarization
+### FR-06 – AI-Assisted Contact Management ✅ IMPLEMENTED
+
+Backend models:
+
+- `Contact` (`apps/backend/src/models/Contact.ts`): `email`, `name`, `org`, `language`, `alternateEmails[]`, `userId`, `aiEnriched`, `mergedInto?`.
+
+`ContactService` (`apps/backend/src/modules/contacts/contact.service.ts`):
+
+- `upsertParticipants(userId, emails[])` — called after each `syncEmails` (fire-and-forget), idempotent.
+- `getContacts(userId)`, `getContact(userId, contactId)`, `mergeContacts(userId, sourceId, targetId)`.
+- `getContactTimeline(userId, contactId)` — threads where any of `[email, ...alternateEmails]` appears in `participants`.
+
+API routes:
+
+- `GET /api/contacts` – list contacts.
+- `POST /api/contacts` – create manually.
+- `GET /api/contacts/[contactId]` – single contact.
+- `GET /api/contacts/[contactId]/timeline` – email timeline for this contact.
+- `POST /api/contacts/[contactId]/enrich` – calls AI `/enrich-contact`, saves result.
+- `GET /api/contacts/merge-suggestions` – calls AI `/suggest-merge`, returns candidate pairs.
+- `POST /api/contacts/merge` – body `{ sourceId, targetId }`, soft-merges (sets `mergedInto`).
 
 AI Service (`apps/ai-service`):
 
-- `POST /summarize` → `{ summary, key_issues, action_required }` via Google Gemini (`gemini-2.0-flash`).
-- `GeminiSummarizationClient` và `GeminiReplyClient` trong `core/llm_client.py`.
-- Handles markdown code block wrapping trong Gemini JSON output.
+- `POST /enrich-contact` – `{ email, name?, conversation_snippet? }` → `{ display_name, org, language }`.
+- `POST /suggest-merge` – `{ contacts[] }` (capped to 50) → `[{ source_id, target_id, confidence, reason }]`.
+- `GeminiContactEnrichClient` + `GeminiMergeSuggestionClient` trong `core/llm_client.py`.
+- `apps/ai-service/models/contact.py` — Pydantic models: `EnrichContactRequest`, `EnrichContactResponse`, `ContactSnippet`, `MergeSuggestion`.
+- `apps/ai-service/routes/contact.py` — `/enrich-contact` + `/suggest-merge` routes.
+
+Frontend:
+
+- `apps/frontend/src/app/contacts/page.tsx` — danh sách contacts + merge suggestion banner (Dismiss / Merge buttons).
+- `apps/frontend/src/app/contacts/[id]/page.tsx` — contact detail + email timeline + "Enrich with AI" button. ✅ IMPLEMENTED
+
+AI Service (`apps/ai-service`):
+
+- `POST /summarize` → `{ summary, key_issues, action_required }` via `GeminiSummarizationClient`.
+- **Always responds in Vietnamese** (`_LANG_INSTRUCTION` constant instructs Gemini to translate output into Vietnamese regardless of email language).
+- Token safety: each message body truncated to 1,500 chars; total content capped at 12,000 chars via `_truncate()` + `_build_messages_text()`.
+- JSON markdown code block stripping for Gemini response.
 
 Backend:
 
 - `AIService.summarizeThread()` (`apps/backend/src/modules/ai/ai.service.ts`) — gọi AI service via axios.
-- `POST /api/threads/[threadId]/summarize` → lưu result vào `thread.summary` trong MongoDB.
+- `POST /api/threads/[threadId]/summarize` → lưu result vào `thread.summary` trong MongoDB, emits `SUMMARY_READY` socket event.
 
 Frontend:
 
 - `AISummaryCard` (`apps/frontend/src/components/AISummaryCard.tsx`):
   - Shows `"Summarize this Thread"` button khi `!summary || !summary.text`.
-  - Hiển thị summary + key issues + action items khi có kết quả.
+  - Hiển thị summary (Vietnamese) + key issues + action items khi có kết quả.
   - `"Regenerate"` link để re-trigger.
 
-### FR-03 – Read/Unread/Archive ✅ IMPLEMENTED | FR-02 – Compose/Send 🔄 PARTIAL (plain text; rich text + attachment pending)
+### FR-02 – Compose + Send ✅ IMPLEMENTED (Rich Text + Attachments)
+
+`GmailService` (`apps/backend/src/modules/email/gmail.service.ts`):
+
+- `sendEmail({ to, subject, htmlBody, attachmentIds? })`: RFC 2822 MIME encode (HTML body) → `users.messages.send` → upsert Thread + Message vào MongoDB.
+- Attachment support: `POST /api/emails/attachments` nhận multipart/form-data, lưu tạm trong `uploads/`, trả về `attachmentId`. `sendEmail` đính kèm file trước khi gửi.
+
+API routes:
+
+- `POST /api/emails/send` – body `{ to, subject, htmlBody, threadId?, attachmentIds? }`.
+- `POST /api/emails/attachments` – multipart upload, trả về `{ attachmentId, filename, size }`.
+
+Frontend:
+
+- `ComposeDrawer` (`apps/frontend/src/components/ComposeDrawer.tsx`): Tiptap rich text editor (bold, italic, bullet, blockquote, link) + file picker + attachment chips. ESC + backdrop close. `htmlBody` gửi HTML string từ Tiptap thay vì plain text.
 
 `GmailService` (`apps/backend/src/modules/email/gmail.service.ts`):
 
@@ -145,27 +196,36 @@ Frontend:
 - Inbox `page.tsx`: nút "Compose" (indigo, + icon) → `setComposeOpen(true)` → mở `ComposeDrawer`.
 - Thread detail `page.tsx`: nút "Reply" → mở `ComposeDrawer` pre-filled `to`, `subject`, `replyToThreadId`. `useEffect` auto-marks thread as read khi component mount.
 
-### FR-08 – Smart Reply Suggestions
+### FR-08 – Smart Reply Suggestions ✅ IMPLEMENTED
 
 AI Service (`apps/ai-service`):
 
-- `POST /suggest-reply` → `{ thread_id, replies[] }` via `GeminiReplyClient.suggest_replies()`.
-- Parse numbered list từ Gemini text response thành `string[]`.
+- `POST /suggest-reply` → `{ thread_id, format, replies: [{ subject, body }] }` via `GeminiReplyClient`.
+- Accepts `format: "email" | "message"` (default `"message"`).
+  - `email` format: full RFC 2822-style reply with greeting, content, sign-off, and subject line.
+  - `message` format: short conversational reply (1–3 sentences, no formal greeting).
+- **Always responds in Vietnamese** (shared `_LANG_INSTRUCTION`).
+- Token safety: `conversation_context` capped at 400 chars, `latest_message.text` capped at 1,500 chars.
+- JSON array output `[{"subject": ..., "body": ...}]`; plain-text fallback parser for non-JSON Gemini responses.
 
 Backend:
 
-- `AIService.suggestReplies(threadId, latestMessage, context?, maxReplies=3)` — POST `${AI_SERVICE_URL}/suggest-reply`, trả về `string[]`.
-- `POST /api/threads/[threadId]/suggest-reply` — tự resolve thread+messages từ DB qua `TimelineService`, no request body needed, trả về `{ threadId, replies[] }`.
+- `AIService.suggestReplies(threadId, latestMessage, context?, maxReplies, format)` — returns `{ format, replies: ReplyItem[] }`.
+- `ReplyItem` interface: `{ subject: string | null; body: string }`. Exported from `ai.service.ts`.
+- `POST /api/threads/[threadId]/suggest-reply` — accepts `{ format? }` in body, resolves thread+messages from DB, returns `{ threadId, format, replies[] }`.
 
 Frontend:
 
-- `SmartReplyBar` (`apps/frontend/src/components/SmartReplyBar.tsx`): nút "Generate suggestions" → spinner → 2-3 chip buttons (truncated 60 chars). "↻ Regenerate" sau khi đã generate.
-- Click chip → `onSelect(reply)` → `handleOpenReply(reply)` → mở `ComposeDrawer` với `initialBody` pre-filled.
-- Đặt giữa `AISummaryCard` và danh sách messages trong thread detail page.
+- `SmartReplyBar` (`apps/frontend/src/components/SmartReplyBar.tsx`):
+  - Format toggle header: `💬 Message` / `✉ Email`.
+  - **Message format**: compact chip buttons showing `reply.body`.
+  - **Email format**: expanded cards with Subject + body preview + "Use this reply" button.
+  - `onSelect(reply: ReplyItem)` callback.
+- Thread detail `page.tsx`:
+  - `subjectOverride` state: khi user chọn email-format reply có subject, `ComposeDrawer` dùng subject đó thay vì `Re: <original>`.
+  - `handleSelectReply(reply: ReplyItem)` pre-fills both `initialBody` và `subjectOverride`.
 
 ### FR-05 – WebSocket Realtime
-
-**Architecture**: Socket.IO + Redis adapter, custom Next.js server thay thế `output: "standalone"`.
 
 Custom server (`apps/backend/server.ts`):
 
@@ -191,11 +251,12 @@ Backend routes emit events:
 Frontend hook (`apps/frontend/src/hooks/useSocket.ts`):
 
 - Singleton socket kết nối trực tiếp `NEXT_PUBLIC_BACKEND_SOCKET_URL` (baked tại build time).
-- `useSocket(userId, listeners)`: join room khi connect/reconnect, đăng ký listeners qua stable ref để tránh stale closures.
+- `useSocket(userId, listeners)`: join room khi connect **và** reconnect (fixed: trước đây chỉ join khi `connect`, bỏ sót `reconnect` event → room bị mất sau ngắt kết nối).
+- `useBackgroundSync(cb, intervalMs, enabled)`: polling fallback mỗi 60s để revalidate SWR cache phòng trường hợp socket event bị miss.
 
 Frontend wiring:
 
-- `apps/frontend/src/app/page.tsx`: `EMAIL_SYNCED` → `mutate(/api/threads/*)` + toast. `EMAIL_SENT` → mutate.
+- `apps/frontend/src/app/page.tsx`: `EMAIL_SYNCED` → `mutate(/api/threads/*)` + toast (chỉ khi `count > 0`). `NEW_THREAD` + `EMAIL_SENT` → mutate. `useBackgroundSync` 60s fallback.
 - `apps/frontend/src/app/threads/[id]/page.tsx`: `SUMMARY_READY` (match threadId) → `mutate()` refresh AISummaryCard.
 
 Dockerfile backend:
@@ -331,17 +392,24 @@ GEMINI_MODEL_NAME=gemini-2.0-flash
 
 ## Known Issues / Next Steps
 
-**FR hoàn thành (theo thesis)**: FR-01, FR-03, FR-04, FR-05, FR-07, FR-08.
+**FR hoàn thành (theo thesis)**: FR-01, FR-02, FR-03, FR-04, FR-05, FR-06, FR-07, FR-08.
 
 **FR đang pending**:
 
-| FR    | Description                                                                         | Plan         |
-| ----- | ----------------------------------------------------------------------------------- | ------------ |
-| FR-02 | Rich text editor (Tiptap) + file attachment trong `ComposeDrawer`                   | Bước kế tiếp |
-| FR-06 | AI Contact Management: auto-create khi sync + manual + AI enrich + merge suggestion | Sau FR-02    |
-| FR-09 | Multi-channel: abstract `IChannelAdapter` + Telegram Bot (grammy)                   | Sau FR-06    |
+| FR    | Description                                                       | Plan       |
+| ----- | ----------------------------------------------------------------- | ---------- |
+| FR-09 | Multi-channel: abstract `IChannelAdapter` + Telegram Bot (grammy) | Tạm bỏ qua |
+
+**AI improvements (tất cả implemented)**:
+
+| Improvement         | Detail                                                                                                |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| Token truncation    | `_truncate()` helper; 1,500 chars/message, 12,000 chars total, 400 chars snippets                     |
+| Vietnamese output   | `_LANG_INSTRUCTION` trong summarize + reply prompts — luôn dịch sang tiếng Việt                       |
+| Smart reply format  | `format: "email"\|"message"` xuyên suốt full stack: AI → backend → frontend                           |
+| Duplicate class fix | `llm_client.py` đã xóa các duplicate class definitions (cũ và mới đều tồn tại → Python chọn cái cuối) |
 
 **Quyết định kiến trúc**:
 
 - FR-01 Gmail Pub/Sub webhook: không implement trong PoC (cần public HTTPS + Google Cloud setup). Architecture sẵn sàng thêm webhook handler sau.
-- FR-09 channel được chọn: **Telegram Bot** (grammy) — free, không cần approval, TypeScript SDK tốt.
+- FR-09 channel được chọn: **Telegram Bot** (grammy) — free, không cần approval, TypeScript SDK tốt. Tạm bỏ qua.

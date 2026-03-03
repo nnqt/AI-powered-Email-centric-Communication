@@ -11,11 +11,11 @@ where to implement new features.
 | FR    | Description                                                   | Status                                                         |
 | ----- | ------------------------------------------------------------- | -------------------------------------------------------------- |
 | FR-01 | Email sync (near real-time)                                   | ✅ IMPLEMENTED (manual sync; webhook is architecture decision) |
-| FR-02 | Compose + send (rich text + attachments)                      | 🔄 PARTIAL (plain text only; rich text + attachment pending)   |
+| FR-02 | Compose + send (rich text + attachments)                      | ✅ IMPLEMENTED                                                 |
 | FR-03 | Manage read/unread/archive/labels (two-way sync)              | ✅ IMPLEMENTED                                                 |
 | FR-04 | Inbox + Thread timeline view                                  | ✅ IMPLEMENTED                                                 |
 | FR-05 | Real-time UI update (WebSocket)                               | ✅ IMPLEMENTED                                                 |
-| FR-06 | AI-assisted Contact Management (auto-create + enrich + merge) | ⏳ PENDING                                                     |
+| FR-06 | AI-assisted Contact Management (auto-create + enrich + merge) | ✅ IMPLEMENTED                                                 |
 | FR-07 | Thread summarization (AI)                                     | ✅ IMPLEMENTED                                                 |
 | FR-08 | Smart reply suggestions (AI)                                  | ✅ IMPLEMENTED                                                 |
 | FR-09 | Multi-channel adapter interface + Telegram                    | ⏳ PENDING                                                     |
@@ -45,7 +45,7 @@ such as Gmail (or any API-based provider) with minimal delay.
 - Store messages in MongoDB, keyed by thread/conversation id.
 - Design the sync logic to be idempotent (safe to run multiple times).
 
-### FR-02 – Compose + Send Email 🔄 PARTIAL (plain text implemented; rich text + attachments pending)
+### FR-02 – Compose + Send Email ✅ IMPLEMENTED (Rich Text + Attachments)
 
 **Goal**: người dùng có thể soạn email với Rich Text (bold, italic, bullet, blockquote) và đính kèm tệp. Email gửi đi đồng bộ ngược vào Gmail để lịch sử nhất quấn.
 
@@ -130,7 +130,7 @@ such as Gmail (or any API-based provider) with minimal delay.
 - Frontend connects directly to `NEXT_PUBLIC_BACKEND_SOCKET_URL` (baked at build time) — Next.js `rewrites()` cannot proxy WebSocket upgrades.
 - Clients join `user:<userId>` room on connect so server can target specific users.
 
-### FR-06 – AI-Assisted Contact Management ⏳ PENDING
+### FR-06 – AI-Assisted Contact Management ✅ IMPLEMENTED
 
 **Goal**: tự động tạo Contact khi sync email; AI súy luận metadata (tên, org, ngôn ngữ); đề xuất gộp (merge) nhiều địa chỉ email → 1 Contact.
 
@@ -189,15 +189,21 @@ information overload, shown directly in the thread/timeline UI.
 
 **Goal**: propose 2–3 reply options for the latest email in a thread,
 surfaced in the thread view so the user can click to pre-fill the composer.
+Supports two output formats: conversational message or full email.
 
 **Primary modules**:
 
 - `apps/backend`:
-  - `apps/backend/src/modules/ai/ai.service.ts` — `suggestReplies(threadId, latestMessage, context?, maxReplies)`.
-  - `apps/backend/src/app/api/threads/[threadId]/suggest-reply/route.ts` — `POST`, no body needed; resolves thread+messages internally.
+  - `apps/backend/src/modules/ai/ai.service.ts` — `suggestReplies(threadId, latestMessage, context?, maxReplies, format)`. Returns `{ format, replies: ReplyItem[] }`.
+  - `apps/backend/src/app/api/threads/[threadId]/suggest-reply/route.ts` — `POST`, accepts optional `{ format }` body; resolves thread+messages internally.
 - `apps/ai-service`:
   - `apps/ai-service/routes/reply.py` — `POST /suggest-reply`.
-  - `apps/ai-service/services/smart_reply.py` — `SmartReplyService`.
+  - `apps/ai-service/services/smart_reply.py` — `suggest_replies()` returns `SuggestReplyResponse` with `List[ReplyItem]`.
+  - `apps/ai-service/models/reply.py` — `SuggestReplyRequest` (with `format` field), `ReplyItem` (`subject`, `body`), `SuggestReplyResponse`.
+  - `apps/ai-service/core/llm_client.py` — `GeminiReplyClient.suggest_replies()` returns `List[Dict]` with `subject` + `body`.
+- `apps/frontend`:
+  - `apps/frontend/src/components/SmartReplyBar.tsx` — format toggle (💬 Message / ✉ Email), chip buttons or expanded cards.
+  - `apps/frontend/src/app/threads/[id]/page.tsx` — `subjectOverride` state, `handleSelectReply(ReplyItem)`, wired between `AISummaryCard` and messages.
   - `apps/ai-service/core/llm_client.py` — `GeminiReplyClient`.
 - `apps/frontend`:
   - `apps/frontend/src/components/SmartReplyBar.tsx` — chip buttons + generate/regenerate.

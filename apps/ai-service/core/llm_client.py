@@ -16,14 +16,53 @@ genai.configure(api_key=GEMINI_API_KEY)
 _model = genai.GenerativeModel(GEMINI_MODEL_NAME)
 
 
+# ── Token-safety helpers ────────────────────────────────────────────────────
+
+# Rough char budget so we stay well under Gemini's token limit.
+# gemini-2.0-flash supports ~1M tokens input, but large prompts are slow and expensive.
+# Keep practical per-request limit at ~12 000 chars (~3 000 tokens).
+_MAX_TOTAL_CONTENT_CHARS = 12_000
+_MAX_PER_MESSAGE_CHARS = 1_500   # truncate each individual message body
+_MAX_SNIPPET_CHARS = 400
+
+
+def _truncate(text: str, max_chars: int) -> str:
+    """Hard-truncate text and append an indicator if cut."""
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "… [truncated]"
+
+
+def _build_messages_text(request: SummarizeRequest) -> str:
+    """Render messages list to a text block, truncating long bodies."""
+    parts: List[str] = []
+    for m in request.messages:
+        body = _truncate(m.text, _MAX_PER_MESSAGE_CHARS)
+        parts.append(
+            f"From: {m.from_}\nTo: {', '.join(m.to)}\nSent at: {m.sent_at}\nText: {body}"
+        )
+    full = "\n\n".join(parts)
+    # Second-pass: if combined still too long, hard-cut overall
+    return _truncate(full, _MAX_TOTAL_CONTENT_CHARS)
+
+
+# ── Language awareness instruction ─────────────────────────────────────────
+
+_LANG_INSTRUCTION = (
+    "IMPORTANT: Always respond entirely in Vietnamese (Tiếng Việt), regardless of the "
+    "language of the original email content. Translate all summaries, key issues, "
+    "action items, and reply suggestions into Vietnamese."
+)
+
+
+# ── Client implementations ──────────────────────────────────────────────────
+
 class GeminiSummarizationClient:
     async def summarize_thread(self, request: SummarizeRequest) -> Dict[str, Any]:
-        messages_text = "\n\n".join(
-            f"From: {m.from_}\nTo: {', '.join(m.to)}\nSent at: {m.sent_at}\nText: {m.text}"
-            for m in request.messages
-        )
+        messages_text = _build_messages_text(request)
         prompt = (
             "You are an AI assistant that summarizes email threads for a CRM-like system. "
+            f"{_LANG_INSTRUCTION}\n\n"
             "Analyze the following email thread and return a JSON object with exactly these fields:\n"
             '- "summary": A concise summary of the thread (string)\n'
             '- "key_issues": An array of key topics or issues discussed (array of strings)\n'
@@ -59,17 +98,52 @@ class GeminiSummarizationClient:
 
 
 class GeminiReplyClient:
-    async def suggest_replies(self, request: SuggestReplyRequest) -> List[str]:
-        context = request.conversation_context or "(No additional context provided)"
-        latest = request.latest_message
+    async def suggest_replies(self, request: SuggestReplyRequest) -> List[Dict[str, Any]]:
+        context = _truncate(
+            request.conversation_context or "(No additional context provided)",
+            _MAX_SNIPPET_CHARS,
+        )
+        latest_text = _truncate(request.latest_message.text, _MAX_PER_MESSAGE_CHARS)
+        reply_format = getattr(request, "format", "message")  # "email" or "message"
+
+        if reply_format == "email":
+            format_instruction = (
+                "Generate professional EMAIL replies in RFC 2822 style. "
+                "For EACH reply option, return a JSON object with:\n"
+                '- "subject": reply subject line (usually "Re: <original subject>")\n'
+                '- "body": full email body including greeting, content, and sign-off\n'
+            )
+            format_example = (
+                '[\n'
+                '  {"subject": "Re: Meeting", "body": "Dear Alice,\\n\\nThank you for your message...\\n\\nBest regards,\\n[Your name]"},\n'
+                '  ...\n'
+                ']'
+            )
+        else:
+            format_instruction = (
+                "Generate short, conversational message replies. "
+                "For EACH reply option, return a JSON object with:\n"
+                '- "subject": null\n'
+                '- "body": the reply text (1-3 sentences, no formal greeting)\n'
+            )
+            format_example = (
+                '[\n'
+                '  {"subject": null, "body": "Sounds good, let\'s meet at 3pm."},\n'
+                '  ...\n'
+                ']'
+            )
+
         prompt = (
-            "You are an AI assistant generating professional, concise reply suggestions for an email thread. "
-            "Return ONLY a numbered list of reply options, without extra commentary.\n\n"
+            "You are an AI assistant generating reply suggestions for an email thread. "
+            f"{_LANG_INSTRUCTION}\n\n"
+            f"{format_instruction}"
+            f"Return a JSON array of exactly {request.max_replies} reply objects. "
+            f"Example format:\n{format_example}\n\n"
+            "Return ONLY a valid JSON array, no markdown, no extra text.\n\n"
             f"Thread ID: {request.thread_id}\n"
             f"Conversation context: {context}\n\n"
-            "Latest message from the other party:\n"
-            f"From: {latest.from_}\nText: {latest.text}\n\n"
-            f"Generate {request.max_replies} distinct reply options."
+            "Latest message to reply to:\n"
+            f"From: {request.latest_message.from_}\nText: {latest_text}\n"
         )
 
         try:
@@ -81,24 +155,43 @@ class GeminiReplyClient:
         if not text:
             raise RuntimeError("Gemini reply generation returned empty text")
 
-        # Parse numbered list into individual replies
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        replies: List[str] = []
-        for line in lines:
-            cleaned = line
-            if cleaned[0].isdigit():
-                # Remove leading numbering like "1.", "2)", "3 -"
-                i = 0
-                while i < len(cleaned) and (cleaned[i].isdigit() or cleaned[i] in {'.', ')', '-', ':'}):
-                    i += 1
-                cleaned = cleaned[i:].lstrip()
-            if cleaned:
-                replies.append(cleaned)
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
 
-        if not replies:
-            raise RuntimeError("Gemini reply parsing produced no replies")
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            # Fallback: try to parse as plain numbered list for backwards compat
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            replies_fallback: List[Dict[str, Any]] = []
+            for line in lines:
+                cleaned = line
+                if cleaned and cleaned[0].isdigit():
+                    i = 0
+                    while i < len(cleaned) and (cleaned[i].isdigit() or cleaned[i] in {'.', ')', '-', ':'}):
+                        i += 1
+                    cleaned = cleaned[i:].lstrip()
+                if cleaned:
+                    replies_fallback.append({"subject": None, "body": cleaned})
+            if not replies_fallback:
+                raise RuntimeError(f"Failed to parse reply response: {text[:200]}")
+            return replies_fallback[: request.max_replies]
 
-        return replies[: request.max_replies]
+        if not isinstance(data, list):
+            raise RuntimeError("Gemini reply returned non-list JSON")
+
+        # Normalise each item
+        result: List[Dict[str, Any]] = []
+        for item in data:
+            if isinstance(item, str):
+                result.append({"subject": None, "body": item})
+            elif isinstance(item, dict):
+                result.append({
+                    "subject": item.get("subject"),
+                    "body": item.get("body", ""),
+                })
+        return result[: request.max_replies]
 
 
 def get_summarization_client() -> GeminiSummarizationClient:
@@ -112,7 +205,7 @@ def get_reply_client() -> GeminiReplyClient:
 class GeminiContactEnrichClient:
     async def enrich_contact(self, request: EnrichContactRequest) -> Dict[str, Any]:
         snippet_section = (
-            f"\nRecent email snippet:\n{request.conversation_snippet}"
+            f"\nRecent email snippet:\n{_truncate(request.conversation_snippet, _MAX_SNIPPET_CHARS)}"
             if request.conversation_snippet
             else ""
         )
@@ -154,10 +247,12 @@ class GeminiContactEnrichClient:
 
 class GeminiMergeSuggestionClient:
     async def suggest_merges(self, contacts: List[ContactSnippet]) -> List[MergeSuggestion]:
+        # Cap the contacts list to avoid token overflow
+        contacts_sample = contacts[:50]
         contacts_text = "\n".join(
             f"- id={c.contact_id}, email={c.email}, name={c.name or 'unknown'}, "
-            f"alt_emails={c.alternate_emails}, threads={len(c.sample_threads)}"
-            for c in contacts
+            f"alt_emails={c.alternate_emails}"
+            for c in contacts_sample
         )
         prompt = (
             "You are a CRM AI assistant. Analyze the following list of email contacts and identify "
@@ -219,4 +314,5 @@ def get_contact_enrich_client() -> GeminiContactEnrichClient:
 
 def get_merge_suggestion_client() -> GeminiMergeSuggestionClient:
     return GeminiMergeSuggestionClient()
+
 

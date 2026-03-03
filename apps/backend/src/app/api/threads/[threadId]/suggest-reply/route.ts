@@ -7,7 +7,7 @@ import { TimelineService } from "@/modules/timeline/timeline.service";
 
 // POST /api/threads/:threadId/suggest-reply
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ threadId: string }> },
 ) {
   try {
@@ -22,6 +22,10 @@ export async function POST(
     }
 
     const { threadId } = await context.params;
+
+    // Optional format param in body: "email" | "message" (default: "message")
+    const body = await request.json().catch(() => ({}));
+    const format = (body.format ?? "message") as "email" | "message";
 
     // Fetch thread + messages from DB
     const timeline = new TimelineService();
@@ -49,7 +53,7 @@ export async function POST(
       (thread.subject ? `Thread subject: ${thread.subject}` : undefined);
 
     const aiService = new AIService();
-    const replies = await aiService.suggestReplies(
+    const result2 = await aiService.suggestReplies(
       threadId,
       {
         id: latest.id,
@@ -58,9 +62,14 @@ export async function POST(
       },
       conversationContext,
       3,
+      format,
     );
 
-    return NextResponse.json({ threadId, replies });
+    return NextResponse.json({
+      threadId,
+      format: result2.format,
+      replies: result2.replies,
+    });
   } catch (error: any) {
     console.error("Failed to suggest replies", error);
     return NextResponse.json(

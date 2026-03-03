@@ -61,114 +61,137 @@ export class GmailService {
     const threads = listRes.data.threads || [];
     let syncedMessages = 0;
 
-    for (const threadMeta of threads) {
-      if (!threadMeta.id) continue;
+    // Fetch all thread details in parallel batches of 10 to avoid rate limits
+    const BATCH_SIZE = 10;
+    const allParticipants: string[][] = [];
 
-      const threadRes = await gmail.users.threads.get({
-        userId: "me",
-        id: threadMeta.id,
-        format: "full",
-      });
+    for (let i = 0; i < threads.length; i += BATCH_SIZE) {
+      const batch = threads.slice(i, i + BATCH_SIZE).filter((t) => !!t.id);
 
-      const thread = threadRes.data;
-      if (!thread.id) continue;
-
-      // Extract participants, subject, and snippet from messages
-      const participants = new Set<string>();
-      let threadSubject = "";
-      let threadSnippet = "";
-
-      for (const msg of thread.messages || []) {
-        const headers = msg.payload?.headers || [];
-        const getHeader = (name: string) =>
-          headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
-            ?.value || "";
-
-        const from = getHeader("From");
-        const toRaw = getHeader("To");
-        const subject = getHeader("Subject");
-
-        if (from) participants.add(from);
-        if (toRaw) {
-          toRaw.split(",").forEach((email) => participants.add(email.trim()));
-        }
-
-        if (!threadSubject && subject) {
-          threadSubject = subject;
-        }
-
-        // Use message snippet as thread snippet (from last message)
-        if (msg.snippet) {
-          threadSnippet = msg.snippet;
-        }
-      }
-
-      const threadDoc = await Thread.findOneAndUpdate(
-        { id: thread.id },
-        {
-          id: thread.id,
-          userId: new mongoose.Types.ObjectId(this.userId),
-          historyId: thread.historyId,
-          snippet: thread.snippet || threadSnippet,
-          participants: Array.from(participants),
-          subject: threadSubject,
-          lastMessageDate: thread.messages?.[thread.messages.length - 1]
-            ?.internalDate
-            ? new Date(
-                parseInt(
-                  thread.messages[thread.messages.length - 1].internalDate!,
-                  10,
-                ),
-              )
-            : undefined,
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true },
+      const results = await Promise.allSettled(
+        batch.map((threadMeta) =>
+          gmail.users.threads.get({
+            userId: "me",
+            id: threadMeta.id!,
+            // "metadata" is faster – only headers, no full bodies on list
+            // But we still need bodies for messages, so use "full"
+            format: "full",
+          }),
+        ),
       );
 
-      // Auto-create contacts for each participant (FR-06)
-      await contactService.upsertParticipants(
-        this.userId,
-        Array.from(participants),
+      // Process DB writes in parallel per batch
+      await Promise.allSettled(
+        results.map(async (result) => {
+          if (result.status === "rejected" || !result.value.data.id) return;
+
+          const thread = result.value.data;
+
+          // Extract participants, subject, and snippet from messages
+          const participants = new Set<string>();
+          let threadSubject = "";
+          let threadSnippet = "";
+
+          for (const msg of thread.messages || []) {
+            const headers = msg.payload?.headers || [];
+            const getHeader = (name: string) =>
+              headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
+                ?.value || "";
+
+            const from = getHeader("From");
+            const toRaw = getHeader("To");
+            const subject = getHeader("Subject");
+
+            if (from) participants.add(from);
+            if (toRaw) {
+              toRaw
+                .split(",")
+                .forEach((email) => participants.add(email.trim()));
+            }
+            if (!threadSubject && subject) threadSubject = subject;
+            if (msg.snippet) threadSnippet = msg.snippet;
+          }
+
+          const threadDoc = await Thread.findOneAndUpdate(
+            { id: thread.id },
+            {
+              id: thread.id,
+              userId: new mongoose.Types.ObjectId(this.userId),
+              historyId: thread.historyId,
+              snippet: thread.snippet || threadSnippet,
+              participants: Array.from(participants),
+              subject: threadSubject,
+              lastMessageDate: thread.messages?.[thread.messages.length - 1]
+                ?.internalDate
+                ? new Date(
+                    parseInt(
+                      thread.messages[thread.messages.length - 1].internalDate!,
+                      10,
+                    ),
+                  )
+                : undefined,
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true },
+          );
+
+          allParticipants.push(Array.from(participants));
+
+          const threadId = threadDoc._id;
+
+          // Upsert all messages in this thread in parallel
+          const msgResults = await Promise.allSettled(
+            (thread.messages || [])
+              .filter((m) => !!m.id)
+              .map(async (msg) => {
+                const headers = msg.payload?.headers || [];
+                const getHeader = (name: string) =>
+                  headers.find(
+                    (h) => h.name?.toLowerCase() === name.toLowerCase(),
+                  )?.value || "";
+
+                const subject = getHeader("Subject");
+                const from = getHeader("From");
+                const toRaw = getHeader("To");
+                const to = toRaw ? toRaw.split(",").map((t) => t.trim()) : [];
+                const body = extractMessageBody(msg.payload);
+
+                await Message.findOneAndUpdate(
+                  { id: msg.id },
+                  {
+                    id: msg.id,
+                    threadId,
+                    userId: new mongoose.Types.ObjectId(this.userId),
+                    from,
+                    to,
+                    subject,
+                    body,
+                    snippet: msg.snippet,
+                    date: msg.internalDate
+                      ? new Date(parseInt(msg.internalDate, 10))
+                      : undefined,
+                    labelIds: msg.labelIds || [],
+                  },
+                  { upsert: true, new: true, setDefaultsOnInsert: true },
+                );
+              }),
+          );
+
+          syncedMessages += msgResults.filter(
+            (r) => r.status === "fulfilled",
+          ).length;
+        }),
       );
+    }
 
-      const threadId = threadDoc._id;
-
-      for (const msg of thread.messages || []) {
-        if (!msg.id) continue;
-
-        const headers = msg.payload?.headers || [];
-        const getHeader = (name: string) =>
-          headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
-            ?.value || "";
-
-        const subject = getHeader("Subject");
-        const from = getHeader("From");
-        const toRaw = getHeader("To");
-        const to = toRaw ? toRaw.split(",").map((t) => t.trim()) : [];
-
-        const body = extractMessageBody(msg.payload);
-
-        await Message.findOneAndUpdate(
-          { id: msg.id },
-          {
-            id: msg.id,
-            threadId,
-            userId: new mongoose.Types.ObjectId(this.userId),
-            from,
-            to,
-            subject,
-            body,
-            snippet: msg.snippet,
-            date: msg.internalDate
-              ? new Date(parseInt(msg.internalDate, 10))
-              : undefined,
-            labelIds: msg.labelIds || [],
-          },
-          { upsert: true, new: true, setDefaultsOnInsert: true },
+    // Batch upsert all participants once after all threads are processed
+    if (allParticipants.length > 0) {
+      const uniqueParticipants = [...new Set(allParticipants.flat())];
+      // Fire-and-forget – don't block sync response on contact upserts
+      contactService
+        .upsertParticipants(this.userId, uniqueParticipants)
+        .catch((err) =>
+          console.warn("[syncEmails] upsertParticipants error:", err.message),
         );
-
-        syncedMessages += 1;
-      }
     }
 
     // Store nextPageToken for future syncs

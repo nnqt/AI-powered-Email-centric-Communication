@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import { useThreadDetail } from "@/hooks/useThreadDetail";
 import { AISummaryCard } from "@/components/AISummaryCard";
 import { ComposeDrawer } from "@/components/ComposeDrawer";
-import { SmartReplyBar } from "@/components/SmartReplyBar";
+import { SmartReplyBar, ReplyItem } from "@/components/SmartReplyBar";
 import { useSocket } from "@/hooks/useSocket";
 import apiClient from "@/lib/api";
 
@@ -24,6 +24,7 @@ export default function ThreadDetailPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
   const [initialBody, setInitialBody] = useState("");
+  const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
 
   // Realtime: refresh thread detail when AI finishes summarizing this thread
   useSocket(userId, {
@@ -59,6 +60,13 @@ export default function ThreadDetailPage() {
 
   const handleOpenReply = (prefillBody = "") => {
     setInitialBody(prefillBody);
+    setSubjectOverride(null);
+    setComposeOpen(true);
+  };
+
+  const handleSelectReply = (reply: ReplyItem) => {
+    setInitialBody(reply.body);
+    setSubjectOverride(reply.subject ?? null);
     setComposeOpen(true);
   };
 
@@ -141,7 +149,7 @@ export default function ThreadDetailPage() {
           isGenerating={isGenerating}
         />
 
-        <SmartReplyBar threadId={threadId} onSelect={handleOpenReply} />
+        <SmartReplyBar threadId={threadId} onSelect={handleSelectReply} />
 
         <section className="space-y-4">
           {messages?.map((msg) => (
@@ -179,9 +187,12 @@ export default function ThreadDetailPage() {
 
       <ComposeDrawer
         open={composeOpen}
-        onClose={() => setComposeOpen(false)}
+        onClose={() => {
+          setComposeOpen(false);
+          setSubjectOverride(null);
+        }}
         initialTo={getReplyTo()}
-        initialSubject={getReplySubject()}
+        initialSubject={subjectOverride ?? getReplySubject()}
         initialBody={initialBody}
         replyToThreadId={thread.id}
         onSent={() => mutate()}

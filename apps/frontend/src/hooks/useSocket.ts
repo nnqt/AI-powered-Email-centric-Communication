@@ -15,13 +15,19 @@ function getSocket(): Socket {
     _socket = io(SOCKET_URL, {
       path: "/socket.io",
       transports: ["websocket", "polling"],
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 15,
       reconnectionDelay: 2000,
       autoConnect: true,
     });
 
+    _socket.on("connect", () => {
+      console.log("[Socket] connected:", _socket?.id);
+    });
     _socket.on("connect_error", (err) => {
       console.warn("[Socket] connect_error:", err.message);
+    });
+    _socket.on("disconnect", (reason) => {
+      console.warn("[Socket] disconnected:", reason);
     });
   }
   return _socket;
@@ -31,6 +37,7 @@ export type SocketEventMap = Record<string, (payload: any) => void>;
 
 /**
  * Subscribe to Socket.IO events for the given user.
+ * Also handles re-joining the room on reconnect.
  *
  * @param userId  MongoDB user._id string from session. Pass `undefined` to skip.
  * @param listeners  Map of { eventName: handler }. Handlers are stable via ref.
@@ -51,12 +58,17 @@ export function useSocket(
     // Join personal room so server can target `user:<userId>` emissions.
     const joinRoom = () => {
       sock.emit("join", userId);
+      console.log("[Socket] joined room user:", userId);
     };
 
+    // Always join immediately if already connected
     if (sock.connected) {
       joinRoom();
     }
+
+    // Re-join on connect and on every reconnect
     sock.on("connect", joinRoom);
+    sock.on("reconnect", joinRoom);
 
     // Register all event listeners via a stable wrapper.
     const wrappers: SocketEventMap = {};
@@ -69,9 +81,29 @@ export function useSocket(
 
     return () => {
       sock.off("connect", joinRoom);
+      sock.off("reconnect", joinRoom);
       for (const [event, wrapper] of Object.entries(wrappers)) {
         sock.off(event, wrapper);
       }
     };
   }, [userId]); // Only re-run when userId changes
+}
+
+/**
+ * Background polling hook – silently revalidates a SWR key every `intervalMs`.
+ * Acts as a safety net when WebSocket events are missed or socket is disconnected.
+ */
+export function useBackgroundSync(
+  cb: () => void,
+  intervalMs: number = 60_000,
+  enabled: boolean = true,
+) {
+  const cbRef = useRef(cb);
+  cbRef.current = cb;
+
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setInterval(() => cbRef.current(), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs, enabled]);
 }

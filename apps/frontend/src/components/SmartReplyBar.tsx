@@ -4,26 +4,36 @@ import { useState } from "react";
 
 import apiClient from "@/lib/api";
 
-interface SmartReplyBarProps {
-  threadId: string;
-  /** Called when user clicks a suggestion chip — fills the compose drawer */
-  onSelect: (reply: string) => void;
+export interface ReplyItem {
+  subject: string | null;
+  body: string;
 }
 
+interface SmartReplyBarProps {
+  threadId: string;
+  /** Called when user clicks a suggestion — fills the compose drawer */
+  onSelect: (reply: ReplyItem) => void;
+}
+
+type ReplyFormat = "message" | "email";
+
 export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
-  const [replies, setReplies] = useState<string[]>([]);
+  const [format, setFormat] = useState<ReplyFormat>("message");
+  const [replies, setReplies] = useState<ReplyItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generated, setGenerated] = useState(false);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (fmt: ReplyFormat = format) => {
     setLoading(true);
     setError(null);
+    setReplies([]);
     try {
-      const res = await apiClient.post<{ replies: string[] }>(
-        `/api/threads/${threadId}/suggest-reply`,
-      );
-      setReplies(res.data.replies);
+      const res = await apiClient.post<{
+        format: string;
+        replies: ReplyItem[];
+      }>(`/api/threads/${threadId}/suggest-reply`, { format: fmt });
+      setReplies(res.data.replies ?? []);
       setGenerated(true);
     } catch (err: any) {
       setError(err?.response?.data?.error || "Failed to generate suggestions.");
@@ -32,16 +42,22 @@ export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
     }
   };
 
-  const handleSelect = (reply: string) => {
+  const handleFormatChange = (fmt: ReplyFormat) => {
+    setFormat(fmt);
+    setGenerated(false);
+    setReplies([]);
+  };
+
+  const handleSelect = (reply: ReplyItem) => {
     onSelect(reply);
-    // Reset so user can re-generate if needed
     setReplies([]);
     setGenerated(false);
   };
 
   return (
-    <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 space-y-2">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs font-medium text-indigo-700">
           <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -53,10 +69,37 @@ export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
           Smart Reply
         </span>
 
-        {!generated && (
+        <div className="flex items-center gap-1">
+          {/* Format toggle */}
+          <div className="flex rounded-md border border-indigo-200 overflow-hidden text-xs">
+            <button
+              type="button"
+              onClick={() => handleFormatChange("message")}
+              className={`px-2 py-1 transition-colors ${
+                format === "message"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-indigo-600 hover:bg-indigo-50"
+              }`}
+            >
+              💬 Message
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFormatChange("email")}
+              className={`px-2 py-1 transition-colors ${
+                format === "email"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-indigo-600 hover:bg-indigo-50"
+              }`}
+            >
+              ✉ Email
+            </button>
+          </div>
+
+          {/* Generate / Regenerate */}
           <button
             type="button"
-            onClick={handleGenerate}
+            onClick={() => handleGenerate(format)}
             disabled={loading}
             className="rounded px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -83,46 +126,69 @@ export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
                 </svg>
                 Generating…
               </span>
+            ) : generated ? (
+              "↻ Regenerate"
             ) : (
-              "Generate suggestions"
+              "Generate"
             )}
           </button>
-        )}
-
-        {generated && (
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={loading}
-            className="rounded px-2.5 py-1 text-xs text-indigo-500 hover:text-indigo-700 disabled:opacity-50"
-          >
-            ↻ Regenerate
-          </button>
-        )}
+        </div>
       </div>
 
       {error && <p className="text-xs text-red-600">{error}</p>}
 
+      {/* Reply chips / cards */}
       {replies.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {replies.map((reply, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleSelect(reply)}
-              className="max-w-xs truncate rounded-full border border-indigo-200 bg-white px-3 py-1 text-left text-xs text-indigo-800 hover:border-indigo-400 hover:bg-indigo-50"
-              title={reply}
-            >
-              {reply}
-            </button>
-          ))}
-        </div>
+        <>
+          {format === "message" ? (
+            /* Compact chips for message format */
+            <div className="flex flex-wrap gap-2">
+              {replies.map((reply, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handleSelect(reply)}
+                  className="max-w-xs truncate rounded-full border border-indigo-200 bg-white px-3 py-1 text-left text-xs text-indigo-800 hover:border-indigo-400 hover:bg-indigo-50"
+                  title={reply.body}
+                >
+                  {reply.body}
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* Expanded cards for email format */
+            <div className="space-y-2">
+              {replies.map((reply, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-md border border-indigo-200 bg-white p-3 text-xs"
+                >
+                  {reply.subject && (
+                    <p className="mb-1 font-medium text-gray-700">
+                      Subject: {reply.subject}
+                    </p>
+                  )}
+                  <p className="whitespace-pre-wrap text-gray-600 line-clamp-4">
+                    {reply.body}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(reply)}
+                    className="mt-2 rounded bg-indigo-600 px-2.5 py-1 text-white hover:bg-indigo-700"
+                  >
+                    Use this reply
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {!generated && !loading && replies.length === 0 && (
         <p className="text-xs text-indigo-500">
-          Click &ldquo;Generate suggestions&rdquo; to get AI-powered reply
-          ideas.
+          Choose a format and click &ldquo;Generate&rdquo; to get AI-powered
+          reply ideas.
         </p>
       )}
     </div>
