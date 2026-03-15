@@ -1,9 +1,18 @@
 "use client";
 
 import useSWR from "swr";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 import apiClient from "@/lib/api";
+
+export type ContactCategory =
+  | "colleague"
+  | "customer"
+  | "spam"
+  | "other"
+  | "unknown";
+
+export type CategorySource = "rule" | "ai" | "user";
 
 export interface ContactDTO {
   _id: string;
@@ -13,9 +22,14 @@ export interface ContactDTO {
   language?: string;
   alternateEmails: string[];
   aiEnriched: boolean;
+  enrichedAt?: string;
   mergedInto?: string;
   createdAt: string;
   updatedAt: string;
+  category: ContactCategory;
+  categories: ContactCategory[];
+  categorySource: CategorySource;
+  categoryAiSuggestion?: ContactCategory;
 }
 
 export interface PaginatedContactsResponse {
@@ -29,26 +43,85 @@ const fetcher = async (url: string): Promise<PaginatedContactsResponse> => {
   return response.data;
 };
 
-export function useContacts(limit = 30) {
-  const [skip, setSkip] = useState(0);
+const PAGE_SIZE = 30;
 
-  const url = `/api/contacts?limit=${limit}&skip=${skip}`;
+export function useContacts(limit = PAGE_SIZE) {
+  const [skip, setSkip] = useState(0);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<ContactCategory | "all">(
+    "all",
+  );
+
+  // Fetch all contacts when filtering (large limit), else paginate
+  const isFiltering = search.trim() !== "" || categoryFilter !== "all";
+  const fetchLimit = isFiltering ? 500 : limit;
+  const fetchSkip = isFiltering ? 0 : skip;
+
+  const url = `/api/contacts?limit=${fetchLimit}&skip=${fetchSkip}`;
   const { data, error, isLoading, mutate } = useSWR<PaginatedContactsResponse>(
     url,
     fetcher,
     { keepPreviousData: true },
   );
 
+  const allContacts = data?.contacts ?? [];
+
+  // Client-side filter
+  const filtered = useMemo(() => {
+    let list = allContacts;
+    if (categoryFilter !== "all") {
+      list = list.filter((c) => (c.category ?? "unknown") === categoryFilter);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.email.toLowerCase().includes(q) ||
+          c.name?.toLowerCase().includes(q) ||
+          c.org?.toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [allContacts, categoryFilter, search]);
+
+  // Client-side pagination when filtering
+  const [filterPage, setFilterPage] = useState(0);
+  const filtered_start = isFiltering ? filterPage * limit : 0;
+  const filtered_end = isFiltering ? filtered_start + limit : filtered.length;
+  const pageContacts = isFiltering
+    ? filtered.slice(filtered_start, filtered_end)
+    : filtered;
+  const pageTotal = isFiltering ? filtered.length : (data?.total ?? 0);
+  const currentSkip = isFiltering ? filtered_start : skip;
+
   return {
-    contacts: data?.contacts ?? [],
-    total: data?.total ?? 0,
-    hasNext: data?.hasNext ?? false,
+    contacts: pageContacts,
+    total: pageTotal,
+    hasNext: isFiltering
+      ? filtered_end < filtered.length
+      : (data?.hasNext ?? false),
     isLoading,
     isError: !!error,
     mutate,
-    skip,
-    goToNext: () => setSkip((s) => s + limit),
-    goToPrev: () => setSkip((s) => Math.max(0, s - limit)),
+    skip: currentSkip,
+    goToNext: () => {
+      if (isFiltering) setFilterPage((p) => p + 1);
+      else setSkip((s) => s + limit);
+    },
+    goToPrev: () => {
+      if (isFiltering) setFilterPage((p) => Math.max(0, p - 1));
+      else setSkip((s) => Math.max(0, s - limit));
+    },
+    search,
+    setSearch: (v: string) => {
+      setSearch(v);
+      setFilterPage(0);
+    },
+    categoryFilter,
+    setCategoryFilter: (v: ContactCategory | "all") => {
+      setCategoryFilter(v);
+      setFilterPage(0);
+    },
   };
 }
 

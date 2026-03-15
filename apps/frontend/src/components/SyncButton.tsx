@@ -56,7 +56,7 @@ export function SyncButton() {
         `Successfully synced ${syncedCount} message${
           syncedCount !== 1 ? "s" : ""
         }${moreText}`,
-        "success"
+        "success",
       );
       setRetryCount(0);
     } catch (error: any) {
@@ -64,7 +64,7 @@ export function SyncButton() {
       if (error.isAuthError) {
         showToast(
           error.message || "Session expired. Please sign in again.",
-          "error"
+          "error",
         );
         return;
       }
@@ -98,15 +98,15 @@ export function SyncButton() {
   const buttonText = isLoading
     ? "Syncing..."
     : hasMore
-    ? "Sync More Emails"
-    : "Sync Inbox";
+      ? "Sync More Emails"
+      : "Sync Inbox";
 
   return (
     <button
       type="button"
       onClick={() => handleClick(false)}
       disabled={disabled}
-      className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400 transition-colors"
+      className="sync-button rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-400 transition-colors"
       title={hasMore ? "Fetch older emails from Gmail" : "Sync latest emails"}
     >
       {buttonText}

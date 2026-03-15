@@ -50,6 +50,7 @@ interface EnrichContactRequest {
   email: string;
   name?: string;
   conversation_snippet?: string;
+  user_email_domain?: string;
 }
 
 interface EnrichContactResponse {
@@ -57,6 +58,7 @@ interface EnrichContactResponse {
   display_name: string | null;
   org: string | null;
   language: string | null;
+  category_suggestion: string | null;
 }
 
 interface ContactSnippet {
@@ -169,11 +171,13 @@ export class AIService {
     email: string,
     name?: string,
     conversationSnippet?: string,
+    userEmailDomain?: string,
   ): Promise<EnrichContactResponse> {
     const payload: EnrichContactRequest = {
       email,
       name,
       conversation_snippet: conversationSnippet,
+      user_email_domain: userEmailDomain,
     };
 
     try {
@@ -190,6 +194,102 @@ export class AIService {
           error.response?.data?.detail || error.message
         }`,
       );
+    }
+  }
+
+  async classifyUrgent(
+    threadId: string,
+    subject?: string,
+    snippet?: string,
+    senderEmail?: string,
+    senderCategories?: string[],
+  ): Promise<{ isUrgent: boolean; reason: string }> {
+    try {
+      const response = await axios.post<{
+        thread_id: string;
+        is_urgent: boolean;
+        reason: string;
+      }>(
+        `${AI_SERVICE_URL}/classify-urgent`,
+        {
+          thread_id: threadId,
+          subject,
+          snippet,
+          sender_email: senderEmail,
+          sender_categories: senderCategories,
+        },
+        { timeout: 15000 },
+      );
+      return {
+        isUrgent: response.data.is_urgent,
+        reason: response.data.reason,
+      };
+    } catch (error: any) {
+      console.error("AI classify-urgent failed:", error.message);
+      // Non-fatal: return false rather than throwing
+      return { isUrgent: false, reason: "Classification unavailable" };
+    }
+  }
+
+  async classifyThreadCategory(
+    threadId: string,
+    subject?: string,
+    snippet?: string,
+    senderEmail?: string,
+    senderCategories?: string[],
+  ): Promise<{ categories: string[]; noiseFiltered: boolean }> {
+    try {
+      const response = await axios.post<{
+        thread_id: string;
+        categories: string[];
+        noise_filtered: boolean;
+      }>(
+        `${AI_SERVICE_URL}/classify-thread-category`,
+        {
+          thread_id: threadId,
+          subject,
+          snippet,
+          sender_email: senderEmail,
+          sender_categories: senderCategories,
+        },
+        { timeout: 15000 },
+      );
+      return {
+        categories: response.data.categories,
+        noiseFiltered: response.data.noise_filtered,
+      };
+    } catch (error: any) {
+      console.error("AI classify-thread-category failed:", error.message);
+      // Non-fatal: fallback to empty (will retry on next sync)
+      return { categories: [], noiseFiltered: false };
+    }
+  }
+
+  /**
+   * Phase 3: Ask the AI service to generate a short human-friendly label
+   * (2–5 words) for a topic based on its thread subjects.
+   *
+   * Falls back to the first subject string on any error.
+   */
+  async labelTopic(
+    topicId: string,
+    threadSubjects: string[],
+    contactName?: string,
+  ): Promise<{ name: string }> {
+    try {
+      const response = await axios.post<{ topic_id: string; name: string }>(
+        `${AI_SERVICE_URL}/label-topic`,
+        {
+          topic_id: topicId,
+          thread_subjects: threadSubjects,
+          contact_name: contactName,
+        },
+        { timeout: 10_000 },
+      );
+      return { name: response.data.name ?? threadSubjects[0] ?? "Untitled" };
+    } catch (error: any) {
+      console.warn("[AIService.labelTopic]", error.message);
+      return { name: threadSubjects[0] ?? "Untitled" };
     }
   }
 

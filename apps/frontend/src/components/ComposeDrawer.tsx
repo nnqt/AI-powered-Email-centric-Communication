@@ -43,7 +43,7 @@ function ToolbarButton({
         onClick();
       }}
       title={title}
-      className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
+      className={`compose-drawer__toolbar-btn rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
         active
           ? "bg-gray-600 text-white"
           : "text-gray-400 hover:bg-gray-600 hover:text-white"
@@ -177,7 +177,7 @@ export function ComposeDrawer({
     <>
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/20"
+          className="compose-drawer__overlay fixed inset-0 z-40 bg-black/20"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -187,13 +187,13 @@ export function ComposeDrawer({
         role="dialog"
         aria-modal="true"
         aria-label="Compose email"
-        className={`fixed bottom-0 right-4 z-50 flex w-full max-w-lg flex-col rounded-t-xl border border-gray-200 bg-white shadow-2xl transition-transform duration-300 ${
+        className={`compose-drawer fixed bottom-0 right-4 z-50 flex w-full max-w-lg flex-col rounded-t-xl border border-gray-200 bg-white shadow-2xl transition-transform duration-300 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
         style={{ maxHeight: "80vh" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between rounded-t-xl bg-gray-800 px-4 py-2">
+        <div className="compose-drawer__header flex items-center justify-between rounded-t-xl bg-gray-800 px-4 py-2">
           <span className="text-sm font-medium text-white">
             {replyToThreadId ? "Reply" : "New Message"}
           </span>
@@ -214,7 +214,7 @@ export function ComposeDrawer({
         </div>
 
         {/* To / Subject */}
-        <div className="flex flex-col divide-y divide-gray-100">
+        <div className="compose-drawer__fields flex flex-col divide-y divide-gray-100">
           <div className="flex items-center px-4 py-2">
             <label className="w-12 shrink-0 text-xs text-gray-500">To</label>
             <input
@@ -241,7 +241,7 @@ export function ComposeDrawer({
         </div>
 
         {/* Formatting toolbar */}
-        <div className="flex items-center gap-0.5 border-y border-gray-700 bg-gray-800 px-3 py-1.5">
+        <div className="compose-drawer__toolbar flex items-center gap-0.5 border-y border-gray-700 bg-gray-800 px-3 py-1.5">
           <ToolbarButton
             onClick={() => editor?.chain().focus().toggleBold().run()}
             active={editor?.isActive("bold")}
@@ -286,17 +286,17 @@ export function ComposeDrawer({
         </div>
 
         {/* Tiptap editor */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="compose-drawer__editor flex-1 overflow-y-auto">
           <EditorContent editor={editor} />
         </div>
 
         {/* Attachment chips */}
         {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 border-t border-gray-100 px-4 py-2">
+          <div className="compose-drawer__attachments flex flex-wrap gap-1.5 border-t border-gray-100 px-4 py-2">
             {attachments.map((att) => (
               <div
                 key={att.id}
-                className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700"
+                className="compose-drawer__attachment flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700"
               >
                 <span className="max-w-[140px] truncate">{att.name}</span>
                 <span className="text-gray-400">({formatBytes(att.size)})</span>
@@ -314,7 +314,7 @@ export function ComposeDrawer({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-gray-100 px-4 py-2">
+        <div className="compose-drawer__footer flex items-center justify-between border-t border-gray-100 px-4 py-2">
           <div className="flex items-center gap-2">
             {error ? (
               <p className="text-xs text-red-600">{error}</p>

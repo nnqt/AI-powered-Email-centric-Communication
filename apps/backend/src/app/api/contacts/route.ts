@@ -23,8 +23,11 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const limit = parseInt(url.searchParams.get("limit") ?? "30", 10) || 30;
     const skip = parseInt(url.searchParams.get("skip") ?? "0", 10) || 0;
+    const unverified = url.searchParams.get("unverified") === "true";
 
-    const result = await service.getContacts(userId, limit, skip);
+    const result = unverified
+      ? await service.getUnverifiedContacts(userId, limit, skip)
+      : await service.getContacts(userId, limit, skip);
     return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json(

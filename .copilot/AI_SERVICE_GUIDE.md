@@ -140,8 +140,9 @@ All replies are always in Vietnamese (`_LANG_INSTRUCTION` applied to prompt).
   - `core/llm_client.py` – Gemini client wrapper:
     - `GeminiSummarizationClient` — FR-07
     - `GeminiReplyClient` — FR-08 (returns `List[Dict]` with `subject` + `body`)
-    - `GeminiContactEnrichClient` — FR-06
+    - `GeminiContactEnrichClient` — FR-06 (with `user_email_domain` + `category_suggestion`)
     - `GeminiMergeSuggestionClient` — FR-06
+    - `GeminiUrgentClassifier` — AI urgent classification (keyword fast-path + Gemini fallback)
     - Token helpers: `_truncate()`, `_build_messages_text()`, `_MAX_TOTAL_CONTENT_CHARS = 12_000`
     - `_LANG_INSTRUCTION`: always respond in Vietnamese
   - `routes/contact.py` – `/enrich-contact` + `/suggest-merge` (FR-06)
@@ -175,16 +176,19 @@ You do not have to embed full prompt text here; see the thesis and
  ├── routes/
  │    ├── summarize.py # /summarize endpoint (FR-07)
  │    ├── reply.py     # /suggest-reply endpoint (FR-08)
- │    └── contact.py   # /enrich-contact + /suggest-merge endpoints (FR-06)
+ │    ├── contact.py   # /enrich-contact + /suggest-merge endpoints (FR-06)
+ │    └── urgent.py    # /classify-urgent endpoint (AI urgent classification)
  ├── services/
  │    ├── summarizer.py
  │    ├── smart_reply.py
  │    ├── contact_enricher.py
- │    └── merge_suggester.py
+ │    ├── merge_suggester.py
+ │    └── urgent_classifier.py  # classify_urgent() → ClassifyUrgentResponse
  ├── models/
  │    ├── summarize.py
  │    ├── reply.py       # SuggestReplyRequest (with format), ReplyItem, SuggestReplyResponse
- │    └── contact.py     # EnrichContactRequest, EnrichContactResponse, ContactSnippet, MergeSuggestion
+ │    ├── contact.py     # EnrichContactRequest (+user_email_domain), EnrichContactResponse (+category_suggestion), ContactSnippet, MergeSuggestion
+ │    └── urgent.py      # ClassifyUrgentRequest, ClassifyUrgentResponse
  ├── core/
  │    ├── config.py    # Reads GEMINI_API_KEY, GEMINI_MODEL_NAME
  │    └── llm_client.py# All Gemini clients + token safety helpers + _LANG_INSTRUCTION
@@ -213,16 +217,52 @@ Added alongside the original FR-07/08 endpoints:
 
 ### `POST /enrich-contact`
 
-**Request**: `{ "email": "...", "name": "...", "conversation_snippet": "..." }`  
-**Response**: `{ "display_name": "...", "org": "...", "language": "vi" }`
+**Request**: `{ "email": "...", "name": "...", "conversation_snippet": "...", "user_email_domain": "..." }`  
+**Response**: `{ "display_name": "...", "org": "...", "language": "vi", "category_suggestion": "colleague" }`
+
+- `user_email_domain`: optional; same domain as user → fast-path "colleague" (no Gemini call).
+- `category_suggestion`: one of `colleague | customer | third_party | spam` or `null` if unknown.
 
 ### `POST /suggest-merge`
 
 **Request**: `{ "contacts": [{ "contact_id": "...", "email": "...", "name": "...", "alternate_emails": [] }] }`  
 **Response**: `[{ "source_id": "...", "target_id": "...", "source_email": "...", "target_email": "...", "confidence": 0.92, "reason": "..." }]`
 
-- Contacts list capped at 50 to avoid token overflow.
+- Contacts list capped at **100** (increased from 50) to avoid token overflow.
 - Only pairs with `confidence >= 0.7` are returned.
+
+## AI Urgent Classification Endpoint
+
+### `POST /classify-urgent`
+
+Classify whether an email thread is urgent, using keyword fast-path then Gemini fallback.
+
+**Request body**:
+
+```json
+{
+  "thread_id": "abc123",
+  "subject": "URGENT: Server down",
+  "snippet": "Production is down, need immediate action..."
+}
+```
+
+**Response body**:
+
+```json
+{
+  "thread_id": "abc123",
+  "is_urgent": true,
+  "reason": "Subject contains urgency keyword 'URGENT'"
+}
+```
+
+**Implementation**:
+
+- `_URGENT_KEYWORDS` frozenset: English (`urgent`, `asap`, `immediately`, `critical`, `emergency`, `deadline`, ...) + Vietnamese (`khẩn`, `gấp`, `ngay`, `khẩn cấp`, `deadline`, ...).
+- If any keyword found in subject+snippet → `is_urgent=True`, no Gemini call.
+- Otherwise → call Gemini with `max_retries=2`; default `is_urgent=False` on any error.
+- Called fire-and-forget from `gmail.service.ts` after each thread upsert (`!urgentClassifiedAt` guard).
 
 ## Token Safety (all endpoints)
 

@@ -17,7 +17,7 @@ The project is a **monorepo**:
 │   └── ai-service/        # Python FastAPI microservice for AI (FR-07/08)
 │
 ├── infra/
-│   ├── docker-compose.yml # Orchestration for backend, frontend, AI, Redis, Mongo
+│   ├── docker-compose.yml # Orchestration for backend, frontend, AI, Redis, Mongo, mongo-express
 │   ├── redis/             # (Optional) Redis configuration
 │   ├── mongo/             # (Optional) MongoDB setup
 │
@@ -58,11 +58,15 @@ areas instead of adding new root folders.
 ### `apps/ai-service`
 
 - FastAPI microservice responsible for:
-  - Thread summarization (FR-07).
-  - Smart reply suggestion (FR-08).
+  - Thread summarization (FR-07): `POST /summarize`.
+  - Smart reply suggestion (FR-08): `POST /suggest-reply`.
+  - Contact enrichment + merge suggestions (FR-06): `POST /enrich-contact`, `POST /suggest-merge`.
+  - **AI urgent classification**: `POST /classify-urgent` — keyword fast-path (`_URGENT_KEYWORDS`) + Gemini fallback; fire-and-forget per thread sync.
   - Strictly stateless HTTP contracts; it does **not** access
     MongoDB directly.
-  - Optional use of Redis for caching or rate limiting.
+  - Domain fallback map (`_DOMAIN_MAP`) to skip Gemini for known domains.
+  - Exponential backoff (`_gemini_with_retry`) to handle 429 rate-limit errors.
+  - `category_suggestion` field in `/enrich-contact` response for contact category AI suggestion.
 
 ## Communication Flow
 

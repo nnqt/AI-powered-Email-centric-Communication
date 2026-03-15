@@ -55,9 +55,9 @@ export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
   };
 
   return (
-    <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 space-y-2">
+    <div className="smart-reply-bar mb-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 space-y-2">
       {/* Header row */}
-      <div className="flex items-center justify-between">
+      <div className="smart-reply-bar__header flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs font-medium text-indigo-700">
           <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -71,7 +71,7 @@ export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
 
         <div className="flex items-center gap-1">
           {/* Format toggle */}
-          <div className="flex rounded-md border border-indigo-200 overflow-hidden text-xs">
+          <div className="smart-reply-bar__format-toggle flex rounded-md border border-indigo-200 overflow-hidden text-xs">
             <button
               type="button"
               onClick={() => handleFormatChange("message")}
@@ -135,14 +135,16 @@ export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
         </div>
       </div>
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && (
+        <p className="smart-reply-bar__error text-xs text-red-600">{error}</p>
+      )}
 
       {/* Reply chips / cards */}
       {replies.length > 0 && (
         <>
           {format === "message" ? (
             /* Compact chips for message format */
-            <div className="flex flex-wrap gap-2">
+            <div className="smart-reply-bar__chips flex flex-wrap gap-2">
               {replies.map((reply, idx) => (
                 <button
                   key={idx}
@@ -157,11 +159,11 @@ export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
             </div>
           ) : (
             /* Expanded cards for email format */
-            <div className="space-y-2">
+            <div className="smart-reply-bar__cards space-y-2">
               {replies.map((reply, idx) => (
                 <div
                   key={idx}
-                  className="rounded-md border border-indigo-200 bg-white p-3 text-xs"
+                  className="smart-reply-bar__reply-card rounded-md border border-indigo-200 bg-white p-3 text-xs"
                 >
                   {reply.subject && (
                     <p className="mb-1 font-medium text-gray-700">
@@ -186,7 +188,7 @@ export function SmartReplyBar({ threadId, onSelect }: SmartReplyBarProps) {
       )}
 
       {!generated && !loading && replies.length === 0 && (
-        <p className="text-xs text-indigo-500">
+        <p className="smart-reply-bar__hint text-xs text-indigo-500">
           Choose a format and click &ldquo;Generate&rdquo; to get AI-powered
           reply ideas.
         </p>

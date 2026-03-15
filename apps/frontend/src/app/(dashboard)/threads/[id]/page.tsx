@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { useSession } from "next-auth/react";
@@ -83,42 +84,45 @@ export default function ThreadDetailPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-4xl px-4 py-8">
-          <div className="space-y-4">
-            <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
-            <div className="h-24 w-full animate-pulse rounded bg-gray-200" />
-            <div className="h-32 w-full animate-pulse rounded bg-gray-200" />
-          </div>
+      <div className="mx-auto max-w-3xl px-6 py-8">
+        <div className="space-y-4">
+          <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+          <div className="h-24 w-full animate-pulse rounded bg-gray-200" />
+          <div className="h-32 w-full animate-pulse rounded bg-gray-200" />
         </div>
-      </main>
+      </div>
     );
   }
 
   if (isError || !thread) {
     return (
-      <main className="min-h-screen bg-gray-50">
-        <div className="mx-auto max-w-4xl px-4 py-8">
-          <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
-            Failed to load thread details.
-          </div>
+      <div className="mx-auto max-w-3xl px-6 py-8">
+        <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
+          Failed to load thread details.
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="thread-detail min-h-full bg-gray-50">
+      <div className="thread-detail__container mx-auto max-w-3xl px-6 py-6">
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-4 text-sm text-indigo-600 hover:underline"
+          className="thread-detail__back mb-4 flex items-center gap-1 text-sm text-indigo-600 hover:underline"
         >
-          ← Back to Inbox
+          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fillRule="evenodd"
+              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Back
         </button>
 
-        <header className="mb-6 flex items-start justify-between gap-4">
+        <header className="thread-detail__header mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">
               {messages?.[0]?.subject || thread.subject || "Thread Detail"}
@@ -126,6 +130,21 @@ export default function ThreadDetailPage() {
             <p className="text-sm text-gray-500">
               {messages?.length || 0} message(s)
             </p>
+            {thread.isUrgent && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                  🔴 Urgent
+                </span>
+                {thread.urgentClassifiedAt && (
+                  <span className="text-xs text-gray-400">
+                    AI classified{" "}
+                    {formatDistanceToNow(new Date(thread.urgentClassifiedAt), {
+                      addSuffix: true,
+                    })}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -151,16 +170,33 @@ export default function ThreadDetailPage() {
 
         <SmartReplyBar threadId={threadId} onSelect={handleSelectReply} />
 
-        <section className="space-y-4">
+        <section className="thread-detail__messages space-y-4">
           {messages?.map((msg) => (
             <article
               key={msg._id}
-              className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+              className="thread-detail__message rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
             >
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-800">
-                  {msg.from || "Unknown Sender"}
-                </span>
+              <div className="thread-detail__message-meta mb-2 flex items-center justify-between">
+                {(() => {
+                  const emailMatch = msg.from?.match(/[^\s<>]+@[^\s<>]+/);
+                  const fromEmail = emailMatch?.[0];
+                  const fromName =
+                    msg.from?.replace(/<[^>]*>/, "").trim() ||
+                    msg.from ||
+                    "Unknown Sender";
+                  return fromEmail ? (
+                    <Link
+                      href={`/contacts?q=${encodeURIComponent(fromEmail)}`}
+                      className="text-sm font-medium text-indigo-700 hover:underline"
+                    >
+                      {fromName}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-medium text-gray-800">
+                      {fromName}
+                    </span>
+                  );
+                })()}
                 <span className="text-xs text-gray-500">
                   {msg.date
                     ? formatDistanceToNow(new Date(msg.date), {
@@ -197,6 +233,6 @@ export default function ThreadDetailPage() {
         replyToThreadId={thread.id}
         onSent={() => mutate()}
       />
-    </main>
+    </div>
   );
 }

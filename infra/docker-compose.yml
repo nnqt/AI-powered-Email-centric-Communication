@@ -99,6 +99,20 @@ services:
     networks:
       - app-network
 
+  mongo-express:
+    image: mongo-express:1
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      - ME_CONFIG_MONGODB_URL=mongodb://mongo:27017/
+      - ME_CONFIG_BASICAUTH=false
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge

@@ -4,6 +4,8 @@ import { Thread, IThread } from "@/models/Thread";
 import { Message, IMessage } from "@/models/Message";
 import { connectToDatabase } from "@/lib/db";
 
+export type ThreadFilter = "all" | "unread" | "archived" | "urgent";
+
 export interface PaginatedThreadsResult {
   threads: IThread[];
   total: number;
@@ -15,26 +17,69 @@ export class TimelineService {
   async getThreads(
     userId: string,
     limit: number = 20,
-    cursor?: string
+    cursor?: string,
+    filter: ThreadFilter = "all",
+    q?: string,
   ): Promise<PaginatedThreadsResult> {
     await connectToDatabase();
 
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
-    // Build query
-    const query: any = { userId: userObjectId };
+    // Build base query
+    const baseQuery: any = { userId: userObjectId };
+
+    // Apply filter
+    if (filter === "unread") {
+      baseQuery.isRead = false;
+      baseQuery.isArchived = { $ne: true };
+    } else if (filter === "archived") {
+      baseQuery.isArchived = true;
+    } else if (filter === "urgent") {
+      baseQuery.isUrgent = true;
+      baseQuery.isArchived = { $ne: true };
+      baseQuery.urgentDismissed = { $ne: true };
+    } else {
+      // "all" — exclude archived from main view
+      baseQuery.isArchived = { $ne: true };
+    }
+
+    // Apply search (subject + participants, case-insensitive)
+    if (q && q.trim()) {
+      const regex = new RegExp(
+        q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        "i",
+      );
+      baseQuery.$and = [
+        ...(baseQuery.$and ?? []),
+        {
+          $or: [
+            { subject: regex },
+            { participants: regex },
+            { snippet: regex },
+          ],
+        },
+      ];
+    }
+
+    const query: any = { ...baseQuery };
 
     // Parse cursor: format is "lastMessageDate_id"
     if (cursor) {
-      const [dateStr, id] = cursor.split("_");
+      const underscoreIdx = cursor.lastIndexOf("_");
+      const dateStr = cursor.slice(0, underscoreIdx);
+      const id = cursor.slice(underscoreIdx + 1);
       const cursorDate = new Date(dateStr);
 
-      // Find threads older than cursor (for "Older" button)
-      query.$or = [
-        { lastMessageDate: { $lt: cursorDate } },
+      query.$and = [
+        ...(query.$and ?? []),
         {
-          lastMessageDate: cursorDate,
-          _id: { $lt: new mongoose.Types.ObjectId(id) },
+          $or: [
+            { lastMessageDate: { $lt: cursorDate } },
+            {
+              lastMessageDate: cursorDate,
+              _id: { $lt: new mongoose.Types.ObjectId(id) },
+            },
+          ],
         },
       ];
     }
@@ -42,32 +87,23 @@ export class TimelineService {
     // Fetch threads
     const threads = await Thread.find(query)
       .sort({ lastMessageDate: -1, _id: -1 })
-      .limit(limit + 1) // Fetch one extra to check if there's next page
+      .limit(limit + 1)
       .lean<IThread[]>();
 
-    // Check if there are more threads
     const hasNext = threads.length > limit;
-    if (hasNext) {
-      threads.pop(); // Remove the extra thread
-    }
+    if (hasNext) threads.pop();
 
-    // Get total count (cached for performance)
-    const total = await Thread.countDocuments({ userId: userObjectId });
+    // Total count respects filter + search (not just userId)
+    const total = await Thread.countDocuments(baseQuery);
 
-    // Check if there's a previous page (simple heuristic: cursor exists)
     const hasPrev = !!cursor;
 
-    return {
-      threads,
-      total,
-      hasNext,
-      hasPrev,
-    };
+    return { threads, total, hasNext, hasPrev };
   }
 
   async getThreadDetails(
     userId: string,
-    threadId: string
+    threadId: string,
   ): Promise<{ thread: IThread; messages: IMessage[] } | null> {
     await connectToDatabase();
 

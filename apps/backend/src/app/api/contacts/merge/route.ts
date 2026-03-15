@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import { ContactService } from "@/modules/contacts/contact.service";
+import { redisClient } from "@/lib/redisClient";
 
 const service = new ContactService();
 
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
     }
 
     const merged = await service.mergeContacts(userId, sourceId, targetId);
+
+    // Invalidate cached merge suggestions — contact list has changed
+    await redisClient.clearCache(`contact:merge_suggestions:${userId}`);
+
     return NextResponse.json(merged);
   } catch (error: any) {
     return NextResponse.json(

@@ -15,8 +15,8 @@ export function AISummaryCard({
 }: AISummaryCardProps) {
   if (isGenerating) {
     return (
-      <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
-        <div className="flex items-center gap-2">
+      <div className="ai-summary-card ai-summary-card--loading mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
+        <div className="ai-summary-card__spinner flex items-center gap-2">
           <svg
             className="h-5 w-5 animate-spin text-purple-600"
             xmlns="http://www.w3.org/2000/svg"
@@ -47,11 +47,11 @@ export function AISummaryCard({
 
   if (!summary || !summary.text) {
     return (
-      <div className="mb-4">
+      <div className="ai-summary-card ai-summary-card--empty mb-4">
         <button
           type="button"
           onClick={onGenerate}
-          className="flex items-center gap-2 rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
+          className="ai-summary-card__trigger flex items-center gap-2 rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
         >
           <span>✨</span>
           Summarize this Thread
@@ -61,15 +61,15 @@ export function AISummaryCard({
   }
 
   return (
-    <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="ai-summary-card mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
+      <div className="ai-summary-card__header mb-2 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-purple-800">
           <span>✨</span> AI Summary
         </h3>
         <button
           type="button"
           onClick={onGenerate}
-          className="text-xs text-purple-600 hover:text-purple-800 hover:underline"
+          className="ai-summary-card__regenerate text-xs text-purple-600 hover:text-purple-800 hover:underline"
         >
           Regenerate
         </button>
@@ -77,7 +77,7 @@ export function AISummaryCard({
       <p className="mb-3 text-sm text-gray-700">{summary.text}</p>
 
       {summary.key_issues.length > 0 && (
-        <div className="mb-3">
+        <div className="ai-summary-card__key-issues mb-3">
           <h4 className="mb-1 text-xs font-semibold uppercase text-purple-700">
             Key Issues
           </h4>
@@ -90,7 +90,7 @@ export function AISummaryCard({
       )}
 
       {summary.action_required.length > 0 && (
-        <div>
+        <div className="ai-summary-card__action-required">
           <h4 className="mb-1 text-xs font-semibold uppercase text-purple-700">
             Action Required
           </h4>

@@ -1,9 +1,11 @@
 "use client";
 
 import useSWR from "swr";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import apiClient from "@/lib/api";
+
+export type ThreadFilter = "all" | "unread" | "archived";
 
 export interface ThreadSummary {
   text: string;
@@ -25,6 +27,8 @@ export interface ThreadDTO {
   summary?: ThreadSummary;
   isRead?: boolean;
   isArchived?: boolean;
+  isUrgent?: boolean;
+  urgentClassifiedAt?: string;
 }
 
 export interface PaginatedThreadsResponse {
@@ -39,13 +43,42 @@ const fetcher = async (url: string): Promise<PaginatedThreadsResponse> => {
   return response.data;
 };
 
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
+}
+
 export function useThreads(limit: number = 20) {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<ThreadFilter>("all");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 350);
 
-  const url = cursor
-    ? `/api/threads?limit=${limit}&cursor=${cursor}`
-    : `/api/threads?limit=${limit}`;
+  // Reset pagination when filter or search changes
+  const prevFilterRef = useRef(filter);
+  const prevSearchRef = useRef(debouncedSearch);
+  useEffect(() => {
+    if (
+      prevFilterRef.current !== filter ||
+      prevSearchRef.current !== debouncedSearch
+    ) {
+      prevFilterRef.current = filter;
+      prevSearchRef.current = debouncedSearch;
+      setCursor(undefined);
+      setPage(1);
+    }
+  }, [filter, debouncedSearch]);
+
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set("cursor", cursor);
+  if (filter !== "all") params.set("filter", filter);
+  if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
+  const url = `/api/threads?${params.toString()}`;
 
   const { data, error, isLoading, mutate } = useSWR<PaginatedThreadsResponse>(
     url,
@@ -62,7 +95,6 @@ export function useThreads(limit: number = 20) {
   };
 
   const goToPrevPage = () => {
-    // Reset to first page
     setCursor(undefined);
     setPage(1);
   };
@@ -78,5 +110,9 @@ export function useThreads(limit: number = 20) {
     mutate,
     goToNextPage,
     goToPrevPage,
+    filter,
+    setFilter,
+    search,
+    setSearch,
   };
 }

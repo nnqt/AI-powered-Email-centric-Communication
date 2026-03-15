@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
-import { TimelineService } from "@/modules/timeline/timeline.service";
+import {
+  TimelineService,
+  ThreadFilter,
+} from "@/modules/timeline/timeline.service";
 
 export async function GET(request: Request) {
   try {
@@ -16,7 +19,7 @@ export async function GET(request: Request) {
     if (!userId) {
       return NextResponse.json(
         { error: "Missing user id in session" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -24,9 +27,19 @@ export async function GET(request: Request) {
     const limitParam = url.searchParams.get("limit");
     const limit = limitParam ? parseInt(limitParam, 10) || 20 : 20;
     const cursor = url.searchParams.get("cursor") || undefined;
+    const filterParam = url.searchParams.get("filter") || "all";
+    const filter: ThreadFilter = [
+      "all",
+      "unread",
+      "archived",
+      "urgent",
+    ].includes(filterParam)
+      ? (filterParam as ThreadFilter)
+      : "all";
+    const q = url.searchParams.get("q") || undefined;
 
     const service = new TimelineService();
-    const result = await service.getThreads(userId, limit, cursor);
+    const result = await service.getThreads(userId, limit, cursor, filter, q);
 
     return NextResponse.json(result);
   } catch (error: any) {
@@ -36,7 +49,7 @@ export async function GET(request: Request) {
         error: "Failed to fetch threads",
         details: error.message || String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

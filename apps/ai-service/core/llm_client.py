@@ -1,4 +1,5 @@
 import json
+import asyncio
 from typing import List, Dict, Any, Optional
 
 import google.generativeai as genai
@@ -6,6 +7,13 @@ import google.generativeai as genai
 from models.summarize import SummarizeRequest
 from models.reply import SuggestReplyRequest
 from models.contact import EnrichContactRequest, ContactSnippet, MergeSuggestion
+from models.urgent import ClassifyUrgentRequest
+from models.thread_category import (
+    ClassifyThreadCategoryRequest,
+    VALID_THREAD_CATEGORIES,
+    NOISE_CATEGORIES,
+)
+from models.topic_label import LabelTopicRequest
 from core.config import GEMINI_API_KEY, GEMINI_MODEL_NAME
 
 
@@ -55,6 +63,145 @@ _LANG_INSTRUCTION = (
 )
 
 
+# ── Domain knowledge base (token-free enrichment) ──────────────────────────
+
+# Maps known email domains → (org_name, language).
+# org=None means personal provider (no org to infer).
+# language=None means unknown from domain alone.
+_DOMAIN_MAP: Dict[str, Dict[str, Optional[str]]] = {
+    # ── Personal / generic providers ──────────────────────────────────────
+    "gmail.com":      {"org": None, "language": None},
+    "yahoo.com":      {"org": None, "language": None},
+    "yahoo.com.vn":   {"org": None, "language": "vi"},
+    "outlook.com":    {"org": None, "language": None},
+    "hotmail.com":    {"org": None, "language": None},
+    "icloud.com":     {"org": None, "language": None},
+    "protonmail.com": {"org": None, "language": None},
+    "me.com":         {"org": None, "language": None},
+    # ── Vietnamese universities ────────────────────────────────────────────
+    "hcmut.edu.vn":   {"org": "HCMUT (Đại học Bách Khoa TP.HCM)", "language": "vi"},
+    "hust.edu.vn":    {"org": "HUST (Đại học Bách Khoa Hà Nội)",   "language": "vi"},
+    "hcmus.edu.vn":   {"org": "HCMUS (ĐH Khoa học Tự nhiên)",      "language": "vi"},
+    "uit.edu.vn":     {"org": "UIT (ĐH Công nghệ Thông tin)",       "language": "vi"},
+    "fpt.edu.vn":     {"org": "FPT University",                     "language": "vi"},
+    "uet.vnu.edu.vn": {"org": "UET VNU (ĐH Công nghệ - ĐHQGHN)",   "language": "vi"},
+    "tdtu.edu.vn":    {"org": "Đại học Tôn Đức Thắng",              "language": "vi"},
+    "ueh.edu.vn":     {"org": "UEH (ĐH Kinh tế TP.HCM)",           "language": "vi"},
+    "vnu.edu.vn":     {"org": "ĐHQG Hà Nội",                       "language": "vi"},
+    "vnuhcm.edu.vn":  {"org": "ĐHQG TP.HCM",                       "language": "vi"},
+    "uel.edu.vn":     {"org": "UEL (ĐH Kinh tế - Luật)",           "language": "vi"},
+    # ── Vietnamese corporates ───────────────────────────────────────────────
+    "fpt.com.vn":     {"org": "FPT Corporation",  "language": "vi"},
+    "fpt.com":        {"org": "FPT Corporation",  "language": None},
+    "vng.com.vn":     {"org": "VNG Corporation",  "language": "vi"},
+    "vingroup.net":   {"org": "Vingroup",          "language": "vi"},
+    "vinhomes.vn":    {"org": "Vinhomes",          "language": "vi"},
+    "momo.vn":        {"org": "MoMo",              "language": "vi"},
+    "tiki.vn":        {"org": "Tiki",              "language": "vi"},
+    "sendo.vn":       {"org": "Sendo",             "language": "vi"},
+    "zalopay.vn":     {"org": "ZaloPay",           "language": "vi"},
+    "vnpay.vn":       {"org": "VNPAY",             "language": "vi"},
+    "viettel.com.vn": {"org": "Viettel",           "language": "vi"},
+    "vnpt.vn":        {"org": "VNPT",              "language": "vi"},
+    "mb.com.vn":      {"org": "MB Bank",           "language": "vi"},
+    "vpbank.com.vn":  {"org": "VPBank",            "language": "vi"},
+    "techcombank.com.vn": {"org": "Techcombank",   "language": "vi"},
+    "vcb.com.vn":     {"org": "Vietcombank",       "language": "vi"},
+    # ── International tech ─────────────────────────────────────────────────
+    "google.com":     {"org": "Google",    "language": None},
+    "microsoft.com":  {"org": "Microsoft", "language": None},
+    "amazon.com":     {"org": "Amazon",    "language": None},
+    "meta.com":       {"org": "Meta",      "language": None},
+    "apple.com":      {"org": "Apple",     "language": None},
+    "netflix.com":    {"org": "Netflix",   "language": None},
+    "github.com":     {"org": "GitHub",    "language": None},
+    "stripe.com":     {"org": "Stripe",    "language": None},
+    "openai.com":     {"org": "OpenAI",    "language": None},
+    "shopee.com":     {"org": "Shopee",    "language": None},
+    "grab.com":       {"org": "Grab",      "language": None},
+    "sea.com":        {"org": "Sea Group", "language": None},
+    "bytedance.com":  {"org": "ByteDance", "language": None},
+    "salesforce.com": {"org": "Salesforce","language": None},
+    "atlassian.com":  {"org": "Atlassian", "language": None},
+}
+
+_PERSONAL_DOMAINS = {
+    "gmail.com", "yahoo.com", "yahoo.com.vn", "outlook.com",
+    "hotmail.com", "icloud.com", "protonmail.com", "me.com",
+}
+
+
+def _extract_domain(email: str) -> str:
+    parts = email.lower().strip().split("@")
+    return parts[1] if len(parts) == 2 else ""
+
+
+def _domain_fallback(
+    email: str, name: Optional[str], has_snippet: bool
+) -> Optional[Dict[str, Any]]:
+    """
+    Return enrichment from local domain map without calling Gemini.
+    Returns None when the domain is unknown and Gemini should be called.
+
+    Strategy:
+    - Known corporate/educational domain → return org + language; skip Gemini.
+    - Personal domain (gmail, etc.) without snippet → no useful inference;
+      return nulls immediately to avoid wasting a quota token.
+    - Personal domain WITH snippet → let Gemini run (language detection from snippet).
+    - Unknown .vn / .edu.vn / .com.vn TLD → language = "vi", org unknown; skip Gemini.
+    - Anything else → return None (caller must use Gemini).
+    """
+    domain = _extract_domain(email)
+
+    if domain in _DOMAIN_MAP:
+        entry = _DOMAIN_MAP[domain]
+        is_personal = domain in _PERSONAL_DOMAINS
+        # For personal providers with a snippet, let Gemini detect language.
+        if is_personal and has_snippet:
+            return None
+        return {
+            "display_name": name or None,
+            "org": entry["org"],
+            "language": entry["language"],
+        }
+
+    # Generic Vietnamese TLD heuristic
+    if domain.endswith(".vn"):
+        return {
+            "display_name": name or None,
+            "org": None,
+            "language": "vi",
+        }
+
+    return None  # Unknown domain → call Gemini
+
+
+# ── Gemini retry helper ─────────────────────────────────────────────────────
+
+async def _gemini_with_retry(prompt: str, max_retries: int = 3, base_delay: float = 1.0) -> str:
+    """
+    Call Gemini with exponential backoff on 429 Resource Exhausted errors.
+    Delays: 1s → 2s → 4s (doubles each attempt).
+    """
+    last_exc: Exception = RuntimeError("No attempts made")
+    for attempt in range(max_retries):
+        try:
+            response = await _model.generate_content_async(prompt)
+            return (response.text or "").strip()
+        except Exception as exc:
+            last_exc = exc
+            msg = str(exc)
+            is_rate_limit = "429" in msg or "Resource exhausted" in msg.lower()
+            if is_rate_limit and attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt)
+                await asyncio.sleep(delay)
+                continue
+            raise
+    raise last_exc
+
+
+
+
 # ── Client implementations ──────────────────────────────────────────────────
 
 class GeminiSummarizationClient:
@@ -72,11 +219,10 @@ class GeminiSummarizationClient:
         )
 
         try:
-            response = await _model.generate_content_async(prompt)
-        except Exception as exc:  # pragma: no cover - network/provider
+            text = await _gemini_with_retry(prompt)
+        except Exception as exc:  # pragma: no cover
             raise RuntimeError(f"Gemini summarization failed: {exc}") from exc
 
-        text = (response.text or "").strip()
         if not text:
             raise RuntimeError("Gemini summarization returned empty text")
 
@@ -147,11 +293,10 @@ class GeminiReplyClient:
         )
 
         try:
-            response = await _model.generate_content_async(prompt)
-        except Exception as exc:  # pragma: no cover - network/provider
+            text = await _gemini_with_retry(prompt)
+        except Exception as exc:  # pragma: no cover
             raise RuntimeError(f"Gemini reply generation failed: {exc}") from exc
 
-        text = (response.text or "").strip()
         if not text:
             raise RuntimeError("Gemini reply generation returned empty text")
 
@@ -204,31 +349,60 @@ def get_reply_client() -> GeminiReplyClient:
 
 class GeminiContactEnrichClient:
     async def enrich_contact(self, request: EnrichContactRequest) -> Dict[str, Any]:
+        contact_domain = _extract_domain(request.email)
+
+        # ── Step 0: same domain as user → colleague ────────────────────────
+        if request.user_email_domain and contact_domain == request.user_email_domain:
+            fallback = _domain_fallback(request.email, request.name, has_snippet=False)
+            base = fallback or {"display_name": request.name or None, "org": None, "language": None}
+            base["category_suggestion"] = "colleague"
+            return base
+
+        # ── Step 1: try domain-based fallback (no Gemini token cost) ──────
+        fallback = _domain_fallback(
+            request.email,
+            request.name,
+            has_snippet=bool(request.conversation_snippet),
+        )
+        if fallback is not None:
+            is_personal = contact_domain in _PERSONAL_DOMAINS
+            fallback["category_suggestion"] = None if is_personal else "other"
+            return fallback
+
+        # ── Step 2: call Gemini with retry on 429 ─────────────────────────
         snippet_section = (
             f"\nRecent email snippet:\n{_truncate(request.conversation_snippet, _MAX_SNIPPET_CHARS)}"
             if request.conversation_snippet
             else ""
         )
         name_hint = f"\nKnown name: {request.name}" if request.name else ""
+        user_domain_hint = (
+            f"\nUser's own email domain: {request.user_email_domain}"
+            if request.user_email_domain
+            else ""
+        )
         prompt = (
             "You are a CRM AI assistant. Given an email address and optional context, "
             "infer professional information about the contact. "
             "Return ONLY a valid JSON object with exactly these fields:\n"
             '- "display_name": best guess at full name (string or null)\n'
             '- "org": organization or company name inferred from email domain or context (string or null)\n'
-            '- "language": primary language used (ISO 639-1 code like "en", "vi", "fr", or null)\n\n'
+            '- "language": primary language used (ISO 639-1 code like "en", "vi", "fr", or null)\n'
+            '- "category_suggestion": one of "colleague" (same org as user), "customer" (client/customer), '
+            '"spam" (promotional/unsolicited), "other" (vendor/partner/external/other), '
+            '"unknown" (cannot determine)\n\n'
             "Return ONLY valid JSON, no markdown.\n\n"
-            f"Email: {request.email}"
+            f"Contact email: {request.email}"
             f"{name_hint}"
+            f"{user_domain_hint}"
             f"{snippet_section}"
         )
 
         try:
-            response = await _model.generate_content_async(prompt)
+            text = await _gemini_with_retry(prompt)
         except Exception as exc:
             raise RuntimeError(f"Gemini contact enrich failed: {exc}") from exc
 
-        text = (response.text or "").strip()
         if text.startswith("```"):
             lines = text.split("\n")
             text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
@@ -238,17 +412,22 @@ class GeminiContactEnrichClient:
         except json.JSONDecodeError as exc:
             raise RuntimeError(f"Failed to parse Gemini response as JSON: {text[:200]}") from exc
 
+        valid_categories = {"colleague", "customer", "spam", "other", "unknown"}
+        raw_cat = data.get("category_suggestion")
+        category_suggestion = raw_cat if raw_cat in valid_categories else None
+
         return {
             "display_name": data.get("display_name"),
             "org": data.get("org"),
             "language": data.get("language"),
+            "category_suggestion": category_suggestion,
         }
 
 
 class GeminiMergeSuggestionClient:
     async def suggest_merges(self, contacts: List[ContactSnippet]) -> List[MergeSuggestion]:
         # Cap the contacts list to avoid token overflow
-        contacts_sample = contacts[:50]
+        contacts_sample = contacts[:100]
         contacts_text = "\n".join(
             f"- id={c.contact_id}, email={c.email}, name={c.name or 'unknown'}, "
             f"alt_emails={c.alternate_emails}"
@@ -272,11 +451,10 @@ class GeminiMergeSuggestionClient:
         )
 
         try:
-            response = await _model.generate_content_async(prompt)
+            text = await _gemini_with_retry(prompt)
         except Exception as exc:
             raise RuntimeError(f"Gemini merge suggestion failed: {exc}") from exc
 
-        text = (response.text or "").strip()
         if text.startswith("```"):
             lines = text.split("\n")
             text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
@@ -289,13 +467,28 @@ class GeminiMergeSuggestionClient:
         if not isinstance(data, list):
             return []
 
+        # Build a set of known valid ids to reject hallucinated ids
+        valid_ids = {c.contact_id for c in contacts_sample}
+
         suggestions: List[MergeSuggestion] = []
         for item in data:
             try:
+                sid = str(item["source_id"]).strip()
+                tid = str(item["target_id"]).strip()
+
+                # Skip if Gemini confused ids with emails or returned same id for both
+                if sid == tid:
+                    continue
+                if "@" in sid or "@" in tid:
+                    continue
+                # Skip if either id is not in the set we originally sent
+                if sid not in valid_ids or tid not in valid_ids:
+                    continue
+
                 suggestions.append(
                     MergeSuggestion(
-                        source_id=item["source_id"],
-                        target_id=item["target_id"],
+                        source_id=sid,
+                        target_id=tid,
                         source_email=item.get("source_email", ""),
                         target_email=item.get("target_email", ""),
                         confidence=float(item.get("confidence", 0)),
@@ -316,3 +509,276 @@ def get_merge_suggestion_client() -> GeminiMergeSuggestionClient:
     return GeminiMergeSuggestionClient()
 
 
+# ── Urgent email classifier ─────────────────────────────────────────────────
+
+# Rule-based keyword set — if any match, mark urgent without Gemini.
+# Kept intentionally tight to avoid false positives on common marketing/newsletter words.
+_URGENT_KEYWORDS = frozenset([
+    "urgent", "asap", "immediately", "critical", "emergency",
+    "overdue", "action required", "action needed", "response required",
+    "time sensitive", "time-sensitive", "respond by", "due today", "due by",
+    "by end of day", "eod", "eob", "end of day", "end of business",
+    "past due", "expedite", "high priority",
+    "khẩn", "gấp", "hạn chót", "hạn cuối", "cần gấp", "trả lời ngay",
+])
+
+
+def _has_urgent_keyword(text: str) -> bool:
+    lower = text.lower()
+    return any(kw in lower for kw in _URGENT_KEYWORDS)
+
+
+class GeminiUrgentClassifier:
+    async def classify(self, request: ClassifyUrgentRequest) -> dict:
+        subject = (request.subject or "").strip()
+        snippet = (request.snippet or "").strip()
+        combined = (subject + " " + snippet).strip()
+        sender_cats = request.sender_categories or []
+
+        # Fast path: known spam sender → never urgent
+        if sender_cats and all(c == "spam" for c in sender_cats):
+            return {
+                "is_urgent": False,
+                "reason": "Sender is classified as spam — skipped",
+            }
+
+        # Fast path: keyword match — no Gemini call needed
+        if _has_urgent_keyword(combined):
+            return {
+                "is_urgent": True,
+                "reason": "Contains urgent keyword/signal in subject or body",
+            }
+
+        # No content to analyse
+        if not combined:
+            return {"is_urgent": False, "reason": "No content to analyse"}
+
+        # Build sender context hint
+        sender_context = ""
+        if request.sender_email:
+            sender_context += f"Sender email: {request.sender_email}\n"
+        if sender_cats:
+            cat_str = ", ".join(sender_cats)
+            if "spam" in sender_cats:
+                sender_context += (
+                    f"Sender relationship: {cat_str} — "
+                    "this contact is marked as spam; lean toward NOT urgent unless the "
+                    "content is clearly an actionable business request.\n"
+                )
+            elif "colleague" in sender_cats or "customer" in sender_cats:
+                sender_context += (
+                    f"Sender relationship: {cat_str} — "
+                    "this is a known colleague or customer; give deadlines and "
+                    "blocking requests appropriate urgency weight.\n"
+                )
+            else:
+                sender_context += f"Sender relationship: {cat_str}\n"
+
+        # Gemini path
+        prompt = (
+            "You are an email priority classifier. Given an email subject, snippet, "
+            "and optional sender context, decide if this email requires URGENT attention "
+            "(i.e. the sender needs a reply soon, there is a hard deadline, "
+            "or an action is actively blocking someone).\n"
+            "Do NOT mark as urgent: newsletters, promotions, automated notifications, "
+            "routine follow-ups, or reminders without a concrete deadline.\n"
+            "Return ONLY a JSON object with exactly two fields:\n"
+            '- "is_urgent": boolean\n'
+            '- "reason": one short sentence explaining the decision\n\n'
+            "Return ONLY valid JSON, no markdown.\n\n"
+            + (f"{sender_context}\n" if sender_context else "")
+            + f"Subject: {_truncate(subject, 200)}\n"
+            f"Snippet: {_truncate(snippet, _MAX_SNIPPET_CHARS)}"
+        )
+
+        try:
+            text = await _gemini_with_retry(prompt, max_retries=2, base_delay=1.0)
+        except Exception as exc:
+            # Non-fatal: default to not urgent on failure
+            return {"is_urgent": False, "reason": f"Classification unavailable: {exc}"}
+
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        try:
+            data = json.loads(text)
+            return {
+                "is_urgent": bool(data.get("is_urgent", False)),
+                "reason": str(data.get("reason", "")),
+            }
+        except json.JSONDecodeError:
+            return {"is_urgent": False, "reason": "Failed to parse classifier response"}
+
+
+def get_urgent_classifier() -> GeminiUrgentClassifier:
+    return GeminiUrgentClassifier()
+
+
+# ── Thread category classifier ──────────────────────────────────────────────
+
+# Sender email prefixes that indicate automated / no-reply senders.
+_NOREPLY_PREFIXES = frozenset([
+    "noreply", "no-reply", "no_reply", "donotreply", "do-not-reply",
+    "mailer-daemon", "mailer_daemon", "bounce", "bounces",
+    "postmaster", "automated", "notifications", "notification",
+    "auto", "automailer", "system", "alert", "alerts",
+])
+
+# Subject patterns that indicate automated/transactional emails (case-insensitive).
+_AUTOMATED_SUBJECT_PATTERNS = [
+    "order confirmed", "order received", "your receipt", "payment received",
+    "invoice #", "invoice number", "verification code", "mã xác nhận",
+    "mã otp", "đơn hàng", "xác nhận đơn", "thông báo tự động",
+    "do not reply", "unsubscribe", "security alert", "sign-in attempt",
+]
+
+
+def _is_noreply_sender(sender_email: Optional[str]) -> bool:
+    """Return True if the sender address looks like an automated no-reply account."""
+    if not sender_email:
+        return False
+    local = sender_email.lower().split("@")[0]
+    return any(local.startswith(pfx) or local == pfx for pfx in _NOREPLY_PREFIXES)
+
+
+def _has_automated_subject(subject: str) -> bool:
+    lower = subject.lower()
+    return any(pat in lower for pat in _AUTOMATED_SUBJECT_PATTERNS)
+
+
+class GeminiThreadCategoryClient:
+    async def classify(self, request: ClassifyThreadCategoryRequest) -> dict:
+        subject = (request.subject or "").strip()
+        snippet = (request.snippet or "").strip()
+        sender_cats = request.sender_categories or []
+
+        # ── Tier 1 hard-reject guards (0 AI cost) ──────────────────────────
+        # 1. Sender is contact-categorised as spam
+        if sender_cats and all(c == "spam" for c in sender_cats):
+            return {
+                "categories": ["notification"],
+                "noise_filtered": True,
+            }
+
+        # 2. Sender email matches no-reply pattern
+        if _is_noreply_sender(request.sender_email):
+            return {
+                "categories": ["notification"],
+                "noise_filtered": True,
+            }
+
+        # 3. Subject matches automated/transactional patterns
+        if subject and _has_automated_subject(subject):
+            return {
+                "categories": ["notification"],
+                "noise_filtered": True,
+            }
+
+        # No content to classify
+        if not subject and not snippet:
+            return {"categories": ["other"], "noise_filtered": False}
+
+        # ── Gemini classification ───────────────────────────────────────────
+        categories_list = ", ".join(sorted(VALID_THREAD_CATEGORIES))
+        prompt = (
+            "You are an email classification assistant. "
+            "Given an email subject and snippet, assign one or more categories from the allowed list.\n"
+            "A thread can have MULTIPLE categories if applicable (e.g. a meeting request that is also urgent feedback).\n"
+            "Allowed categories:\n"
+            f"  {categories_list}\n\n"
+            "Return ONLY a JSON object with exactly two fields:\n"
+            '- "categories": array of 1–3 category strings from the allowed list\n'
+            '- "noise_filtered": boolean — true ONLY if this is a fully automated/system '
+            "email (newsletter, receipt, OTP, order confirmation, system alert) that requires "
+            "no human reply whatsoever\n\n"
+            "Return ONLY valid JSON, no markdown.\n\n"
+            f"Subject: {_truncate(subject, 200)}\n"
+            f"Snippet: {_truncate(snippet, _MAX_SNIPPET_CHARS)}"
+        )
+
+        try:
+            text = await _gemini_with_retry(prompt, max_retries=2, base_delay=1.0)
+        except Exception as exc:
+            # Non-fatal: fallback to "other"
+            return {"categories": ["other"], "noise_filtered": False}
+
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        try:
+            data = json.loads(text)
+            raw_cats = data.get("categories", ["other"])
+            # Validate: keep only known categories, fallback to ["other"]
+            valid_cats = [c for c in raw_cats if c in VALID_THREAD_CATEGORIES]
+            if not valid_cats:
+                valid_cats = ["other"]
+            noise = bool(data.get("noise_filtered", False))
+            # Double-check: if Gemini returns noise categories, force noise_filtered=True
+            if any(c in NOISE_CATEGORIES for c in valid_cats):
+                noise = True
+            return {"categories": valid_cats, "noise_filtered": noise}
+        except json.JSONDecodeError:
+            return {"categories": ["other"], "noise_filtered": False}
+
+
+def get_thread_category_client() -> GeminiThreadCategoryClient:
+    return GeminiThreadCategoryClient()
+
+
+# ── Topic label client ──────────────────────────────────────────────────────
+
+class GeminiTopicLabelClient:
+    """
+    Given a list of thread subjects that belong to the same topic,
+    generate a concise human-readable label (2–5 words).
+
+    Shortcut rules (0 AI cost):
+    - No subjects → "Untitled"
+    - Single short subject → return it directly
+    - Otherwise → call Gemini
+    """
+
+    async def label(self, request: LabelTopicRequest) -> str:
+        subjects = [s.strip() for s in request.thread_subjects if s.strip()]
+        if not subjects:
+            return "Untitled"
+
+        # Single short subject: no need for AI
+        if len(subjects) == 1 and len(subjects[0]) <= 60:
+            return subjects[0]
+
+        contact_hint = (
+            f"with contact \u201c{request.contact_name}\u201d" if request.contact_name else ""
+        )
+        subjects_text = "\n".join(
+            f"- {_truncate(s, 150)}" for s in subjects[:20]
+        )
+
+        prompt = (
+            f"{_LANG_INSTRUCTION}\n\n"
+            "You are a topic labeling assistant for an email application. "
+            f"Given a list of related email thread subjects from a conversation "
+            f"{contact_hint}, generate a concise, descriptive topic name.\n\n"
+            "Rules:\n"
+            "- Return ONLY the topic name, nothing else (no quotes, no punctuation at end)\n"
+            "- 2 to 5 words maximum\n"
+            "- In Vietnamese if the email subjects are in Vietnamese, otherwise in English\n"
+            "- Be specific and meaningful; avoid generic labels like \'Email Discussion\'\n\n"
+            f"Thread subjects:\n{subjects_text}\n\n"
+            "Topic name:"
+        )
+
+        try:
+            text = await _gemini_with_retry(prompt, max_retries=2, base_delay=1.0)
+            name = text.strip().strip('"').strip("'").strip()
+            # Safety cap
+            return name[:100] if name else subjects[0][:100]
+        except Exception:
+            # Fallback: return first subject
+            return subjects[0][:100]
+
+
+def get_topic_label_client() -> GeminiTopicLabelClient:
+    return GeminiTopicLabelClient()

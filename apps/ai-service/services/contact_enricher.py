@@ -10,4 +10,5 @@ async def enrich_contact(request: EnrichContactRequest) -> EnrichContactResponse
         display_name=result.get("display_name"),
         org=result.get("org"),
         language=result.get("language"),
+        category_suggestion=result.get("category_suggestion"),
     )

@@ -7,16 +7,37 @@ import { connectToDatabase } from "@/lib/db";
 import { User } from "@/models/User";
 import { Thread } from "@/models/Thread";
 import { Message } from "@/models/Message";
-import { ContactService } from "@/modules/contacts/contact.service";
+import { Contact } from "@/models/Contact";
+import {
+  ContactService,
+  decodeEmailHeader,
+} from "@/modules/contacts/contact.service";
+import { AIService } from "@/modules/ai/ai.service";
+import { TopicService } from "@/modules/topics/topic.service";
+import { emitToUser } from "@/lib/socketServer";
 
 const UPLOAD_DIR = "/tmp/email-attachments";
 const contactService = new ContactService();
+const aiService = new AIService();
+const topicService = new TopicService();
 
 export class GmailService {
   private userId: string;
 
   constructor(userId: string) {
     this.userId = userId;
+  }
+
+  private async getUserEmail(): Promise<string | undefined> {
+    await connectToDatabase();
+    const user = await User.findById(this.userId).lean();
+    return user?.email?.toLowerCase();
+  }
+
+  /** Parse raw "Display Name <email@domain>" → lowercase email only */
+  private static parseEmail(raw: string): string {
+    const match = raw.match(/<([^>]+)>/);
+    return (match ? match[1] : raw).trim().toLowerCase();
   }
 
   private async getGmailClient(): Promise<gmail_v1.Gmail> {
@@ -50,6 +71,7 @@ export class GmailService {
     hasMore: boolean;
   }> {
     const gmail = await this.getGmailClient();
+    const userEmail = await this.getUserEmail();
 
     // List threads with pagination (50 per batch for better UX)
     const listRes = await gmail.users.threads.list({
@@ -64,6 +86,16 @@ export class GmailService {
     // Fetch all thread details in parallel batches of 10 to avoid rate limits
     const BATCH_SIZE = 10;
     const allParticipants: string[][] = [];
+
+    // Collect thread docs for post-sync topic clustering (Trigger 1, 2, 3)
+    interface SyncedThreadMeta {
+      _id: mongoose.Types.ObjectId;
+      topicId?: mongoose.Types.ObjectId;
+      lastMessageDirection: "inbound" | "outbound";
+      lastInboundAt?: Date;
+      lastMessageDate?: Date;
+    }
+    const syncedThreadMetas: SyncedThreadMeta[] = [];
 
     for (let i = 0; i < threads.length; i += BATCH_SIZE) {
       const batch = threads.slice(i, i + BATCH_SIZE).filter((t) => !!t.id);
@@ -91,6 +123,9 @@ export class GmailService {
           const participants = new Set<string>();
           let threadSubject = "";
           let threadSnippet = "";
+          let firstSenderRaw = "";
+          let lastSenderRaw = "";
+          let lastInboundAt: Date | undefined;
 
           for (const msg of thread.messages || []) {
             const headers = msg.payload?.headers || [];
@@ -98,11 +133,23 @@ export class GmailService {
               headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
                 ?.value || "";
 
-            const from = getHeader("From");
+            const from = decodeEmailHeader(getHeader("From"));
             const toRaw = getHeader("To");
             const subject = getHeader("Subject");
 
             if (from) participants.add(from);
+            if (!firstSenderRaw && from) firstSenderRaw = from;
+            if (from) lastSenderRaw = from;
+            // Track last inbound timestamp (message FROM contact, not from user)
+            if (from && msg.internalDate) {
+              const fromEmail = GmailService.parseEmail(from);
+              if (!userEmail || fromEmail !== userEmail) {
+                const msgDate = new Date(parseInt(msg.internalDate, 10));
+                if (!lastInboundAt || msgDate > lastInboundAt) {
+                  lastInboundAt = msgDate;
+                }
+              }
+            }
             if (toRaw) {
               toRaw
                 .split(",")
@@ -111,6 +158,15 @@ export class GmailService {
             if (!threadSubject && subject) threadSubject = subject;
             if (msg.snippet) threadSnippet = msg.snippet;
           }
+
+          // Determine last message direction (inbound = from contact, outbound = from user)
+          const lastSenderEmail = lastSenderRaw
+            ? GmailService.parseEmail(lastSenderRaw)
+            : undefined;
+          const lastMessageDirection: "inbound" | "outbound" =
+            lastSenderEmail && userEmail && lastSenderEmail === userEmail
+              ? "outbound"
+              : "inbound";
 
           const threadDoc = await Thread.findOneAndUpdate(
             { id: thread.id },
@@ -130,9 +186,107 @@ export class GmailService {
                     ),
                   )
                 : undefined,
+              lastMessageDirection,
+              ...(lastInboundAt ? { lastInboundAt } : {}),
             },
             { upsert: true, new: true, setDefaultsOnInsert: true },
           );
+
+          // Fire-and-forget: thread category classification (if not yet classified)
+          if (!threadDoc.categorizedAt) {
+            const catSenderEmail = firstSenderRaw
+              ? GmailService.parseEmail(firstSenderRaw)
+              : undefined;
+
+            const catContactLookup = catSenderEmail
+              ? Contact.findOne({
+                  userId: new mongoose.Types.ObjectId(this.userId),
+                  email: catSenderEmail,
+                })
+                  .lean()
+                  .then((c) => (c ? (c.categories as string[]) : undefined))
+                  .catch(() => undefined)
+              : Promise.resolve(undefined);
+
+            catContactLookup
+              .then((senderCategories) =>
+                aiService.classifyThreadCategory(
+                  thread.id!,
+                  threadDoc.subject,
+                  threadDoc.snippet,
+                  catSenderEmail,
+                  senderCategories,
+                ),
+              )
+              .then(({ categories, noiseFiltered }) =>
+                Thread.updateOne(
+                  { id: thread.id },
+                  {
+                    categories,
+                    noiseFiltered,
+                    categorizedAt: new Date(),
+                    categorySource: "ai",
+                  },
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  "[syncEmails] classify-thread-category error:",
+                  err.message,
+                ),
+              );
+          }
+
+          // Fire-and-forget urgent classification for unclassified threads
+          if (!threadDoc.urgentClassifiedAt) {
+            // Lookup sender contact to get categories for context-aware classification
+            const senderEmail = firstSenderRaw
+              ? firstSenderRaw.match(/<([^>]+)>/)?.[1]?.toLowerCase() ||
+                firstSenderRaw.trim().toLowerCase()
+              : undefined;
+
+            const senderLookup = senderEmail
+              ? Contact.findOne({
+                  userId: new mongoose.Types.ObjectId(this.userId),
+                  email: senderEmail,
+                })
+                  .lean()
+                  .then((c) => (c ? (c.categories as string[]) : undefined))
+                  .catch(() => undefined)
+              : Promise.resolve(undefined);
+
+            senderLookup
+              .then((senderCategories) =>
+                aiService.classifyUrgent(
+                  thread.id!,
+                  threadDoc.subject,
+                  threadDoc.snippet,
+                  senderEmail,
+                  senderCategories,
+                ),
+              )
+              .then(({ isUrgent }) =>
+                Thread.updateOne(
+                  { id: thread.id },
+                  { isUrgent, urgentClassifiedAt: new Date() },
+                ),
+              )
+              .catch((err) =>
+                console.warn(
+                  "[syncEmails] classify-urgent error:",
+                  err.message,
+                ),
+              );
+          }
+
+          // Collect for post-sync topic work
+          syncedThreadMetas.push({
+            _id: threadDoc._id as mongoose.Types.ObjectId,
+            topicId: threadDoc.topicId as mongoose.Types.ObjectId | undefined,
+            lastMessageDirection,
+            lastInboundAt,
+            lastMessageDate: threadDoc.lastMessageDate,
+          });
 
           allParticipants.push(Array.from(participants));
 
@@ -150,7 +304,7 @@ export class GmailService {
                   )?.value || "";
 
                 const subject = getHeader("Subject");
-                const from = getHeader("From");
+                const from = decodeEmailHeader(getHeader("From"));
                 const toRaw = getHeader("To");
                 const to = toRaw ? toRaw.split(",").map((t) => t.trim()) : [];
                 const body = extractMessageBody(msg.payload);
@@ -181,6 +335,65 @@ export class GmailService {
           ).length;
         }),
       );
+    }
+
+    // ── Post-sync topic work (fire-and-forget) ───────────────────────────────
+    if (syncedThreadMetas.length > 0) {
+      // Trigger 1 & 2: new threads without a topic → cluster
+      const unassignedIds = syncedThreadMetas
+        .filter((m) => !m.topicId)
+        .map((m) => m._id);
+
+      if (unassignedIds.length > 0) {
+        const jobId = `topic-pipeline-${Date.now()}`;
+        emitToUser(this.userId, "AI_JOB_START", {
+          jobId,
+          label: `Organizing ${unassignedIds.length} thread(s) into topics…`,
+        });
+
+        topicService
+          .clusterThreadsIntoTopics(this.userId, unassignedIds)
+          // Phase 3: after clustering, label any unlabeled topics for this user
+          .then(() => topicService.labelUnlabeledTopics(this.userId))
+          // Phase 4: re-score all topics after cluster+label pipeline
+          .then(() => topicService.scoreAllTopicsForUser(this.userId))
+          .then(() =>
+            emitToUser(this.userId, "AI_JOB_DONE", {
+              jobId,
+              label: "Topics organized & scored",
+              success: true,
+            }),
+          )
+          .catch((err) => {
+            emitToUser(this.userId, "AI_JOB_DONE", {
+              jobId,
+              label: "Topic organization failed",
+              success: false,
+            });
+            console.warn(
+              "[syncEmails] topic cluster/label/score error:",
+              err.message,
+            );
+          });
+      }
+
+      // Trigger 3: existing threads that already belong to a topic → update timing + re-score
+      const assignedMetas = syncedThreadMetas.filter((m) => m.topicId);
+      for (const meta of assignedMetas) {
+        topicService
+          .updateTopicOnNewMessage(
+            meta.topicId!,
+            meta.lastMessageDirection,
+            meta.lastInboundAt ?? meta.lastMessageDate ?? new Date(),
+          )
+          .then(() => topicService.scoreTopicById(meta.topicId!))
+          .catch((err) =>
+            console.warn(
+              "[syncEmails] updateTopicOnNewMessage error:",
+              err.message,
+            ),
+          );
+      }
     }
 
     // Batch upsert all participants once after all threads are processed
@@ -225,7 +438,23 @@ export class GmailService {
         requestBody: { addLabelIds: ["UNREAD"] },
       });
     }
-    await Thread.findOneAndUpdate({ id: gmailThreadId }, { isRead: read });
+    // When marking as read, also dismiss from urgent list (Option B: granular flag)
+    const update: Record<string, any> = { isRead: read };
+    if (read) update.urgentDismissed = true;
+    const threadDoc = await Thread.findOneAndUpdate(
+      { id: gmailThreadId },
+      update,
+    );
+
+    // Trigger 4: re-score the topic when user marks a thread as read
+    // (unansweredCount may change once the thread's direction is re-evaluated)
+    if (threadDoc?.topicId) {
+      topicService
+        .scoreTopicById(threadDoc.topicId)
+        .catch((err) =>
+          console.warn("[markRead] scoreTopicById error:", err.message),
+        );
+    }
   }
 
   public async archiveThread(gmailThreadId: string): Promise<void> {
@@ -235,7 +464,19 @@ export class GmailService {
       id: gmailThreadId,
       requestBody: { removeLabelIds: ["INBOX"] },
     });
-    await Thread.findOneAndUpdate({ id: gmailThreadId }, { isArchived: true });
+    const archivedDoc = await Thread.findOneAndUpdate(
+      { id: gmailThreadId },
+      { isArchived: true },
+    );
+
+    // Trigger 5: archiving a thread affects unansweredCount → re-score
+    if (archivedDoc?.topicId) {
+      topicService
+        .scoreTopicById(archivedDoc.topicId)
+        .catch((err) =>
+          console.warn("[archiveThread] scoreTopicById error:", err.message),
+        );
+    }
   }
 
   public async sendEmail(params: {

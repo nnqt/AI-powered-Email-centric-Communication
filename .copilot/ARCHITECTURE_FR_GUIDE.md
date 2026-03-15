@@ -102,7 +102,9 @@ such as Gmail (or any API-based provider) with minimal delay.
 **Key ideas**:
 
 - Cursor-based pagination dùng composite key `"lastMessageDate_id"`.
-- `ThreadDTO` include `isRead`, `isArchived` cho UI.
+- `ThreadDTO` include `isRead`, `isArchived`, `isUrgent`, `urgentClassifiedAt` cho UI.
+- `ThreadFilter = "all" | "unread" | "archived" | "urgent"` — "urgent" filter uses `isUrgent: true` query.
+- Urgent classification là **fire-and-forget** sau mỗi sync — không block response; dùng `GeminiUrgentClassifier` (keyword fast-path + Gemini fallback).
 
 ### FR-05 – Real-Time UI Update ✅ IMPLEMENTED
 
@@ -132,33 +134,48 @@ such as Gmail (or any API-based provider) with minimal delay.
 
 ### FR-06 – AI-Assisted Contact Management ✅ IMPLEMENTED
 
-**Goal**: tự động tạo Contact khi sync email; AI súy luận metadata (tên, org, ngôn ngữ); đề xuất gộp (merge) nhiều địa chỉ email → 1 Contact.
+**Goal**: tự động tạo Contact khi sync email; AI suy luận metadata (tên, org, ngôn ngữ); đề xuất gộp (merge) nhiều địa chỉ email → 1 Contact.
 
 **Primary modules**:
 
 - `apps/backend`:
-  - `apps/backend/src/models/Contact.ts` — `email`, `name`, `org`, `language`, `alternateEmails[]`, `userId`, `aiEnriched`, `mergedInto?`.
-  - `apps/backend/src/modules/contacts/contact.service.ts` — `upsertContact()`, `getContacts()`, `mergeContacts()`, `getContactTimeline()`.
+  - `apps/backend/src/models/Contact.ts` — `email`, `name`, `org`, `language`, `alternateEmails[]`, `userId`, `aiEnriched`, `enrichedAt?`, `mergedInto?`, `category` (enum: colleague/customer/third_party/spam/unknown, default "unknown"), `categorySource` (rule/ai/user, default "rule"), `categoryAiSuggestion?`.
+  - `apps/backend/src/modules/contacts/contact.service.ts`:
+    - `upsertContact()`, `getContacts()`, `getContact()`, `mergeContacts()`.
+    - `getContactTimeline()` — regex anchor `(?:^|<)email(?:>|$)` tránh false-positive substring match.
+    - `getContactsForMergeSuggestions()` — **2 DB queries** (fetch contacts max 100 + bulk fetch 300 recent threads, match in-memory). Filter `claimedAltEmails` loại contacts đã linked vào alternateEmails của contact khác. Trả `ContactSnippetDTO[]` với `sample_threads` thực.
+    - `updateContact()` — hỗ trợ `enrichedAt` trong update fields.
+    - `ContactSnippetDTO` interface: `{ contact_id, email, name?, alternate_emails[], sample_threads[] }`.
   - `apps/backend/src/app/api/contacts/route.ts` — `GET /api/contacts`, `POST /api/contacts`.
   - `apps/backend/src/app/api/contacts/[contactId]/route.ts` — `GET /api/contacts/:id`.
   - `apps/backend/src/app/api/contacts/[contactId]/timeline/route.ts` — `GET /api/contacts/:id/timeline`.
-  - `apps/backend/src/app/api/contacts/[contactId]/enrich/route.ts` — `POST /api/contacts/:id/enrich`.
-  - `apps/backend/src/app/api/contacts/merge-suggestions/route.ts` — `GET`.
-  - `apps/backend/src/app/api/contacts/merge/route.ts` — `POST { sourceId, targetId }`.
+  - `apps/backend/src/app/api/contacts/[contactId]/enrich/route.ts` — `POST /api/contacts/:id/enrich`. **Guard**: nếu `aiEnriched=true` → 200 OK `{ contact, cached: true }`, không gọi AI. `?force=true` để bỏ qua guard. Lưu `enrichedAt: new Date()` sau khi enrich thành công.
+  - `apps/backend/src/app/api/contacts/merge-suggestions/route.ts` — `GET`. **Redis cache 6h** (key `contact:merge_suggestions:{userId}`). `?refresh=true` để bypass. **validIdSet guard**: cross-validate AI response ids trước khi cache, lọc `source_id === target_id`.
+  - `apps/backend/src/app/api/contacts/merge/route.ts` — `POST { sourceId, targetId }`. Sau merge thành công **xóa Redis cache** `contact:merge_suggestions:{userId}`.
   - Hook vào `GmailService.syncEmails()` — upsert contact từ mỗi participant mới.
 - `apps/ai-service`:
-  - `POST /enrich-contact` — nhận `{ email, name, conversation_snippet }` → `{ org, language, display_name }`.
-  - `POST /suggest-merge` — nhận list contact snippets → merge candidate pairs + confidence score.
+  - `POST /enrich-contact` — nhận `{ email, name?, conversation_snippet? }` → `{ org, language, display_name }`. **Domain fallback** (`_DOMAIN_MAP` 50+ domains, `_PERSONAL_DOMAINS`) skip Gemini hoàn toàn khi domain đã biết. **Exponential backoff** `_gemini_with_retry()` 1s→2s→4s khi 429.
+  - `POST /suggest-merge` — nhận list contact snippets (capped **100**) → merge candidate pairs + confidence score. **valid_ids Set guard**: lọc hallucinated ids, `sid == tid`, `@` in id.
+  - `apps/ai-service/core/llm_client.py` — `GeminiContactEnrichClient` (with `user_email_domain` + `category_suggestion`), `GeminiMergeSuggestionClient`, `GeminiUrgentClassifier`, `_DOMAIN_MAP`, `_PERSONAL_DOMAINS`, `_extract_domain()`, `_domain_fallback()`, `_gemini_with_retry()`.
+  - `apps/ai-service/models/contact.py` — `EnrichContactRequest` (+ `user_email_domain`), `EnrichContactResponse` (+ `category_suggestion`), `ContactSnippet`, `MergeSuggestion`.
+  - `apps/ai-service/models/urgent.py` — `ClassifyUrgentRequest`, `ClassifyUrgentResponse`.
+  - `apps/ai-service/routes/contact.py` — `/enrich-contact` + `/suggest-merge`.
+  - `apps/ai-service/routes/urgent.py` — `/classify-urgent`.
+  - `apps/ai-service/services/contact_enricher.py`, `merge_suggester.py`, `urgent_classifier.py`.
 - `apps/frontend`:
-  - `apps/frontend/src/app/contacts/page.tsx` — danh sách contacts + merge suggestion banner.
-  - `apps/frontend/src/app/contacts/[id]/page.tsx` — contact detail + timeline + "Enrich with AI" button.
+  - `apps/frontend/src/app/contacts/page.tsx` — danh sách contacts + merge suggestion banner (Dismiss / Merge) + search bar (với `?q=` URL param) + category filter tabs.
+  - `apps/frontend/src/app/contacts/[id]/page.tsx` — **redesigned**: `InfoRow` 2-col grid, inline edit mode, category chip badge (with "· confirmed" for user-set), **AI category suggestion banner** (violet card — Confirm/Dismiss). Handle `res.data.cached`. Thread count badge. Timeline với `divide-y`.
+  - `apps/frontend/src/hooks/useContacts.ts` — `ContactDTO` bao gồm `enrichedAt?`, `category`, `categorySource`, `categoryAiSuggestion?`. `setSearch`/`setCategoryFilter` exposed.
 
 **Key ideas**:
 
 - `upsertContact` chạy trong `syncEmails` — idempotent theo `email` field.
-- Auto-create khi sync email và user có thể tạo thủ công.
-- Merge là soft-merge: `mergedInto` ref để giữ audit trail, không xóa bản ghi gốc.
-- Contact timeline gộm tất cả threads có participant khớp email của contact (hoặc bất kỳ `alternateEmails`).
+- Auto-create khi sync email; user cũng có thể tạo thủ công.
+- Merge là **soft-merge**: set `mergedInto` ref để giữ audit trail, không xóa bản ghi gốc.
+- Contact timeline dùng regex anchor để tránh false-positive (e.g. `notjohn@x.com` không match `john@x.com`).
+- `claimedAltEmails` filter ngăn contact đã appear trong `alternateEmails` của contact khác xuất hiện trong merge suggestions.
+- Domain fallback map giảm đáng kể số lần gọi Gemini cho các domain phổ biến (VN universities, corporates, international).
+- 2-layer hallucination guard cho merge: AI service (`valid_ids` Set) + backend route (`validIdSet` cross-validation).
 
 ### FR-07 – Thread Summarization (AI) ✅ IMPLEMENTED
 

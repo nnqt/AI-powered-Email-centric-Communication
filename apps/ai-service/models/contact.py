@@ -6,6 +6,7 @@ class EnrichContactRequest(BaseModel):
     email: str
     name: Optional[str] = None
     conversation_snippet: Optional[str] = None
+    user_email_domain: Optional[str] = None
 
 
 class EnrichContactResponse(BaseModel):
@@ -13,6 +14,7 @@ class EnrichContactResponse(BaseModel):
     display_name: Optional[str] = None
     org: Optional[str] = None
     language: Optional[str] = None
+    category_suggestion: Optional[str] = None  # colleague|customer|spam|other|unknown
 
 
 class ContactSnippet(BaseModel):
