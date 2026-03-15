@@ -2,15 +2,15 @@
 
 ## Stack
 
-| Layer    | Technology                                      |
-| -------- | ----------------------------------------------- |
-| Frontend | Next.js (App Router) + React + TypeScript       |
-| Backend  | Next.js API Routes + NextAuth v4 + Mongoose     |
-| AI       | FastAPI + Google Gemini (`gemini-2.0-flash`)    |
-| DB       | MongoDB 7                                       |
-| Cache    | Redis 7                                         |
-| Realtime | Socket.IO + `@socket.io/redis-adapter`          |
-| Deploy   | Docker Compose (each app has own build context) |
+| Layer    | Technology                                         |
+| -------- | -------------------------------------------------- |
+| Frontend | Next.js 16 (App Router) + React 19 + TypeScript    |
+| Backend  | Next.js 16 API Routes + NextAuth v4 + Mongoose + GramJS |
+| AI       | FastAPI + Google Gemini (`gemini-2.0-flash`)       |
+| DB       | MongoDB 7                                          |
+| Cache    | Redis 7                                            |
+| Realtime | Socket.IO + `@socket.io/redis-adapter`             |
+| Deploy   | Docker Compose (each app has own build context)    |
 
 ## Services & Ports
 
@@ -101,12 +101,20 @@ GEMINI_API_KEY=<key>
 GEMINI_MODEL_NAME=gemini-2.0-flash
 ```
 
+### `apps/backend/.env` (additional Telegram vars)
+
+```
+TELEGRAM_API_ID=<id>
+TELEGRAM_API_HASH=<hash>
+```
+
 ## Docker Build Notes
 
 - **Frontend**: multi-stage, `output: "standalone"`. `ARG BACKEND_INTERNAL_URL` + `ARG NEXT_PUBLIC_BACKEND_SOCKET_URL` baked at build time.
-- **Backend**: multi-stage, **no** `output: "standalone"` (uses custom `server.ts` for Socket.IO). Builder compiles `server.ts → dist-server/server.js` via `tsc -p tsconfig.server.json`. CMD: `node server.js`.
+- **Backend**: multi-stage, **no** `output: "standalone"` (uses custom `server.ts` for Socket.IO). Builder compiles `server.ts → dist-server/server.js` via `tsc -p tsconfig.server.json`. CMD: `node server.js`. Build script uses `NODE_OPTIONS=--max-old-space-size=4096`.
 - **AI Service**: multi-stage alpine. Builder installs `gcc`/`musl-dev` for C extensions. Runner stage is clean.
 - Start order enforced via `depends_on: condition: service_healthy` with `curl` healthchecks.
+- **Backend next.config.ts**: `serverExternalPackages: ['pino', 'thread-stream']`, `turbopack: {}` (empty config required when webpack config coexists).
 
 ## Route Structure (Frontend App Router)
 
@@ -115,6 +123,9 @@ GEMINI_MODEL_NAME=gemini-2.0-flash
 | `app/page.tsx`                           | `/`             | Login only — Google OAuth button   |
 | `app/(dashboard)/layout.tsx`             | —               | Sidebar + auth guard               |
 | `app/(dashboard)/inbox/page.tsx`         | `/inbox`        | Thread list                        |
+| `app/(dashboard)/focus/page.tsx`         | `/focus`        | Focus page — prioritized topics    |
 | `app/(dashboard)/contacts/page.tsx`      | `/contacts`     | Contact list                       |
 | `app/(dashboard)/contacts/[id]/page.tsx` | `/contacts/:id` | Contact detail + timeline          |
 | `app/(dashboard)/threads/[id]/page.tsx`  | `/threads/:id`  | Thread detail + AI summary + reply |
+| `app/(dashboard)/chat/page.tsx`          | `/chat`         | Telegram chat UI                   |
+| `app/(dashboard)/settings/page.tsx`      | `/settings`     | Telegram integration settings      |

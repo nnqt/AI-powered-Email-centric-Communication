@@ -12,7 +12,7 @@
 | FR-06 | AI-assisted Contact Management (enrich + merge)   | ✅ Implemented                                     |
 | FR-07 | Thread summarization (AI, Vietnamese output)      | ✅ Implemented                                     |
 | FR-08 | Smart reply suggestions (email + message formats) | ✅ Implemented                                     |
-| FR-09 | Multi-channel adapter + Telegram Bot              | ⏳ Pending (designed not to require core refactor) |
+| FR-09 | Multi-channel — Telegram Client (GramJS MTProto)  | ✅ Implemented (Phase 1–5)                         |
 | FR-10 | Topic Intelligence (cluster + AI label + score)   | ✅ Implemented (Phases 1–6)                        |
 
 ---
@@ -139,17 +139,32 @@
 
 ---
 
+## Multi-Channel Telegram (FR-09) — Phases 1–5
+
+**Phase 1 — Setup & Auth**: GramJS (MTProto) integration. Phone login → OTP → StringSession saved per-user.
+
+**Phase 2 — Core Messaging**: `TelegramChat` + `TelegramMessage` models. Socket.IO realtime sync. Chat list + message UI at `/chat`.
+
+**Phase 3 — Contact Integration**: `telegramId`, `telegramUsername`, `telegramName` on Contact. Auto-create contact from Telegram senders. AI merge with `recent_chat_snippets`.
+
+**Phase 4 — Proactive Chunking**: Auto-groups Telegram messages into chunks → `POST /analyze-chat-chunk` → `GeminiChatAnalyzerClient` extracts intent/summary → maps to Topics as `chatInsights[]`. `lastAnalyzedMessageDate` on TelegramChat tracks processing state.
+
+**Phase 5 — Unified Timeline**: `ChatInsightDTO` added to `TopicDTO`/`FocusTopicDTO`. `computeFocusScore` considers max(email lastInboundAt, chatInsight date). Frontend merges email threads + Telegram chatInsights into `unifiedTimeline` on Focus & Contact pages.
+
+---
+
 ## Architecture Decisions
 
 | Decision                           | Rationale                                                                  |
 | ---------------------------------- | -------------------------------------------------------------------------- |
 | No Gmail Pub/Sub webhook in PoC    | Requires public HTTPS URL; manual sync adequate for PoC                    |
-| FR-09 (Telegram) pending           | Not needed for thesis evaluation; architecture designed for future add     |
+| GramJS MTProto (not Bot API)       | User-level access to full chat history; StringSession auth per-user        |
 | Soft-merge for contacts            | Preserves audit trail; `mergedInto` ref keeps data integrity               |
 | Backend custom `server.ts`         | Socket.IO requires HTTP server access; `output: "standalone"` incompatible |
 | `NEXT_PUBLIC_BACKEND_SOCKET_URL`   | Next.js rewrites can't proxy WebSocket; direct URL required                |
 | `load_dotenv()` before all imports | Env vars must be available when `config.py` is imported                    |
 | `pino-pretty` dev-only             | Worker threads crash in production bundled Next.js builds                  |
+| `serverExternalPackages` for pino  | Turbopack cannot bundle `thread-stream` test deps (`tap`)                  |
 
 ---
 
@@ -164,3 +179,5 @@
 | `src/models/User.ts`                  | Fields in TS interface missing from schema                         | Added to Mongoose schema                                                                                                                        |
 | `modules/contacts/contact.service.ts` | Vietnamese names stored as Mojibake (double UTF-8/Latin-1 misread) | `decodeMojibake()` + `decodeEmailHeader()` export; applied in `gmail.service.ts` for `From` header on both Thread.participants and Message.from |
 | `features/inbox/ThreadList.tsx`       | `filter === "urgent"` TS error after type narrowing                | Removed unreachable branch                                                                                                                      |
+| `next.config.ts`                      | Turbopack default + webpack config conflict; pino `tap` module     | `serverExternalPackages`, `turbopack: {}`, `NODE_OPTIONS=--max-old-space-size=4096`                                                             |
+| `next.config.ts`                      | Ambiguous `/api/contacts/[contactId]/timeline` route               | Deleted duplicate route, kept `[id]/timeline`                                                                                                   |

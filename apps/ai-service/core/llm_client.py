@@ -14,6 +14,7 @@ from models.thread_category import (
     NOISE_CATEGORIES,
 )
 from models.topic_label import LabelTopicRequest
+from models.chat_analysis import AnalyzeChatRequest, AnalyzeChatResponse, ChatFragment
 from core.config import GEMINI_API_KEY, GEMINI_MODEL_NAME
 
 
@@ -430,14 +431,17 @@ class GeminiMergeSuggestionClient:
         contacts_sample = contacts[:100]
         contacts_text = "\n".join(
             f"- id={c.contact_id}, email={c.email}, name={c.name or 'unknown'}, "
-            f"alt_emails={c.alternate_emails}"
+            f"alt_emails={c.alternate_emails}, tg_user={c.telegram_username}, "
+            f"tg_name={c.telegram_name}, chat_snippets={c.recent_chat_snippets}"
             for c in contacts_sample
         )
         prompt = (
-            "You are a CRM AI assistant. Analyze the following list of email contacts and identify "
+            "You are a CRM AI assistant. Analyze the following list of email/telegram contacts and identify "
             "pairs that may represent the same real-world person and should be merged. "
             "Look for: same domain + similar names, alternate emails for the same person, "
-            "naming variations.\n"
+            "naming variations (e.g., name vs tg_name). "
+            "Additionally, if a contact has chat_snippets (Telegram), compare their content style, "
+            "topics, or language with the sample_threads of an email-only contact to infer if they are the same person.\n"
             "Return ONLY a valid JSON array of objects with fields:\n"
             '- "source_id": string (id of the contact to merge FROM, i.e. the duplicate)\n'
             '- "target_id": string (id of the contact to merge INTO, i.e. the primary)\n'
@@ -725,6 +729,61 @@ class GeminiThreadCategoryClient:
 
 def get_thread_category_client() -> GeminiThreadCategoryClient:
     return GeminiThreadCategoryClient()
+
+
+# ── Chat analyzer client ────────────────────────────────────────────────────
+
+class GeminiChatAnalyzerClient:
+    async def analyze_chat(self, request: AnalyzeChatRequest) -> AnalyzeChatResponse:
+        prompt = (
+            "You are an AI assistant analyzing a chunk of a Telegram chat conversation. "
+            f"{_LANG_INSTRUCTION}\n\n"
+            "Extract distinct conversational intents or topics from the chunk. "
+            "For each distinct intent, map it to an existing topic if one matches, or suggest a new topic name if it's new.\n"
+            "Return ONLY a JSON object with a single field 'fragments' containing a list of objects with these fields:\n"
+            '- "intent": string (main intent)\n'
+            '- "summary": string (short summary)\n'
+            '- "topic_action": either "route_to_existing" or "create_new"\n'
+            '- "topic_name": string (the existing topic name or a new 2-5 word name)\n\n'
+            "Active topics for this contact: " + (", ".join(request.active_topics) if request.active_topics else "None") + "\n\n"
+            "Return ONLY valid JSON, no markdown.\n\n"
+            f"Chat Chunk:\n{_truncate(request.text_chunk, _MAX_TOTAL_CONTENT_CHARS)}\n"
+        )
+
+        try:
+            text = await _gemini_with_retry(prompt, max_retries=2, base_delay=1.0)
+        except Exception as exc:
+            raise RuntimeError(f"Gemini chat analyzer failed: {exc}") from exc
+
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+        try:
+            data = json.loads(text)
+            fragments_data = data.get("fragments", [])
+            if not isinstance(fragments_data, list):
+                fragments_data = []
+
+            fragments = []
+            for item in fragments_data:
+                action = item.get("topic_action", "create_new")
+                if action not in ["route_to_existing", "create_new"]:
+                    action = "create_new"
+                    
+                fragments.append(ChatFragment(
+                    intent=str(item.get("intent", "")),
+                    summary=str(item.get("summary", "")),
+                    topic_action=action,
+                    topic_name=str(item.get("topic_name", "Untitled"))
+                ))
+            return AnalyzeChatResponse(fragments=fragments)
+        except json.JSONDecodeError:
+            raise RuntimeError(f"Failed to parse Gemini response as JSON: {text[:200]}")
+
+
+def get_chat_analyzer_client() -> GeminiChatAnalyzerClient:
+    return GeminiChatAnalyzerClient()
 
 
 # ── Topic label client ──────────────────────────────────────────────────────

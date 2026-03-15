@@ -257,3 +257,5 @@ Always use this for raw Gmail API header values before storing in `Thread.partic
 | FR-06 | `modules/contacts/contact.service.ts`, `api/contacts`             | `/enrich-contact`, `/suggest-merge` | contacts pages, `useContacts`                  |
 | FR-07 | `modules/ai/ai.service.ts`, `api/threads/:id/summarize`           | `/summarize`                        | `AISummaryCard`                                |
 | FR-08 | `ai.service.ts (suggestReplies)`, `api/threads/:id/suggest-reply` | `/suggest-reply`                    | `SmartReplyBar`, thread `[id]` page            |
+| FR-09 | `lib/telegramManager.ts`, `api/telegram/*`, `TelegramChat/Message` models | `/analyze-chat-chunk`       | `chat/page.tsx`, `settings/page.tsx`           |
+| FR-10 | `modules/topics/topic.service.ts`, `api/topics`, `api/focus`      | `/classify-thread-category`, `/label-topic` | `FocusTopicCard`, `ContactTopicGroup`, `/focus` |

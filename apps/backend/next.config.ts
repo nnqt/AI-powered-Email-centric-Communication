@@ -24,6 +24,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  serverExternalPackages: ['pino', 'thread-stream'],
+  webpack: (config: any, { isServer, webpack }: any) => {
+    if (isServer) {
+        config.plugins.push(
+            new webpack.IgnorePlugin({
+                resourceRegExp: /^(why-is-node-running|tap)$/,
+            })
+        );
+    }
+    return config;
+  },
+  turbopack: {},
 };
 
 export default nextConfig;

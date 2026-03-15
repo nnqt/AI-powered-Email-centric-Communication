@@ -1,4 +1,112 @@
-# Current State – March 10, 2026
+# Current State – March 15, 2026
+
+## Multi-Channel — Phase 1: Setup Infrastructure & Telegram Client Auth ✅ IMPLEMENTED
+
+### Overview
+Added Telegram integration via `gramjs` using user's phone number login. StringSessions are saved directly per-user into the MongoDB `User` document. A Singleton client manages active WebSocket connections.
+
+### Files changed
+
+**Backend:**
+- `package.json` — Add `telegram` (GramJS) dependency.
+- `apps/backend/src/models/User.ts`:
+  - Added `telegramSession` (String) and `telegramPhone` (String) to Mongoose schema and TS interface.
+- `apps/backend/src/lib/telegramManager.ts` — **NEW** — Singleton pattern implementation.
+  - `getTelegramClient(userId, sessionString?)` function.
+  - Keeps live connections inside `global.__telegramClients` dictionary to reuse on Next.js API stateless requests.
+- `apps/backend/src/app/api/telegram/auth/send-code/route.ts` — **NEW** — `POST` handler calling `client.sendCode(...)`.
+- `apps/backend/src/app/api/telegram/auth/verify-code/route.ts` — **NEW** — `POST` handler, validates OTP via `Api.auth.SignIn`, upserts session to `telegramSession`.
+- `apps/backend/src/app/api/telegram/status/route.ts` — **NEW** — `GET` handler returning linked status and phone number.
+
+**Frontend:**
+- `apps/frontend/src/app/(dashboard)/layout.tsx`:
+  - Added new "Settings" tab in `NAV_ITEMS` with specific route `/settings`.
+- `apps/frontend/src/app/(dashboard)/settings/page.tsx` — **NEW**
+  - "Telegram Integration" section with 2 states: linked (✅ green bar) and unlinked (forms).
+  - Handles "Send Code" → OTP input → "Verify Code".
+  - Graceful explicit error handling mapped from GramJS exceptions via standard error toasts.
+
+## Multi-Channel — Phase 2: Core Messaging & Database ✅ IMPLEMENTED
+
+### Overview
+Added Telegram chat list and messaging. `TelegramChat` and `TelegramMessage` Mongoose models store chat metadata and messages. Socket.IO events (`TELEGRAM_MESSAGE`) push realtime updates.
+
+### Files changed
+
+**Backend:**
+- `apps/backend/src/models/TelegramChat.ts` — **NEW** — `chatId`, `userId`, `title`, `type`, `lastMessageDate`, `unreadCount`. Index: `{ userId: 1, lastMessageDate: -1 }`.
+- `apps/backend/src/models/TelegramMessage.ts` — **NEW** — `messageId`, `chatId`, `userId`, `senderId`, `text`, `date`, `isOutbound`.
+- `apps/backend/src/app/api/telegram/chats/route.ts` — **NEW** — `GET` chat list.
+- `apps/backend/src/app/api/telegram/chats/[chatId]/messages/route.ts` — **NEW** — `GET` messages.
+- `apps/backend/src/app/api/telegram/chats/[chatId]/send/route.ts` — **NEW** — `POST` send message.
+
+**Frontend:**
+- `apps/frontend/src/app/(dashboard)/chat/page.tsx` — **NEW** — Chat UI with sidebar chat list + message view.
+- `apps/frontend/src/app/(dashboard)/layout.tsx` — Added "Chat" nav item.
+
+---
+
+## Multi-Channel — Phase 3: Contact Integration ✅ IMPLEMENTED
+
+### Overview
+Extended Contact schema with Telegram fields. Auto-creates contacts from Telegram message senders. AI merge suggestions now consider `recent_chat_snippets` for cross-channel matching (Email ↔ Telegram).
+
+### Files changed
+
+- `apps/backend/src/models/Contact.ts` — Added `telegramId` (sparse unique), `telegramUsername`, `telegramName` to schema + `IContact`.
+- `apps/backend/src/modules/contacts/contact.service.ts` — Updated `getContactsForMergeSuggestions()` to include `recent_chat_snippets` from Telegram messages.
+- `apps/frontend/src/hooks/useContacts.ts` — `ContactDTO` includes `telegramId?`, `telegramUsername?`, `telegramName?`.
+- `apps/ai-service/models/contact.py` — `ContactSnippet` includes `recent_chat_snippets?`.
+
+---
+
+## Multi-Channel — Phase 4: Proactive Chunking & Semantic Extraction ✅ IMPLEMENTED
+
+### Overview
+Auto-groups consecutive Telegram messages into time-based chunks. Each chunk is sent to `POST /analyze-chat-chunk` for AI intent/summary extraction. Results are stored as `chatInsights[]` subdocuments on Topic.
+
+### Files changed
+
+**AI Service:**
+- `apps/ai-service/models/chat_analysis.py` — **NEW** — `AnalyzeChatRequest(text_chunk, active_topics[])`, `ChatFragment(intent, summary, topic_action, topic_name)`, `AnalyzeChatResponse(fragments[])`.
+- `apps/ai-service/routes/chat.py` — **NEW** — `POST /analyze-chat-chunk`.
+- `apps/ai-service/core/llm_client.py` — **NEW** `GeminiChatAnalyzerClient.analyze_chat()` — extracts distinct intents from Telegram chunk, maps to existing or new topics. `get_chat_analyzer_client()` factory.
+- `apps/ai-service/main.py` — registered `chat_routes`.
+
+**Backend:**
+- `apps/backend/src/models/Topic.ts` — Added `chatInsights[]` subdocument array (`intent`, `summary`, `sourceChatId`, `date`) + `lastAnalyzedMessageDate`.
+- `apps/backend/src/models/TelegramChat.ts` — Added `lastAnalyzedMessageDate` for tracking processed state.
+
+---
+
+## Multi-Channel — Phase 5: Unified Focus Page & Timeline ✅ IMPLEMENTED
+
+### Overview
+Integrated `chatInsights` into `TopicDTO`/`FocusTopicDTO`. Focus score formula now considers max(email `lastInboundAt`, latest `chatInsight.date`). Frontend merges email threads + Telegram chatInsights into a unified chronological timeline on Focus page and Contact detail page.
+
+### Files changed
+
+**Backend:**
+- `apps/backend/src/modules/topics/topic.service.ts` — `toTopicDTO()` maps `chatInsights`. `computeFocusScore()` checks max date between email and chat insight dates.
+
+**Frontend:**
+- `apps/frontend/src/hooks/useFocusTopics.ts` — Added `ChatInsightDTO` and `chatInsights?` to `FocusTopicDTO`.
+- `apps/frontend/src/hooks/useContactTopics.ts` — Added `ChatInsightDTO` and `chatInsights?` to `TopicDTO`.
+- `apps/frontend/src/features/focus/FocusTopicCard.tsx` — `useMemo` merges email threads + chatInsights into `unifiedTimeline`, renders Telegram insight items with 💬 icon.
+- `apps/frontend/src/features/contacts/ContactTopicGroup.tsx` — Same unified timeline logic for Contact detail By Topic view.
+
+---
+
+## Docker Build Fixes ✅ RESOLVED
+
+| Issue | Fix |
+|-------|-----|
+| Ambiguous `/api/contacts/[contactId]/timeline` vs `[id]/timeline` | Deleted redundant `[contactId]/timeline` route |
+| JavaScript heap OOM during backend Docker build | `NODE_OPTIONS=--max-old-space-size=4096` in `package.json` build script |
+| Turbopack + webpack config conflict | Added `turbopack: {}` + `serverExternalPackages: ['pino', 'thread-stream']` in `next.config.ts` |
+| `ImportError: GeminiChatAnalyzerClient` in AI service | Implemented full class in `llm_client.py` + fixed `await` in `chat.py` |
+
+---
 
 ## Topic Intelligence — Phase 1: Thread Category Classification ✅ IMPLEMENTED
 

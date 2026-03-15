@@ -69,6 +69,14 @@ function parseEmail(raw: string): string {
 
 // ── Topic DTO ────────────────────────────────────────────────────────────────
 
+export interface ChatInsightDTO {
+  _id: string;
+  intent: string;
+  summary: string;
+  sourceChatId: string;
+  date: string;
+}
+
 export interface TopicDTO {
   _id: string;
   contactId: string;
@@ -80,6 +88,7 @@ export interface TopicDTO {
   lastInboundAt?: string;
   lastOutboundAt?: string;
   aiLabeled: boolean;
+  chatInsights?: ChatInsightDTO[];
   createdAt: string;
   updatedAt: string;
 }
@@ -108,6 +117,13 @@ function toTopicDTO(t: ITopic): TopicDTO {
     lastInboundAt: t.lastInboundAt?.toISOString(),
     lastOutboundAt: t.lastOutboundAt?.toISOString(),
     aiLabeled: t.aiLabeled,
+    chatInsights: doc.chatInsights?.map((insight: any) => ({
+      _id: insight._id?.toString() ?? "",
+      intent: insight.intent,
+      summary: insight.summary,
+      sourceChatId: insight.sourceChatId,
+      date: insight.date?.toISOString() ?? "",
+    })),
     createdAt: doc.createdAt?.toISOString(),
     updatedAt: doc.updatedAt?.toISOString(),
   };
@@ -139,18 +155,24 @@ function _contactWeight(category: string | undefined): number {
   return 5; // other | unknown | undefined
 }
 
-/**
- * Pure, synchronous focus-score computation from topic + contact fields.
- * Exported for unit-test convenience.
- */
 export function computeFocusScore(params: {
   unansweredCount: number;
   lastInboundAt?: Date;
   contactCategory?: string;
+  chatInsights?: any[];
 }): number {
+  let latestDate = params.lastInboundAt;
+  
+  if (params.chatInsights?.length) {
+    const latestInsightDate = new Date(Math.max(...params.chatInsights.map(i => new Date(i.date).getTime())));
+    if (!latestDate || latestInsightDate > latestDate) {
+      latestDate = latestInsightDate;
+    }
+  }
+
   return Math.round(
     params.unansweredCount * 40 +
-      _recencyScore(params.lastInboundAt) +
+      _recencyScore(latestDate) +
       _contactWeight(params.contactCategory),
   );
 }
@@ -461,6 +483,7 @@ export class TopicService {
       unansweredCount: topic.unansweredCount,
       lastInboundAt: topic.lastInboundAt,
       contactCategory: (contact as any)?.category,
+      chatInsights: topic.chatInsights
     });
 
     await Topic.updateOne(
@@ -499,6 +522,7 @@ export class TopicService {
         $project: {
           unansweredCount: 1,
           lastInboundAt: 1,
+          chatInsights: 1,
           contactCategory: { $arrayElemAt: ["$_contact.category", 0] },
         },
       },
@@ -518,6 +542,7 @@ export class TopicService {
                 unansweredCount: row.unansweredCount,
                 lastInboundAt: row.lastInboundAt,
                 contactCategory: row.contactCategory,
+                chatInsights: (row as any).chatInsights,
               }),
               lastScoredAt: new Date(),
             },
@@ -581,6 +606,13 @@ export class TopicService {
       lastInboundAt: row.lastInboundAt?.toISOString(),
       lastOutboundAt: row.lastOutboundAt?.toISOString(),
       aiLabeled: row.aiLabeled,
+      chatInsights: row.chatInsights?.map((insight: any) => ({
+        _id: insight._id?.toString() ?? "",
+        intent: insight.intent,
+        summary: insight.summary,
+        sourceChatId: insight.sourceChatId,
+        date: insight.date?.toISOString() ?? "",
+      })),
       createdAt: row.createdAt?.toISOString(),
       updatedAt: row.updatedAt?.toISOString(),
       contact: {

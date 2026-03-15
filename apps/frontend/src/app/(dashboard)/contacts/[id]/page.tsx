@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { format, formatDistanceToNow } from "date-fns";
 
 import { useContactDetail, useContactTimeline } from "@/hooks/useContacts";
+import { useUnifiedTimeline, TimelineItemDTO } from "@/hooks/useTimeline";
 import type { ContactCategory } from "@/hooks/useContacts";
 import { useContactTopics } from "@/hooks/useContactTopics";
 import type { TopicDTO } from "@/hooks/useContactTopics";
@@ -86,7 +87,8 @@ export default function ContactDetailPage() {
 
   const contactId = params.id as string;
   const { contact, isLoading, isError, mutate } = useContactDetail(contactId);
-  const { threads, isLoading: timelineLoading } = useContactTimeline(contactId);
+  const { timeline, isLoading: timelineLoading } = useUnifiedTimeline(contactId);
+  const { threads } = useContactTimeline(contactId); // keep for topic view, or we can adapt later
   const {
     topics,
     isLoading: topicsLoading,
@@ -252,9 +254,9 @@ export default function ContactDetailPage() {
     ? (LANGUAGE_LABELS[contact.language] ?? contact.language)
     : null;
 
-  const lastThread = threads?.[0];
-  const lastInteraction = lastThread?.lastMessageDate
-    ? formatDistanceToNow(new Date(lastThread.lastMessageDate), {
+  const lastThread = timeline?.[0];
+  const lastInteraction = lastThread?.date
+    ? formatDistanceToNow(new Date(lastThread.date), {
         addSuffix: true,
       })
     : null;
@@ -401,10 +403,23 @@ export default function ContactDetailPage() {
                     )}
                   </span>
                 ))}
+                {/* Telegram badge */}
+                {contact.telegramId && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 border border-blue-200 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                    <svg
+                      className="h-3 w-3"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                    </svg>
+                    Telegram
+                  </span>
+                )}
                 {/* Thread count badge */}
-                {!timelineLoading && threads.length > 0 && (
+                {!timelineLoading && timeline.length > 0 && (
                   <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
-                    {threads.length} thread{threads.length !== 1 ? "s" : ""}
+                    {timeline.length} interaction{timeline.length !== 1 ? "s" : ""}
                   </span>
                 )}
               </div>
@@ -629,7 +644,7 @@ export default function ContactDetailPage() {
               {timelineView === "flat" ? "Communication Timeline" : "Topics"}
               {timelineView === "flat" && !timelineLoading && (
                 <span className="rounded-full bg-gray-200 px-2 py-0.5 text-gray-600 normal-case font-medium">
-                  {threads.length}
+                  {timeline.length}
                 </span>
               )}
               {timelineView === "topics" && !topicsLoading && (
@@ -680,42 +695,48 @@ export default function ContactDetailPage() {
                 </div>
               ) : (
                 <div className="contact-detail__timeline-list overflow-hidden rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
-                  {threads.map((thread: any) => (
+                  {timeline.map((item: TimelineItemDTO) => (
                     <div
-                      key={thread._id}
+                      key={`${item.type}-${item.id}`}
                       role="button"
                       tabIndex={0}
-                      onClick={() => router.push(`/threads/${thread.id}`)}
+                      onClick={() => item.type === "email" ? router.push(`/threads/${item.threadId}`) : router.push(`/chat/${item.chatId}`)}
                       onKeyDown={(e) =>
                         e.key === "Enter" &&
-                        router.push(`/threads/${thread.id}`)
+                        (item.type === "email" ? router.push(`/threads/${item.threadId}`) : router.push(`/chat/${item.chatId}`))
                       }
                       className="contact-detail__timeline-item flex cursor-pointer items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group"
                     >
-                      <div
-                        className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500 opacity-0 data-[unread=true]:opacity-100"
-                        data-unread={!thread.isRead}
-                      />
+                      <div className="mt-1 h-5 w-5 shrink-0 flex items-center justify-center">
+                        {item.type === "telegram" ? (
+                           <svg className="h-4 w-4 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                           </svg>
+                        ) : (
+                           <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                           </svg>
+                        )}
+                      </div>
                       <div className="min-w-0 flex-1">
-                        <p
-                          className={`truncate text-sm ${
-                            !thread.isRead
-                              ? "font-semibold text-gray-900"
-                              : "text-gray-700"
-                          }`}
-                        >
-                          {thread.subject ?? "(no subject)"}
+                        <p className="truncate text-sm text-gray-900 font-medium">
+                          {item.type === "email" ? (item.subject ?? "(no subject)") : (
+                            <span className="flex items-center gap-1.5">
+                               {item.isOutbound ? <span className="text-gray-400">You:</span> : null}
+                               {item.text}
+                            </span>
+                          )}
                         </p>
-                        {thread.snippet && (
-                          <p className="truncate text-xs text-gray-400 mt-0.5">
-                            {thread.snippet}
+                        {item.snippet && item.type === "email" && (
+                          <p className="truncate text-xs text-gray-500 mt-0.5">
+                            {item.snippet}
                           </p>
                         )}
                       </div>
                       <span className="shrink-0 text-xs text-gray-400 pt-0.5">
-                        {thread.lastMessageDate
+                        {item.date
                           ? formatDistanceToNow(
-                              new Date(thread.lastMessageDate),
+                              new Date(item.date),
                               { addSuffix: true },
                             )
                           : ""}

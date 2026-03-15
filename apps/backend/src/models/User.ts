@@ -9,6 +9,8 @@ export interface IUser extends Document {
   refreshToken?: string;
   gmailNextPageToken?: string;
   gmailSyncComplete?: boolean;
+  telegramSession?: string;
+  telegramPhone?: string;
 }
 
 const UserSchema: Schema<IUser> = new Schema(
@@ -21,6 +23,8 @@ const UserSchema: Schema<IUser> = new Schema(
     refreshToken: { type: String },
     gmailNextPageToken: { type: String, default: null },
     gmailSyncComplete: { type: Boolean, default: false },
+    telegramSession: { type: String, default: null },
+    telegramPhone: { type: String, default: null },
   },
   {
     timestamps: true,

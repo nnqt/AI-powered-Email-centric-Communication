@@ -1,6 +1,14 @@
 import useSWR from "swr";
 import apiClient from "@/lib/api";
 
+export interface ChatInsightDTO {
+  _id: string;
+  intent: string;
+  summary: string;
+  sourceChatId: string;
+  date: string;
+}
+
 export interface TopicDTO {
   _id: string;
   name: string;
@@ -12,6 +20,7 @@ export interface TopicDTO {
   lastInboundAt?: string;
   lastOutboundAt?: string;
   aiLabeled: boolean;
+  chatInsights?: ChatInsightDTO[];
 }
 
 export function useContactTopics(contactId: string) {

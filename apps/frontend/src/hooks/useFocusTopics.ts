@@ -4,6 +4,24 @@ import useSWR from "swr";
 
 import apiClient from "@/lib/api";
 
+export interface ThreadDTO {
+  _id: string;
+  id: string;
+  subject?: string;
+  snippet?: string;
+  lastMessageDate?: string;
+  lastMessageDirection?: "inbound" | "outbound";
+  isRead?: boolean;
+}
+
+export interface ChatInsightDTO {
+  _id: string;
+  intent: string;
+  summary: string;
+  sourceChatId: string;
+  date: string;
+}
+
 export interface FocusContactDTO {
   _id: string;
   email: string;
@@ -24,6 +42,7 @@ export interface FocusTopicDTO {
   lastInboundAt?: string;
   lastOutboundAt?: string;
   aiLabeled: boolean;
+  chatInsights?: ChatInsightDTO[];
   createdAt: string;
   updatedAt: string;
   contact: FocusContactDTO;

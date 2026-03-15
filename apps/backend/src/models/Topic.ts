@@ -21,6 +21,14 @@ export interface ITopic extends Document {
   // AI labeling (Phase 3)
   aiLabeled: boolean;
   aiLabeledAt?: Date;
+
+  // Telegram chunk insights (Phase 4)
+  chatInsights: {
+    intent: string;
+    summary: string;
+    sourceChatId: string;
+    date: Date;
+  }[];
 }
 
 const TopicSchema: Schema<ITopic> = new Schema(
@@ -55,6 +63,16 @@ const TopicSchema: Schema<ITopic> = new Schema(
     // AI labeling
     aiLabeled: { type: Boolean, default: false },
     aiLabeledAt: { type: Date },
+
+    // Telegram chunk insights
+    chatInsights: [
+      {
+        intent: { type: String, required: true },
+        summary: { type: String, required: true },
+        sourceChatId: { type: String, required: true },
+        date: { type: Date, required: true },
+      },
+    ],
   },
   { timestamps: true },
 );

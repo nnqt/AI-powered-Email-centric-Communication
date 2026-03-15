@@ -18,7 +18,7 @@ where to implement new features.
 | FR-06 | AI-assisted Contact Management (auto-create + enrich + merge) | ✅ IMPLEMENTED                                                 |
 | FR-07 | Thread summarization (AI)                                     | ✅ IMPLEMENTED                                                 |
 | FR-08 | Smart reply suggestions (AI)                                  | ✅ IMPLEMENTED                                                 |
-| FR-09 | Multi-channel adapter interface + Telegram                    | ⏳ PENDING                                                     |
+| FR-09 | Multi-channel — Telegram Client (GramJS MTProto)              | ✅ IMPLEMENTED (Phase 1–5)                                     |
 
 ## Mapping FRs to Modules
 
@@ -232,28 +232,36 @@ Supports two output formats: conversational message or full email.
 - AI service nhận `latest_message` + `conversation_context` (từ `thread.summary.text` nếu có) để generate relevant replies.
 - `SmartReplyBar` mounts lazy — chỉ gọi API khi user click "Generate suggestions".
 
-### FR-09 – Multi-Channel Adapter Interface + Telegram ⏳ PENDING
+### FR-09 – Multi-Channel: Telegram Client (GramJS MTProto) ✅ IMPLEMENTED
 
-**Goal**: định nghĩa abstract interface (`IMessage`, `IConversation`, `IChannelAdapter`) độc lập với nguồn kênh. Implement `EmailAdapter` và `TelegramAdapter` (grammy) để minh họa pattern.
+**Goal**: Integrate Telegram as a second communication channel alongside Email. Users authenticate with their personal Telegram account (not a bot) via phone number OTP, enabling full chat history access, real-time messaging, and AI-powered analysis of Telegram conversations.
 
 **Primary modules**:
 
 - `apps/backend`:
-  - `apps/backend/src/modules/channels/interfaces/IChannelAdapter.ts` — `IMessage`, `IConversation`, `IChannelAdapter`.
-  - `apps/backend/src/modules/channels/adapters/EmailAdapter.ts` — wrap existing Gmail logic.
-  - `apps/backend/src/modules/channels/adapters/TelegramAdapter.ts` — grammy bot, webhook mode.
-  - `apps/backend/src/models/TelegramConversation.ts`, `TelegramMessage.ts`.
-  - `apps/backend/src/app/api/telegram/webhook/route.ts` — `POST` Telegram webhook handler.
+  - `apps/backend/src/lib/telegramManager.ts` — Singleton pattern managing GramJS `TelegramClient` instances per user via `global.__telegramClients`.
+  - `apps/backend/src/models/User.ts` — `telegramSession` (StringSession), `telegramPhone` fields.
+  - `apps/backend/src/models/TelegramChat.ts` — Chat list per user (`chatId`, `title`, `type`, `lastMessageDate`, `unreadCount`).
+  - `apps/backend/src/models/TelegramMessage.ts` — Individual messages (`messageId`, `chatId`, `senderId`, `text`, `date`, `isOutbound`).
+  - `apps/backend/src/models/Contact.ts` — `telegramId`, `telegramUsername`, `telegramName` fields for Telegram contact linking.
+  - `apps/backend/src/app/api/telegram/auth/` — `send-code/`, `verify-code/` routes for phone OTP auth.
+  - `apps/backend/src/app/api/telegram/status/` — `GET` linked status.
+  - `apps/backend/src/app/api/telegram/chats/` — Chat list, messages, send message routes.
+- `apps/ai-service`:
+  - `POST /analyze-chat-chunk` — `GeminiChatAnalyzerClient` extracts intents from Telegram message chunks, maps to Topics.
+  - `apps/ai-service/models/chat_analysis.py` — `AnalyzeChatRequest`, `ChatFragment`, `AnalyzeChatResponse`.
+  - `apps/ai-service/routes/chat.py` — Chat analysis route.
 - `apps/frontend`:
-  - Unified inbox view với channel badge (Email vs Telegram).
-  - Compose/reply đơn giản cho Telegram (plain text).
+  - `apps/frontend/src/app/(dashboard)/settings/page.tsx` — Telegram linking UI (phone + OTP forms).
+  - `apps/frontend/src/app/(dashboard)/chat/page.tsx` — Telegram chat interface.
 
 **Key ideas**:
 
-- Telegram Bot token qua env var `TELEGRAM_BOT_TOKEN`; webhook URL được register khi server start.
-- `TelegramConversation` được model tương tự `Thread` nhưng không có Gmail-specific fields.
-- `IChannelAdapter` cho phép thêm Zalo/WhatsApp sau này mà không rewrite core logic.
-- Local dev: `TELEGRAM_WEBHOOK_URL` trỏ đến ngrok/cloudflare tunnel.
+- **GramJS MTProto** (not Bot API) gives user-level access to full chat history.
+- **StringSession** auth persists across server restarts without re-login.
+- **Contact auto-creation**: Telegram senders auto-create Contact records with `telegramId` for cross-channel merge.
+- **Proactive Chunking**: Background job groups Telegram messages into time windows → AI analyzes each chunk → creates `chatInsights` on Topics.
+- **Unified Timeline**: Email threads + Telegram chatInsights merged chronologically on Focus & Contact pages.
 
 ## Design Principles
 

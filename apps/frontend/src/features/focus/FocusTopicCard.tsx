@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { MessageCircle } from "lucide-react";
 
 import type { FocusTopicDTO } from "@/hooks/useFocusTopics";
+import type { ChatInsightDTO } from "@/hooks/useContactTopics";
 import apiClient from "@/lib/api";
 import { PriorityBadge } from "@/components/PriorityBadge";
 
@@ -61,6 +63,40 @@ export function FocusTopicCard({ topic, onRename }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [loadingThreads, setLoadingThreads] = useState(false);
+
+  // useMemo computes the unified timeline every time threads or topic.chatInsights change
+  const unifiedTimeline = React.useMemo(() => {
+    if (!threads) return null;
+
+    type TimelineItem =
+      | { type: "email"; data: Thread; timestamp: number }
+      | { type: "telegram"; data: ChatInsightDTO; timestamp: number };
+
+    const items: TimelineItem[] = [];
+
+    // 1. Add email threads
+    for (const t of threads) {
+      items.push({
+        type: "email",
+        data: t,
+        timestamp: t.lastMessageDate ? new Date(t.lastMessageDate).getTime() : 0,
+      });
+    }
+
+    // 2. Add telegram insights
+    if (topic.chatInsights) {
+      for (const insight of topic.chatInsights) {
+        items.push({
+          type: "telegram",
+          data: insight,
+          timestamp: new Date(insight.date).getTime(),
+        });
+      }
+    }
+
+    // 3. Sort descending by timestamp
+    return items.sort((a, b) => b.timestamp - a.timestamp);
+  }, [threads, topic.chatInsights]);
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(topic.name);
@@ -219,55 +255,84 @@ export function FocusTopicCard({ topic, onRename }: Props) {
             <p className="py-3 text-center text-xs text-gray-400">Loading…</p>
           )}
 
-          {!loadingThreads && threads?.length === 0 && (
+          {!loadingThreads && unifiedTimeline?.length === 0 && (
             <p className="py-3 text-center text-xs text-gray-400">
-              No threads found.
+              No emails or chat insights yet.
             </p>
           )}
 
-          {!loadingThreads && threads && threads.length > 0 && (
+          {!loadingThreads && unifiedTimeline && unifiedTimeline.length > 0 && (
             <ul className="focus-topic-card__thread-list divide-y divide-gray-50">
-              {threads.map((t) => (
-                <li key={t._id} className="focus-topic-card__thread-item">
-                  <Link
-                    href={`/threads/${t.id}`}
-                    className="flex items-start gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-gray-50"
-                  >
-                    {/* Inbound / outbound indicator */}
-                    <span
-                      title={
-                        t.lastMessageDirection === "inbound"
-                          ? "Unread / awaiting reply"
-                          : "You replied"
-                      }
-                      className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
-                        t.lastMessageDirection === "inbound"
-                          ? "bg-red-400"
-                          : "bg-green-400"
-                      }`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={`truncate text-xs ${!t.isRead ? "font-semibold text-gray-900" : "text-gray-600"}`}
+              {unifiedTimeline.map((item) => {
+                if (item.type === "email") {
+                  const t = item.data;
+                  return (
+                    <li key={`email-${t._id}`} className="focus-topic-card__thread-item">
+                      <Link
+                        href={`/threads/${t.id}`}
+                        className="flex items-start gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-gray-50"
                       >
-                        {t.subject ?? "(No subject)"}
-                      </p>
-                      {t.snippet && (
-                        <p className="truncate text-xs text-gray-400">
-                          {t.snippet}
-                        </p>
-                      )}
-                    </div>
-                    {t.lastMessageDate && (
-                      <span className="shrink-0 text-xs text-gray-400">
-                        {formatDistanceToNow(new Date(t.lastMessageDate), {
-                          addSuffix: true,
-                        })}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
+                        {/* Inbound / outbound indicator */}
+                        <span
+                          title={
+                            t.lastMessageDirection === "inbound"
+                              ? "Unread / awaiting reply"
+                              : "You replied"
+                          }
+                          className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${
+                            t.lastMessageDirection === "inbound"
+                              ? "bg-red-400"
+                              : "bg-green-400"
+                          }`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p
+                            className={`truncate text-xs ${!t.isRead ? "font-semibold text-gray-900" : "text-gray-600"}`}
+                          >
+                            {t.subject ?? "(No subject)"}
+                          </p>
+                          {t.snippet && (
+                            <p className="truncate text-xs text-gray-400">
+                              {t.snippet}
+                            </p>
+                          )}
+                        </div>
+                        {t.lastMessageDate && (
+                          <span className="shrink-0 text-xs text-gray-400">
+                            {formatDistanceToNow(new Date(t.lastMessageDate), {
+                              addSuffix: true,
+                            })}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                } else {
+                  const insight = item.data;
+                  return (
+                    <li key={`tg-${insight._id}`} className="focus-topic-card__insight-item py-2">
+                       <div className="flex items-start gap-3 rounded-lg border-l-2 border-indigo-400 bg-indigo-50/50 px-2 py-2 transition-colors hover:bg-indigo-50">
+                          <div className="mt-0.5 shrink-0 text-indigo-500">
+                            <MessageCircle className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                             <p className="truncate text-xs font-semibold text-indigo-900">
+                               {insight.intent}
+                             </p>
+                             <p className="text-xs text-indigo-700/80 line-clamp-2 mt-0.5">
+                               {insight.summary}
+                             </p>
+                          </div>
+                          <span className="shrink-0 text-xs text-indigo-400">
+                            {formatDistanceToNow(new Date(insight.date), {
+                              addSuffix: true,
+                            })}
+                          </span>
+                       </div>
+                    </li>
+                  );
+                }
+              })}
             </ul>
           )}
 

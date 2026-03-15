@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
+import { MessageCircle } from "lucide-react";
 import apiClient from "@/lib/api";
-import type { TopicDTO } from "@/hooks/useContactTopics";
+import type { TopicDTO, ChatInsightDTO } from "@/hooks/useContactTopics";
+import React from "react";
 import { PriorityBadge } from "@/components/PriorityBadge";
 
 interface ThreadMeta {
@@ -27,6 +29,36 @@ export default function ContactTopicGroup({ topic, onRename }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [threads, setThreads] = useState<ThreadMeta[] | null>(null);
   const [loadingThreads, setLoadingThreads] = useState(false);
+
+  const unifiedTimeline = React.useMemo(() => {
+    if (!threads) return null;
+
+    type TimelineItem =
+      | { type: "email"; data: ThreadMeta; timestamp: number }
+      | { type: "telegram"; data: ChatInsightDTO; timestamp: number };
+
+    const items: TimelineItem[] = [];
+
+    for (const t of threads) {
+      items.push({
+        type: "email",
+        data: t,
+        timestamp: t.lastMessageDate ? new Date(t.lastMessageDate).getTime() : 0,
+      });
+    }
+
+    if (topic.chatInsights) {
+      for (const insight of topic.chatInsights) {
+        items.push({
+          type: "telegram",
+          data: insight,
+          timestamp: new Date(insight.date).getTime(),
+        });
+      }
+    }
+
+    return items.sort((a, b) => b.timestamp - a.timestamp);
+  }, [threads, topic.chatInsights]);
 
   // Rename state
   const [renaming, setRenaming] = useState(false);
@@ -182,63 +214,92 @@ export default function ContactTopicGroup({ topic, onRename }: Props) {
             <div className="px-6 py-4 text-center">
               <p className="text-xs text-gray-400">Loading threads…</p>
             </div>
-          ) : threads && threads.length === 0 ? (
+          ) : unifiedTimeline && unifiedTimeline.length === 0 ? (
             <div className="px-6 py-4 text-center">
-              <p className="text-xs text-gray-400">No threads in this topic.</p>
+              <p className="text-xs text-gray-400">No emails or chat insights yet.</p>
             </div>
           ) : (
-            threads?.map((thread) => (
-              <div
-                key={thread._id}
-                role="button"
-                tabIndex={0}
-                onClick={() =>
-                  router.push(`/threads/${thread.id || thread._id}`)
-                }
-                onKeyDown={(e) =>
-                  e.key === "Enter" &&
-                  router.push(`/threads/${thread.id || thread._id}`)
-                }
-                className="flex cursor-pointer items-start gap-3 px-6 py-2.5 hover:bg-gray-50 transition-colors"
-              >
-                {/* Direction dot */}
-                <div
-                  className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
-                    thread.lastMessageDirection === "inbound"
-                      ? "bg-indigo-500"
-                      : "bg-emerald-500"
-                  }`}
-                  title={
-                    thread.lastMessageDirection === "inbound"
-                      ? "Inbound"
-                      : "Outbound"
-                  }
-                />
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={`truncate text-sm ${
-                      !thread.isRead
-                        ? "font-semibold text-gray-900"
-                        : "text-gray-700"
-                    }`}
+            unifiedTimeline?.map((item) => {
+              if (item.type === "email") {
+                const thread = item.data;
+                return (
+                  <div
+                    key={`email-${thread._id}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      router.push(`/threads/${thread.id || thread._id}`)
+                    }
+                    onKeyDown={(e) =>
+                      e.key === "Enter" &&
+                      router.push(`/threads/${thread.id || thread._id}`)
+                    }
+                    className="flex cursor-pointer items-start gap-3 px-6 py-2.5 hover:bg-gray-50 transition-colors"
                   >
-                    {thread.subject ?? "(no subject)"}
-                  </p>
-                  {thread.snippet && (
-                    <p className="truncate text-xs text-gray-400 mt-0.5">
-                      {thread.snippet}
-                    </p>
-                  )}
-                </div>
-                <span className="shrink-0 text-xs text-gray-400 pt-0.5">
-                  {thread.lastMessageDate
-                    ? formatDistanceToNow(new Date(thread.lastMessageDate), {
-                        addSuffix: true,
-                      })
-                    : ""}
-                </span>
-              </div>
-            ))
+                    {/* Direction dot */}
+                    <div
+                      className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${
+                        thread.lastMessageDirection === "inbound"
+                          ? "bg-indigo-500"
+                          : "bg-emerald-500"
+                      }`}
+                      title={
+                        thread.lastMessageDirection === "inbound"
+                          ? "Inbound"
+                          : "Outbound"
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`truncate text-sm ${
+                          !thread.isRead
+                            ? "font-semibold text-gray-900"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {thread.subject ?? "(no subject)"}
+                      </p>
+                      {thread.snippet && (
+                        <p className="truncate text-xs text-gray-400 mt-0.5">
+                          {thread.snippet}
+                        </p>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-xs text-gray-400 pt-0.5">
+                      {thread.lastMessageDate
+                        ? formatDistanceToNow(new Date(thread.lastMessageDate), {
+                            addSuffix: true,
+                          })
+                        : ""}
+                    </span>
+                  </div>
+                );
+              } else {
+                const insight = item.data;
+                return (
+                  <div key={`tg-${insight._id}`} className="px-6 py-2">
+                     <div className="flex items-start gap-3 rounded-lg border-l-2 border-indigo-400 bg-indigo-50/50 px-3 py-2 transition-colors hover:bg-indigo-50">
+                        <div className="mt-0.5 shrink-0 text-indigo-500">
+                          <MessageCircle className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                           <p className="truncate text-sm font-semibold text-indigo-900">
+                             {insight.intent}
+                           </p>
+                           <p className="text-xs text-indigo-700/80 line-clamp-2 mt-0.5">
+                             {insight.summary}
+                           </p>
+                        </div>
+                        <span className="shrink-0 text-xs text-indigo-400 pt-0.5">
+                          {formatDistanceToNow(new Date(insight.date), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                     </div>
+                  </div>
+                );
+              }
+            })
           )}
         </div>
       )}

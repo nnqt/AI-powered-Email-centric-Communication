@@ -20,7 +20,8 @@ apps/ai-service/
 │   ├── contact.py           # POST /enrich-contact, POST /suggest-merge
 │   ├── urgent.py            # POST /classify-urgent
 │   ├── thread_category.py   # POST /classify-thread-category
-│   └── topic_label.py       # POST /label-topic
+│   ├── topic_label.py       # POST /label-topic
+│   └── chat.py              # POST /analyze-chat-chunk
 ├── services/
 │   ├── summarizer.py
 │   ├── smart_reply.py
@@ -35,7 +36,8 @@ apps/ai-service/
     ├── contact.py           # EnrichContactRequest(+user_email_domain), EnrichContactResponse(+category_suggestion), ContactSnippet, MergeSuggestion
     ├── urgent.py            # ClassifyUrgentRequest(+sender_email, +sender_categories), ClassifyUrgentResponse
     ├── thread_category.py   # ClassifyThreadCategoryRequest/Response, VALID_THREAD_CATEGORIES, NOISE_CATEGORIES
-    └── topic_label.py       # LabelTopicRequest(topic_id, thread_subjects[], contact_name?), LabelTopicResponse
+    ├── topic_label.py       # LabelTopicRequest(topic_id, thread_subjects[], contact_name?), LabelTopicResponse
+    └── chat_analysis.py     # AnalyzeChatRequest(text_chunk, active_topics[]), ChatFragment, AnalyzeChatResponse
 ```
 
 ---
@@ -51,8 +53,9 @@ apps/ai-service/
 | `GeminiUrgentClassifier`      | `/classify-urgent`          | `{ is_urgent, reason }`                                |
 | `GeminiThreadCategoryClient`  | `/classify-thread-category` | `{ categories[], noise_filtered }`                     |
 | `GeminiTopicLabelClient`      | `/label-topic`              | `{ name }`                                             |
+| `GeminiChatAnalyzerClient`    | `/analyze-chat-chunk`       | `{ fragments[{ intent, summary, topic_action, topic_name }] }` |
 
-Factory functions: `get_summarization_client()`, `get_reply_client()`, `get_thread_category_client()`, `get_topic_label_client()`, etc.
+Factory functions: `get_summarization_client()`, `get_reply_client()`, `get_thread_category_client()`, `get_topic_label_client()`, `get_chat_analyzer_client()`, etc.
 
 ---
 

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "next build && tsc -p tsconfig.server.json",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build && tsc -p tsconfig.server.json",
     "start": "node server.js",
     "lint": "eslint"
   },
@@ -22,7 +22,8 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "redis": "^5.10.0",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "telegram": "^2.26.22"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -36,6 +37,7 @@
     "eslint-config-next": "16.0.1",
     "tailwindcss": "^4",
     "tsx": "^4.19.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "why-is-node-running": "^3.2.2"
   }
 }

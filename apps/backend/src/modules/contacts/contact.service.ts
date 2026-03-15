@@ -193,6 +193,9 @@ export interface ContactDTO {
   categories: ContactCategory[];
   categorySource: CategorySource;
   categoryAiSuggestion?: ContactCategory;
+  telegramId?: string;
+  telegramUsername?: string;
+  telegramName?: string;
 }
 
 export interface ContactSnippetDTO {
@@ -227,6 +230,9 @@ function toDTO(c: IContact): ContactDTO {
     categories: (c as any).categories ?? [],
     categorySource: c.categorySource ?? "rule",
     categoryAiSuggestion: c.categoryAiSuggestion,
+    telegramId: (c as any).telegramId,
+    telegramUsername: (c as any).telegramUsername,
+    telegramName: (c as any).telegramName,
   };
 }
 
@@ -438,9 +444,22 @@ export class ContactService {
       ]),
     ).filter((e) => e !== target.email);
 
-    await Contact.findByIdAndUpdate(targetId, {
+    const updateFields: any = {
       alternateEmails: newAlternates,
-    });
+    };
+
+    // If target is missing Telegram data but source has it, copy it over
+    if (!(target as any).telegramId && (source as any).telegramId) {
+      updateFields.telegramId = (source as any).telegramId;
+    }
+    if (!(target as any).telegramUsername && (source as any).telegramUsername) {
+      updateFields.telegramUsername = (source as any).telegramUsername;
+    }
+    if (!(target as any).telegramName && (source as any).telegramName) {
+      updateFields.telegramName = (source as any).telegramName;
+    }
+
+    await Contact.findByIdAndUpdate(targetId, updateFields);
 
     // Mark source as merged
     await Contact.findByIdAndUpdate(sourceId, {
@@ -473,8 +492,6 @@ export class ContactService {
     if (contacts.length < 2) return [];
 
     // Build a Set of all emails already claimed as alternateEmails by some contact.
-    // Any contact whose primary email appears in this set is already linked to another
-    // contact — no need to suggest merging them again.
     const claimedAltEmails = new Set<string>(
       contacts.flatMap((c) => c.alternateEmails.map((e) => e.toLowerCase())),
     );
@@ -485,7 +502,7 @@ export class ContactService {
 
     if (candidates.length < 2) return [];
 
-    // Single bulk query for recent threads — avoids N+1 per contact
+    // Pull recent threads 
     const recentThreads = (await Thread.find({ userId: uid })
       .sort({ lastMessageDate: -1 })
       .limit(300)
@@ -496,15 +513,34 @@ export class ContactService {
       subject?: string;
     }>;
 
+    // Pull recent Telegram messages for telegramId lookup
+    const telegramContactIds = candidates
+       .map((c: any) => c.telegramId)
+       .filter(Boolean);
+
+    let recentTgMessages: any[] = [];
+    if (telegramContactIds.length > 0) {
+      // Import dynamically to avoid circular/initialization issues if any
+      const { TelegramMessage } = await import("@/models/TelegramMessage");
+      recentTgMessages = await TelegramMessage.find({
+        userId: uid,
+        senderId: { $in: telegramContactIds }
+      })
+      .sort({ date: -1 })
+      .limit(200)
+      .select("senderId text")
+      .lean();
+    }
+
     return candidates.map((c) => {
       const allEmails = [c.email, ...c.alternateEmails].map((e) =>
         e.toLowerCase(),
       );
+      
       const threadSnippets = recentThreads
         .filter((t) =>
           (t.participants ?? []).some((p) => {
             const pl = p.toLowerCase();
-            // Exact match OR bounded by angle brackets (display-name format)
             return allEmails.some(
               (e) =>
                 pl === e || pl.includes(`<${e}>`) || pl.startsWith(`${e}>`),
@@ -515,12 +551,24 @@ export class ContactService {
         .map((t) => t.snippet || t.subject || "")
         .filter(Boolean);
 
+      const tgId = (c as any).telegramId;
+      const chatSnippets = tgId 
+        ? recentTgMessages
+            .filter(m => m.senderId === tgId)
+            .slice(0, 2)
+            .map(m => m.text)
+            .filter(Boolean)
+        : [];
+
       return {
         contact_id: (c as any)._id.toString(),
         email: c.email,
         name: c.name,
         alternate_emails: c.alternateEmails,
         sample_threads: threadSnippets,
+        telegram_username: (c as any).telegramUsername,
+        telegram_name: (c as any).telegramName,
+        recent_chat_snippets: chatSnippets,
       };
     });
   }

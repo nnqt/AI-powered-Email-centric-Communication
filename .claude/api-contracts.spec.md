@@ -135,6 +135,44 @@ Soft-merge source into target. Clears Redis merge cache on success.
 
 ---
 
+## Telegram
+
+### `GET /api/telegram/status`
+
+Return Telegram link status for authenticated user.  
+**Response**: `{ linked: boolean, phone?: string }`
+
+### `POST /api/telegram/auth/send-code`
+
+Send OTP to phone number via GramJS.  
+**Body**: `{ phoneNumber: string }`  
+**Response**: `{ phoneCodeHash: string }`
+
+### `POST /api/telegram/auth/verify-code`
+
+Verify OTP and save StringSession.  
+**Body**: `{ phoneNumber: string, phoneCode: string, phoneCodeHash: string }`  
+**Response**: `{ success: true }`
+
+### `GET /api/telegram/chats`
+
+List Telegram chats for authenticated user.  
+**Response**: `TelegramChatDTO[]`
+
+### `GET /api/telegram/chats/[chatId]/messages`
+
+Get messages for a Telegram chat.  
+**Query**: `limit?`, `offset?`  
+**Response**: `{ messages: TelegramMessageDTO[] }`
+
+### `POST /api/telegram/chats/[chatId]/send`
+
+Send message to a Telegram chat.  
+**Body**: `{ text: string }`  
+**Response**: `{ success: true }`
+
+---
+
 ## ContactDTO Interface (TypeScript)
 
 ```typescript
@@ -152,6 +190,9 @@ interface ContactDTO {
   categories: ("colleague" | "customer" | "other" | "spam" | "unknown")[];
   categorySource: "rule" | "ai" | "user";
   categoryAiSuggestion?: string;
+  telegramId?: string;
+  telegramUsername?: string;
+  telegramName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -204,6 +245,14 @@ Return top focus topics for the authenticated user sorted by focusScore desc.
 ## TopicDTO Interface (TypeScript)
 
 ```typescript
+interface ChatInsightDTO {
+  _id: string;
+  intent: string;
+  summary: string;
+  sourceChatId: string;
+  date: string; // ISO string
+}
+
 interface TopicDTO {
   _id: string;
   name: string;
@@ -216,6 +265,7 @@ interface TopicDTO {
   lastOutboundAt?: string;
   aiLabeled: boolean;
   aiLabeledAt?: string;
+  chatInsights?: ChatInsightDTO[];
 }
 
 interface FocusTopicDTO extends TopicDTO {
@@ -364,3 +414,33 @@ Tier 2 Gemini: returns 1–3 categories from the 22-value enum.
 - Single subject ≤ 60 chars → return it directly
 
 Otherwise: Gemini 2–5 word label in the same language as the subjects.
+
+---
+
+## `POST /analyze-chat-chunk` (FR-09 Phase 4)
+
+**Request**:
+
+```json
+{
+  "text_chunk": "[14:00] Alice: Let's discuss the project deadline...\n[14:05] Bob: Sure...",
+  "active_topics": ["Project Update", "Meeting Schedule"]
+}
+```
+
+**Response**:
+
+```json
+{
+  "fragments": [
+    {
+      "intent": "Discussing project deadline",
+      "summary": "Alice and Bob discuss upcoming project deadline adjustments",
+      "topic_action": "route_to_existing",
+      "topic_name": "Project Update"
+    }
+  ]
+}
+```
+
+`GeminiChatAnalyzerClient`: Gemini extracts distinct intents from the Telegram chunk. Each fragment is either routed to an existing topic or creates a new one.

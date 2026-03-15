@@ -30,6 +30,9 @@ export interface ContactDTO {
   categories: ContactCategory[];
   categorySource: CategorySource;
   categoryAiSuggestion?: ContactCategory;
+  telegramId?: string;
+  telegramUsername?: string;
+  telegramName?: string;
 }
 
 export interface PaginatedContactsResponse {

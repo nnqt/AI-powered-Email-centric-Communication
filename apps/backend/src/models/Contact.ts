@@ -23,6 +23,9 @@ export interface IContact extends Document {
   categories: ContactCategory[];
   categorySource: CategorySource;
   categoryAiSuggestion?: ContactCategory;
+  telegramId?: string;
+  telegramUsername?: string;
+  telegramName?: string;
 }
 
 const ContactSchema: Schema<IContact> = new Schema(
@@ -55,12 +58,21 @@ const ContactSchema: Schema<IContact> = new Schema(
       type: String,
       enum: ["colleague", "customer", "spam", "other", "unknown"],
     },
+    telegramId: { type: String, sparse: true },
+    telegramUsername: { type: String },
+    telegramName: { type: String },
   },
   { timestamps: true },
 );
 
 // Unique contact per (email, userId)
 ContactSchema.index({ email: 1, userId: 1 }, { unique: true });
+
+// Unique contact per (telegramId, userId) if telegramId exists
+ContactSchema.index(
+  { telegramId: 1, userId: 1 },
+  { unique: true, partialFilterExpression: { telegramId: { $type: "string" } } }
+);
 
 export const Contact: Model<IContact> =
   (mongoose.models.Contact as Model<IContact>) ||

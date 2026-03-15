@@ -23,6 +23,9 @@ class ContactSnippet(BaseModel):
     name: Optional[str] = None
     alternate_emails: List[str] = []
     sample_threads: List[str] = []
+    telegram_username: Optional[str] = None
+    telegram_name: Optional[str] = None
+    recent_chat_snippets: List[str] = []
 
 
 class MergeSuggestion(BaseModel):

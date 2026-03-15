@@ -14,20 +14,20 @@ from the Markdown files in `.copilot/` without needing the LaTeX report.
 
 ## Current Implementation Focus
 
-The project is in the **initial stage**. The immediate goal is to
-implement a minimal but clean PoC that covers these functional
-requirements (FR) from the thesis:
+The project has completed all core functional requirements:
 
-- **FR-01 – Email sync (near real-time)**
-- **FR-02 – Basic email operations (read/archive/labels)**
-- **FR-03 – Contact-centric timeline view**
-- **FR-04 – Real-time UI update (timeline refresh)**
-- **FR-07 – Thread summarization (AI)**
-- **FR-08 – Smart reply suggestions (AI)**
+- **FR-01 – Email sync (near real-time)** ✅
+- **FR-02 – Basic email operations (read/archive/labels)** ✅
+- **FR-03 – Contact-centric timeline view** ✅
+- **FR-04 – Real-time UI update (timeline refresh)** ✅
+- **FR-05 – WebSocket real-time** ✅
+- **FR-06 – AI-assisted Contact Management** ✅
+- **FR-07 – Thread summarization (AI)** ✅
+- **FR-08 – Smart reply suggestions (AI)** ✅
+- **FR-09 – Multi-channel Telegram (GramJS MTProto)** ✅
+- **FR-10 – Topic Intelligence + Focus Page** ✅
 
-Other FRs/NFRs exist in the thesis but are **not priority to
-implement yet**. You should design code and architecture in a way that
-they can be added later without major refactors.
+The current focus is on stabilization, testing, and polish.
 
 ## High-Level Architecture
 
