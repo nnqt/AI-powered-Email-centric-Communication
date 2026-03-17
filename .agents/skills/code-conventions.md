@@ -1,12 +1,3 @@
----
-name: code-conventions
-description: Code conventions for fullstack Next, Backend, and Python AI service.
----
-
-> **Moved**: Full content is at [`.agents/skills/code-conventions.md`](../code-conventions.md).
-> This file is kept for backward compatibility with tools that auto-load `.agents/skills/*/SKILL.md`.
-
-
 # Code Conventions — Skill Reference
 
 Stack: TypeScript (frontend + backend) · Python 3.12 (AI service) · TailwindCSS

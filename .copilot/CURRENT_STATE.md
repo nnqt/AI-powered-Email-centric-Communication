@@ -1,4 +1,32 @@
-# Current State – March 15, 2026
+# Current State – March 17, 2026
+
+## Bug Fixes — Telegram Chat Empty List & Contact Detail 404 ✅ FIXED
+
+### Bug 1 — Telegram chat API trả về `[]`
+
+**Root cause:** `GET /api/telegram/chats` chỉ query DB, nhưng `TelegramChat` docs chỉ được tạo khi có new message qua listener. User vừa link Telegram xong → DB trống → trả `[]`.
+
+**Fix:**
+- `apps/backend/src/lib/telegramManager.ts` — Thêm `syncDialogs(userId)`: gọi `client.getDialogs({ limit: 50 })`, upsert mỗi dialog vào `TelegramChat`.
+- `apps/backend/src/app/api/telegram/chats/route.ts` — Nếu DB trống + user có `telegramSession` → gọi `syncDialogs()` trước khi trả response.
+
+### Bug 2 — Contact detail luôn "Contact not found."
+
+**Root cause:** Frontend `useContactDetail(id)` gọi `GET /api/contacts/:id` nhưng backend không có route handler tại `app/api/contacts/[id]/route.ts`.
+
+**Fix:**
+- `apps/backend/src/app/api/contacts/[id]/route.ts` — **NEW** — `GET` + `PATCH` handlers, delegate sang `ContactService.getContactById()` / `updateContact()`.
+
+### Bug 3 — Chat messages trống khi click vào chat
+
+**Root cause:** `GET /api/telegram/chats/[chatId]` query `TelegramMessage.find({ chatId })` nhưng messages chỉ được tạo từ live listener. Chưa có initial history fetch.
+
+**Fix:**
+- `apps/backend/src/lib/telegramManager.ts` — Thêm `syncChatHistory(userId, chatId)`: gọi `client.getMessages(entity, { limit: 50 })`, upsert mỗi message vào `TelegramMessage`.
+- `apps/backend/src/app/api/telegram/chats/[chatId]/route.ts` — Nếu DB trống messages → gọi `syncChatHistory()` trước khi trả response.
+
+---
+
 
 ## Multi-Channel — Phase 1: Setup Infrastructure & Telegram Client Auth ✅ IMPLEMENTED
 

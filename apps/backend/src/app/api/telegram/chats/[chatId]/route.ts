@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { TelegramChat } from "@/models/TelegramChat";
 import { TelegramMessage } from "@/models/TelegramMessage";
 import { connectToDatabase } from "@/lib/db";
+import { syncChatHistory } from "@/lib/telegramManager";
 
 export async function GET(
   req: NextRequest,
@@ -17,11 +18,12 @@ export async function GET(
     }
 
     const { chatId } = await params;
+    const userId = session.user.id;
 
     await connectToDatabase();
 
     const chat = await TelegramChat.findOne({
-      userId: session.user.id,
+      userId,
       chatId,
     }).lean();
 
@@ -29,13 +31,25 @@ export async function GET(
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
 
-    const messages = await TelegramMessage.find({
-      userId: session.user.id,
+    let messages = await TelegramMessage.find({
+      userId,
       chatId,
     })
       .sort({ date: -1 })
       .limit(50)
       .lean();
+
+    // If no messages in DB, pull history from Telegram
+    if (messages.length === 0) {
+      await syncChatHistory(userId, chatId);
+      messages = await TelegramMessage.find({
+        userId,
+        chatId,
+      })
+        .sort({ date: -1 })
+        .limit(50)
+        .lean();
+    }
 
     // Reset unread count
     if (chat.unreadCount > 0) {
@@ -57,3 +71,4 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

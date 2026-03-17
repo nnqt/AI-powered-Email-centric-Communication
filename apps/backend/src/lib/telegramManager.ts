@@ -212,6 +212,143 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
   console.log(`[Telegram] Message listener attached for user ${userId}`);
 }
 
+/**
+ * Pull existing Telegram dialogs and upsert into TelegramChat collection.
+ * Called once when user first opens chat page (DB is empty).
+ */
+export async function syncDialogs(userId: string): Promise<void> {
+  await connectToDatabase();
+
+  const user = await User.findById(userId).lean();
+  if (!user?.telegramSession) {
+    return; // Not linked
+  }
+
+  const client = await getTelegramClient(userId, user.telegramSession);
+
+  const dialogs = await client.getDialogs({ limit: 50 });
+
+  for (const dialog of dialogs) {
+    const entity = dialog.entity;
+    if (!entity) continue;
+
+    let chatId: string | null = null;
+    let title = "Unknown";
+    let chatType: "private" | "group" | "channel" = "private";
+
+    if (entity.className === "User") {
+      chatId = entity.id?.toString() ?? null;
+      title = [entity.firstName, entity.lastName].filter(Boolean).join(" ") || entity.username || "Unknown User";
+      chatType = "private";
+    } else if (entity.className === "Chat") {
+      chatId = entity.id?.toString() ?? null;
+      title = entity.title || "Unknown Group";
+      chatType = "group";
+    } else if (entity.className === "Channel") {
+      chatId = entity.id?.toString() ?? null;
+      title = entity.title || "Unknown Channel";
+      chatType = entity.megagroup ? "group" : "channel";
+    }
+
+    if (!chatId) continue;
+
+    const lastMsgDate = dialog.message?.date
+      ? new Date(dialog.message.date * 1000)
+      : new Date();
+
+    await TelegramChat.findOneAndUpdate(
+      { userId, chatId },
+      {
+        $setOnInsert: {
+          userId,
+          chatId,
+          unreadCount: dialog.unreadCount ?? 0,
+        },
+        $set: {
+          title,
+          type: chatType,
+          lastMessageDate: lastMsgDate,
+        },
+      },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
+  }
+
+  console.log(`[Telegram] syncDialogs completed for user ${userId}, ${dialogs.length} dialogs processed.`);
+}
+
+/**
+ * Pull recent message history for a specific chat and upsert into TelegramMessage.
+ * Called once when user opens a chat that has no messages in DB yet.
+ */
+export async function syncChatHistory(
+  userId: string,
+  chatId: string,
+  limit = 50,
+): Promise<void> {
+  await connectToDatabase();
+
+  const user = await User.findById(userId).lean();
+  if (!user?.telegramSession) return;
+
+  const client = await getTelegramClient(userId, user.telegramSession);
+
+  // Resolve the entity for this chatId
+  let entity: any;
+  try {
+    entity = await client.getEntity(chatId);
+  } catch {
+    // chatId might be a numeric ID — try as number
+    try {
+      entity = await client.getEntity(parseInt(chatId, 10));
+    } catch (e2) {
+      console.warn(`[Telegram] syncChatHistory: could not resolve entity for chatId=${chatId}`, e2);
+      return;
+    }
+  }
+
+  const rawMessages = await client.getMessages(entity, { limit });
+
+  for (const msg of rawMessages) {
+    if (!msg || msg.id === undefined) continue;
+
+    const text = msg.message || "";
+    const date = new Date(msg.date * 1000);
+    const isOutbound = msg.out || false;
+
+    // Determine senderId
+    let senderId = "unknown";
+    const fromId = msg.fromId;
+    if (fromId) {
+      if (fromId.className === "PeerUser") {
+        senderId = fromId.userId?.toString() ?? "unknown";
+      } else if (fromId.className === "PeerChat") {
+        senderId = fromId.chatId?.toString() ?? "unknown";
+      } else if (fromId.className === "PeerChannel") {
+        senderId = fromId.channelId?.toString() ?? "unknown";
+      }
+    }
+
+    await TelegramMessage.findOneAndUpdate(
+      { chatId, messageId: msg.id.toString() },
+      {
+        $setOnInsert: {
+          userId,
+          chatId,
+          messageId: msg.id.toString(),
+          senderId,
+          text,
+          date,
+          isOutbound,
+        },
+      },
+      { upsert: true, setDefaultsOnInsert: true },
+    );
+  }
+
+  console.log(`[Telegram] syncChatHistory completed for chatId=${chatId}, ${rawMessages.length} messages processed.`);
+}
+
 let isProcessingChunks = false;
 
 export async function processChatChunks(userId: string) {
