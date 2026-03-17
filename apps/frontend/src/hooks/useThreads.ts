@@ -17,6 +17,7 @@ export interface ThreadDTO {
   _id: string;
   id: string;
   userId: string;
+  isMock?: boolean;
   historyId?: string;
   snippet?: string;
   lastMessageDate?: string;

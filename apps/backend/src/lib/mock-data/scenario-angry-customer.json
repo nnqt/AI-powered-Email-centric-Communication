@@ -1,0 +1,49 @@
+[
+  {
+    "scenarioName": "Angry Customer - Delayed Delivery",
+    "contacts": [
+      {
+        "email": "alex.customer@example.com",
+        "name": "Alex Nguyen",
+        "org": "Acme Retail",
+        "language": "en",
+        "threads": [
+          {
+            "subject": "Urgent: My order is still not delivered",
+            "snippet": "I have waited for 8 days and still no update.",
+            "dateOffsetMs": 15000,
+            "messages": [
+              {
+                "from": "alex.customer@example.com",
+                "to": [
+                  "support@yourcompany.com"
+                ],
+                "subject": "Urgent: My order is still not delivered",
+                "body": "Hello team,\\nI placed order #AC-1042 eight days ago and it still shows processing. This is unacceptable. Please resolve today.",
+                "dateOffsetMs": 12000
+              },
+              {
+                "from": "support@yourcompany.com",
+                "to": [
+                  "alex.customer@example.com"
+                ],
+                "subject": "Re: Urgent: My order is still not delivered",
+                "body": "Hi Alex,\\nWe are checking with logistics right now and will update you shortly.",
+                "dateOffsetMs": 9000
+              },
+              {
+                "from": "alex.customer@example.com",
+                "to": [
+                  "support@yourcompany.com"
+                ],
+                "subject": "Re: Urgent: My order is still not delivered",
+                "body": "I need a concrete ETA in the next 2 hours or I will cancel and post a public complaint.",
+                "dateOffsetMs": 6000
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

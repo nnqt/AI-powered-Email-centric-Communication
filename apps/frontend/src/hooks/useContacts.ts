@@ -17,6 +17,7 @@ export type CategorySource = "rule" | "ai" | "user";
 export interface ContactDTO {
   _id: string;
   email: string;
+  isMock?: boolean;
   name?: string;
   org?: string;
   language?: string;

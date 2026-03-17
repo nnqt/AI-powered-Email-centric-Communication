@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface ITelegramChat extends Document {
   chatId: string;
   userId: mongoose.Types.ObjectId;
+  isMock?: boolean;
   title: string;
   type: "private" | "group" | "channel";
   lastMessageDate: Date;
@@ -18,6 +19,7 @@ const TelegramChatSchema: Schema<ITelegramChat> = new Schema(
       ref: "User",
       required: true,
     },
+    isMock: { type: Boolean, default: false },
     title: { type: String, required: true },
     type: {
       type: String,
@@ -28,7 +30,7 @@ const TelegramChatSchema: Schema<ITelegramChat> = new Schema(
     unreadCount: { type: Number, default: 0 },
     lastAnalyzedMessageDate: { type: Date },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Compound index for querying user's chats ordered by last message

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useSocket } from "@/hooks/useSocket";
@@ -81,7 +81,11 @@ const NAV_ITEMS: NavItem[] = [
     activePaths: ["/chat"],
     icon: (
       <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+        <path
+          fillRule="evenodd"
+          d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"
+          clipRule="evenodd"
+        />
       </svg>
     ),
   },
@@ -139,6 +143,21 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+const DEV_NAV_ITEM: NavItem = {
+  href: "/dev/sandbox",
+  label: "Sandbox",
+  activePaths: ["/dev/sandbox"],
+  icon: (
+    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fillRule="evenodd"
+        d="M10 2a1 1 0 01.707.293l6 6a1 1 0 010 1.414l-6 6A1 1 0 0110 16H4a2 2 0 01-2-2V8a2 2 0 012-2h6zM7 7a1 1 0 100 2h6a1 1 0 100-2H7zm0 4a1 1 0 100 2h4a1 1 0 100-2H7z"
+        clipRule="evenodd"
+      />
+    </svg>
+  ),
+};
+
 export default function DashboardLayout({
   children,
 }: {
@@ -153,6 +172,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const unreadCount = useUnreadCount();
   const { showToast, updateToast } = useToast();
+  const navItems = useMemo(
+    () =>
+      process.env.NODE_ENV === "development"
+        ? [...NAV_ITEMS, DEV_NAV_ITEM]
+        : NAV_ITEMS,
+    [],
+  );
 
   const userId = (session?.user as any)?.id as string | undefined;
   // Map AI jobId → toastId so AI_JOB_DONE can update the right toast
@@ -188,7 +214,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   // Auto-expand section if current path matches it
   useEffect(() => {
-    NAV_ITEMS.forEach((item) => {
+    navItems.forEach((item) => {
       const paths = item.activePaths ?? [item.href];
       const inSection =
         paths.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
@@ -199,7 +225,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         setExpandedSections((prev) => new Set(prev).add(item.href));
       }
     });
-  }, [pathname]);
+  }, [pathname, navItems]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -265,7 +291,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         {/* Nav */}
         <nav className="sidebar__nav flex-1 overflow-y-auto px-2 py-3">
           <ul className="sidebar__nav-list space-y-0.5">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const sectionActive = isSectionActive(item);
               const isExpanded = expandedSections.has(item.href);
               const isMainActive = pathname === item.href;

@@ -16,6 +16,7 @@ export interface IContact extends Document {
   language?: string;
   alternateEmails: string[];
   userId: mongoose.Types.ObjectId;
+  isMock?: boolean;
   aiEnriched: boolean;
   enrichedAt?: Date;
   mergedInto?: mongoose.Types.ObjectId;
@@ -36,6 +37,7 @@ const ContactSchema: Schema<IContact> = new Schema(
     language: { type: String },
     alternateEmails: { type: [String], default: [] },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    isMock: { type: Boolean, default: false },
     aiEnriched: { type: Boolean, default: false },
     enrichedAt: { type: Date },
     mergedInto: { type: Schema.Types.ObjectId, ref: "Contact" },
@@ -71,7 +73,10 @@ ContactSchema.index({ email: 1, userId: 1 }, { unique: true });
 // Unique contact per (telegramId, userId) if telegramId exists
 ContactSchema.index(
   { telegramId: 1, userId: 1 },
-  { unique: true, partialFilterExpression: { telegramId: { $type: "string" } } }
+  {
+    unique: true,
+    partialFilterExpression: { telegramId: { $type: "string" } },
+  },
 );
 
 export const Contact: Model<IContact> =

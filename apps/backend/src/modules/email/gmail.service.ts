@@ -490,11 +490,72 @@ export class GmailService {
     attachmentIds?: string[];
     threadId?: string; // Gmail thread ID to reply into
   }): Promise<{ gmailMessageId: string; gmailThreadId: string }> {
-    const gmail = await this.getGmailClient();
     await connectToDatabase();
 
     const user = await User.findById(this.userId).lean();
     if (!user) throw new Error("User not found");
+
+    // Guard: sandbox/mock thread must never call Gmail API.
+    if (params.threadId) {
+      const existingThread = await Thread.findOne({
+        id: params.threadId,
+        userId: new mongoose.Types.ObjectId(this.userId),
+      });
+
+      if (existingThread?.isMock) {
+        const mockMessageId = `mock-msg-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        const sentAt = new Date();
+        const htmlContent = params.htmlBody ?? params.body ?? "";
+
+        await Message.findOneAndUpdate(
+          { id: mockMessageId },
+          {
+            id: mockMessageId,
+            threadId: existingThread._id,
+            userId: new mongoose.Types.ObjectId(this.userId),
+            isMock: true,
+            from: user.email ?? "",
+            to: [params.to],
+            subject: params.subject,
+            body: htmlContent,
+            snippet: htmlContent.replace(/<[^>]*>/g, "").slice(0, 100),
+            date: sentAt,
+            labelIds: [],
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true },
+        );
+
+        await Thread.updateOne(
+          { _id: existingThread._id },
+          {
+            $set: {
+              lastMessageDate: sentAt,
+              snippet: htmlContent.replace(/<[^>]*>/g, "").slice(0, 100),
+              lastMessageDirection: "outbound",
+            },
+            $addToSet: { participants: params.to },
+          },
+        );
+
+        for (const id of params.attachmentIds ?? []) {
+          try {
+            await unlink(path.join(UPLOAD_DIR, id));
+            await unlink(path.join(UPLOAD_DIR, `${id}.json`));
+          } catch {
+            /* ignore cleanup errors */
+          }
+        }
+
+        return {
+          gmailMessageId: mockMessageId,
+          gmailThreadId: existingThread.id,
+        };
+      }
+    }
+
+    const gmail = await this.getGmailClient();
 
     const htmlContent = params.htmlBody ?? params.body ?? "";
     const fromHeader = user.email;

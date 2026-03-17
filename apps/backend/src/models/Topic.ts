@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface ITopic extends Document {
   userId: mongoose.Types.ObjectId;
   contactId: mongoose.Types.ObjectId; // primary contact this topic belongs to
+  isMock?: boolean;
   name: string; // AI-generated (Phase 3) or normalized subject (Phase 2 temp)
   nameEditedByUser: boolean; // if true → never overwrite with AI name
   threadIds: mongoose.Types.ObjectId[]; // _id refs to Thread documents
@@ -45,6 +46,7 @@ const TopicSchema: Schema<ITopic> = new Schema(
       required: true,
       index: true,
     },
+    isMock: { type: Boolean, default: false },
     name: { type: String, required: true },
     nameEditedByUser: { type: Boolean, default: false },
     threadIds: { type: [Schema.Types.ObjectId], ref: "Thread", default: [] },

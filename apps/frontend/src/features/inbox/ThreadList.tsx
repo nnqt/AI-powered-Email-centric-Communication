@@ -15,6 +15,11 @@ const FILTER_TABS: { value: ThreadFilter; label: string }[] = [
 export function ThreadList() {
   const {
     threads,
+                      {thread.isMock && (
+                        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700">
+                          [MOCK]
+                        </span>
+                      )}
     total,
     hasNext,
     hasPrev,

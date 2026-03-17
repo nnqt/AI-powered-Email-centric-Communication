@@ -22,7 +22,7 @@ declare global {
 export const getTelegramClient = async (
   userId: string,
   sessionString: string = "",
-  _phone?: string // We can log or use it later if needed
+  _phone?: string, // We can log or use it later if needed
 ): Promise<CustomTelegramClient> => {
   if (!global.__telegramClients) {
     global.__telegramClients = {};
@@ -47,7 +47,7 @@ export const getTelegramClient = async (
 
   if (!apiId || !apiHash) {
     throw new Error(
-      "Missing TELEGRAM_API_ID or TELEGRAM_API_HASH in environment variables."
+      "Missing TELEGRAM_API_ID or TELEGRAM_API_HASH in environment variables.",
     );
   }
 
@@ -60,7 +60,7 @@ export const getTelegramClient = async (
     await client.connect();
 
     setupMessageListener(client as CustomTelegramClient, userId);
-    
+
     global.__telegramClients[userId] = client as CustomTelegramClient;
     return client as CustomTelegramClient;
   } catch (error) {
@@ -79,13 +79,14 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
       const message = event.message;
       if (!message || !message.peerId) return;
 
-      const chatId = message.peerId.className === "PeerUser" 
-        ? message.peerId.userId?.toString() 
-        : message.peerId.className === "PeerChat" 
-          ? message.peerId.chatId?.toString()
-          : message.peerId.className === "PeerChannel"
-            ? message.peerId.channelId?.toString()
-            : null;
+      const chatId =
+        message.peerId.className === "PeerUser"
+          ? message.peerId.userId?.toString()
+          : message.peerId.className === "PeerChat"
+            ? message.peerId.chatId?.toString()
+            : message.peerId.className === "PeerChannel"
+              ? message.peerId.channelId?.toString()
+              : null;
 
       if (!chatId) return;
 
@@ -93,13 +94,14 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
 
       // Get sender info
       const senderId = message.fromId || message.peerId;
-      const senderIdStr = senderId.className === "PeerUser"
-        ? senderId.userId?.toString()
-        : senderId.className === "PeerChat"
-          ? senderId.chatId?.toString()
-          : senderId.className === "PeerChannel"
-            ? senderId.channelId?.toString()
-            : "unknown";
+      const senderIdStr =
+        senderId.className === "PeerUser"
+          ? senderId.userId?.toString()
+          : senderId.className === "PeerChat"
+            ? senderId.chatId?.toString()
+            : senderId.className === "PeerChannel"
+              ? senderId.channelId?.toString()
+              : "unknown";
 
       const text = message.message || "";
       const date = new Date(message.date * 1000);
@@ -108,12 +110,15 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
       // Determine chat title and type from chat/sender info
       let chatTitle = "Unknown Chat";
       let chatType: "private" | "group" | "channel" = "private";
-      
+
       try {
         const entity = await client.getEntity(message.peerId);
         if (entity) {
           if (entity.className === "User") {
-            chatTitle = [entity.firstName, entity.lastName].filter(Boolean).join(" ") || entity.username || "Unknown User";
+            chatTitle =
+              [entity.firstName, entity.lastName].filter(Boolean).join(" ") ||
+              entity.username ||
+              "Unknown User";
             chatType = "private";
           } else if (entity.className === "Chat") {
             chatTitle = entity.title || "Unknown Group";
@@ -133,11 +138,15 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
           // Determine potential username from entity if we fetched it
           let tgUsername = "";
           try {
-            const senderEntity: any = await client.getEntity(message.fromId || message.peerId);
+            const senderEntity: any = await client.getEntity(
+              message.fromId || message.peerId,
+            );
             if (senderEntity && senderEntity.username) {
               tgUsername = senderEntity.username;
             }
-          } catch (e) { /* ignore entity fetch error here */ }
+          } catch (e) {
+            /* ignore entity fetch error here */
+          }
 
           await Contact.findOneAndUpdate(
             { telegramId: senderIdStr, userId },
@@ -145,19 +154,23 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
               $setOnInsert: {
                 telegramId: senderIdStr,
                 userId,
-                telegramName: chatTitle !== "Unknown Chat" ? chatTitle : undefined,
+                telegramName:
+                  chatTitle !== "Unknown Chat" ? chatTitle : undefined,
                 telegramUsername: tgUsername || undefined,
                 email: `tg-${senderIdStr}@telegram.local`, // Fallback required email field
                 category: "unknown",
                 categorySource: "rule",
                 aiEnriched: false,
                 alternateEmails: [],
-              }
+              },
             },
-            { upsert: true, setDefaultsOnInsert: true }
+            { upsert: true, setDefaultsOnInsert: true },
           );
         } catch (contactErr) {
-          console.error(`[Telegram] Error upserting Contact for sender ${senderIdStr}:`, contactErr);
+          console.error(
+            `[Telegram] Error upserting Contact for sender ${senderIdStr}:`,
+            contactErr,
+          );
         }
       }
 
@@ -172,9 +185,9 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
           },
           $inc: {
             unreadCount: isOutbound ? 0 : 1,
-          }
+          },
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
 
       // Insert Message
@@ -187,9 +200,9 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
             text,
             date,
             isOutbound,
-          }
+          },
         },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true },
       );
 
       // Emit socket event to frontend
@@ -200,9 +213,8 @@ function setupMessageListener(client: CustomTelegramClient, userId: string) {
       });
       // Fire and forget chunk processing
       processChatChunks(userId).catch((e) =>
-        console.error("[Telegram] processChatChunks error:", e)
+        console.error("[Telegram] processChatChunks error:", e),
       );
-
     } catch (err) {
       console.error("[Telegram] Error processing new message:", err);
     }
@@ -238,7 +250,10 @@ export async function syncDialogs(userId: string): Promise<void> {
 
     if (entity.className === "User") {
       chatId = entity.id?.toString() ?? null;
-      title = [entity.firstName, entity.lastName].filter(Boolean).join(" ") || entity.username || "Unknown User";
+      title =
+        [entity.firstName, entity.lastName].filter(Boolean).join(" ") ||
+        entity.username ||
+        "Unknown User";
       chatType = "private";
     } else if (entity.className === "Chat") {
       chatId = entity.id?.toString() ?? null;
@@ -274,7 +289,9 @@ export async function syncDialogs(userId: string): Promise<void> {
     );
   }
 
-  console.log(`[Telegram] syncDialogs completed for user ${userId}, ${dialogs.length} dialogs processed.`);
+  console.log(
+    `[Telegram] syncDialogs completed for user ${userId}, ${dialogs.length} dialogs processed.`,
+  );
 }
 
 /**
@@ -302,7 +319,10 @@ export async function syncChatHistory(
     try {
       entity = await client.getEntity(parseInt(chatId, 10));
     } catch (e2) {
-      console.warn(`[Telegram] syncChatHistory: could not resolve entity for chatId=${chatId}`, e2);
+      console.warn(
+        `[Telegram] syncChatHistory: could not resolve entity for chatId=${chatId}`,
+        e2,
+      );
       return;
     }
   }
@@ -346,7 +366,118 @@ export async function syncChatHistory(
     );
   }
 
-  console.log(`[Telegram] syncChatHistory completed for chatId=${chatId}, ${rawMessages.length} messages processed.`);
+  console.log(
+    `[Telegram] syncChatHistory completed for chatId=${chatId}, ${rawMessages.length} messages processed.`,
+  );
+}
+
+export async function sendTelegramMessage(
+  userId: string,
+  chatId: string,
+  text: string,
+): Promise<{ chat: any; message: any; sentToTelegram: boolean }> {
+  await connectToDatabase();
+
+  const existingChat = await TelegramChat.findOne({ userId, chatId });
+  const hasMockMessage = await TelegramMessage.exists({
+    userId,
+    chatId,
+    isMock: true,
+  });
+  const shouldShortCircuit = Boolean(existingChat?.isMock || hasMockMessage);
+
+  if (shouldShortCircuit) {
+    const now = new Date();
+    const messageId = `mock-tg-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    const updatedChat = await TelegramChat.findOneAndUpdate(
+      { userId, chatId },
+      {
+        $setOnInsert: {
+          userId,
+          chatId,
+          title: existingChat?.title ?? "Mock Chat",
+          type: existingChat?.type ?? "private",
+          unreadCount: 0,
+        },
+        $set: {
+          isMock: true,
+          lastMessageDate: now,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+
+    const newMessage = await TelegramMessage.findOneAndUpdate(
+      { chatId, messageId },
+      {
+        $set: {
+          userId,
+          chatId,
+          messageId,
+          senderId: "me",
+          text,
+          date: now,
+          isOutbound: true,
+          isMock: true,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
+    );
+
+    emitToUser(userId, "NEW_TELEGRAM_MESSAGE", {
+      chatId,
+      chat: updatedChat,
+      message: newMessage,
+    });
+
+    return { chat: updatedChat, message: newMessage, sentToTelegram: false };
+  }
+
+  const user = await User.findById(userId).lean();
+  if (!user?.telegramSession) {
+    throw new Error("Telegram account not linked");
+  }
+
+  const client = await getTelegramClient(userId, user.telegramSession);
+  const result = await client.sendMessage(chatId, { message: text });
+
+  const messageId = result.id.toString();
+  const date = new Date(result.date * 1000);
+
+  const updatedChat = await TelegramChat.findOneAndUpdate(
+    { userId, chatId },
+    {
+      $set: {
+        lastMessageDate: date,
+      },
+    },
+    { new: true },
+  );
+
+  const newMessage = await TelegramMessage.findOneAndUpdate(
+    { chatId, messageId },
+    {
+      $set: {
+        userId,
+        senderId: "me",
+        text,
+        date,
+        isOutbound: true,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+
+  emitToUser(userId, "NEW_TELEGRAM_MESSAGE", {
+    chatId,
+    chat: updatedChat,
+    message: newMessage,
+  });
+
+  return { chat: updatedChat, message: newMessage, sentToTelegram: true };
 }
 
 let isProcessingChunks = false;
@@ -357,7 +488,7 @@ export async function processChatChunks(userId: string) {
 
   try {
     await connectToDatabase();
-    
+
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
     // Find chats that either:
@@ -366,7 +497,7 @@ export async function processChatChunks(userId: string) {
     //    there's a chat with recent messages and `lastAnalyzedMessageDate` is either not set or < twoHoursAgo.
     // For a more robust approach, we query all chats for this user
     const chats = await TelegramChat.find({ userId });
-    
+
     for (const chat of chats) {
       // Find messages for this chat that are newer than lastAnalyzedMessageDate
       const query: any = { chatId: chat.chatId, userId };
@@ -379,24 +510,33 @@ export async function processChatChunks(userId: string) {
 
       // Condition: either > 20 unanalyzed messages OR last message is older than 2 hours.
       // Easiest heuristic: if we have any new messages and it's been > 2 hrs since last analyzed or we have > 20 messages.
-      const lastMsgDate = chat.lastAnalyzedMessageDate ? new Date(chat.lastAnalyzedMessageDate) : new Date(0);
-      const readyToChunk = newMessagesCount >= 20 || (new Date().getTime() - lastMsgDate.getTime() > 2 * 60 * 60 * 1000);
+      const lastMsgDate = chat.lastAnalyzedMessageDate
+        ? new Date(chat.lastAnalyzedMessageDate)
+        : new Date(0);
+      const readyToChunk =
+        newMessagesCount >= 20 ||
+        new Date().getTime() - lastMsgDate.getTime() > 2 * 60 * 60 * 1000;
 
       if (readyToChunk) {
         // Fetch them
-        const messages = await TelegramMessage.find(query).sort({ date: 1 }).lean<any>();
+        const messages = await TelegramMessage.find(query)
+          .sort({ date: 1 })
+          .lean<any>();
         if (!messages.length) continue;
 
         // Try to find corresponding Contact (since TelegramChat doesn't store contactRef directly, we infer via senderId=tg_id)
         let contactId: any = null;
         if (chat.type === "private") {
-           // chat.chatId is usually the partner's Tg ID for private chats
-           const contact = await Contact.findOne({ telegramId: chat.chatId, userId });
-           if (contact) {
-             contactId = contact._id;
-           }
+          // chat.chatId is usually the partner's Tg ID for private chats
+          const contact = await Contact.findOne({
+            telegramId: chat.chatId,
+            userId,
+          });
+          if (contact) {
+            contactId = contact._id;
+          }
         }
-        
+
         // Find active topics for this contact
         let activeTopics: string[] = [];
         if (contactId) {
@@ -405,70 +545,85 @@ export async function processChatChunks(userId: string) {
         }
 
         // Format chunk text
-        const textChunk = messages.map((m: any) => `[${new Date(m.date).toLocaleTimeString()}] ${m.isOutbound ? 'You' : (m.senderId)}: ${m.text}`).join("\n");
+        const textChunk = messages
+          .map(
+            (m: any) =>
+              `[${new Date(m.date).toLocaleTimeString()}] ${m.isOutbound ? "You" : m.senderId}: ${m.text}`,
+          )
+          .join("\n");
 
         // Send to AI Service
-        const aiServiceUrl = process.env.AI_SERVICE_URL || "http://localhost:8000";
+        const aiServiceUrl =
+          process.env.AI_SERVICE_URL || "http://localhost:8000";
         try {
           const res = await fetch(`${aiServiceUrl}/analyze-chat-chunk/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               text_chunk: textChunk,
-              active_topics: activeTopics
-            })
+              active_topics: activeTopics,
+            }),
           });
-          
+
           if (res.ok) {
             const result = await res.json();
             const fragments = result.fragments || [];
 
             // Distribute insights into Topics
             for (const frag of fragments) {
-               if (frag.topic_action === "route_to_existing" && contactId) {
-                 await Topic.findOneAndUpdate(
-                   { name: frag.topic_name, contactId, userId },
-                   {
-                     $push: {
-                       chatInsights: {
-                         intent: frag.intent,
-                         summary: frag.summary,
-                         sourceChatId: chat.chatId,
-                         date: messages[messages.length - 1].date
-                       }
-                     },
-                     $set: { lastInboundAt: messages[messages.length - 1].date }
-                   }
-                 );
-               } else if (frag.topic_action === "create_new" && contactId) {
-                 await Topic.create({
-                   userId,
-                   contactId,
-                   name: frag.topic_name,
-                   chatInsights: [{
-                     intent: frag.intent,
-                     summary: frag.summary,
-                     sourceChatId: chat.chatId,
-                     date: messages[messages.length - 1].date
-                   }],
-                   aiLabeled: true,
-                   aiLabeledAt: new Date(),
-                   lastInboundAt: messages[messages.length - 1].date,
-                   focusScore: 50 // initial starting score
-                 });
-               }
+              if (frag.topic_action === "route_to_existing" && contactId) {
+                await Topic.findOneAndUpdate(
+                  { name: frag.topic_name, contactId, userId },
+                  {
+                    $push: {
+                      chatInsights: {
+                        intent: frag.intent,
+                        summary: frag.summary,
+                        sourceChatId: chat.chatId,
+                        date: messages[messages.length - 1].date,
+                      },
+                    },
+                    $set: { lastInboundAt: messages[messages.length - 1].date },
+                  },
+                );
+              } else if (frag.topic_action === "create_new" && contactId) {
+                await Topic.create({
+                  userId,
+                  contactId,
+                  name: frag.topic_name,
+                  chatInsights: [
+                    {
+                      intent: frag.intent,
+                      summary: frag.summary,
+                      sourceChatId: chat.chatId,
+                      date: messages[messages.length - 1].date,
+                    },
+                  ],
+                  aiLabeled: true,
+                  aiLabeledAt: new Date(),
+                  lastInboundAt: messages[messages.length - 1].date,
+                  focusScore: 50, // initial starting score
+                });
+              }
             }
 
             // Update lastAnalyzedMessageDate on Chat
             await TelegramChat.findByIdAndUpdate(chat._id, {
-              lastAnalyzedMessageDate: messages[messages.length - 1].date
+              lastAnalyzedMessageDate: messages[messages.length - 1].date,
             });
-            console.log(`[Telegram] Processed chunk for chat ${chat.chatId} with ${messages.length} messages.`);
+            console.log(
+              `[Telegram] Processed chunk for chat ${chat.chatId} with ${messages.length} messages.`,
+            );
           } else {
-             console.error(`[Telegram] AI Service error processing chunk for chat ${chat.chatId}: ${res.statusText}`);
+            console.error(
+              `[Telegram] AI Service error processing chunk for chat ${chat.chatId}: ${res.statusText}`,
+            );
           }
         } catch (aiErr) {
-          console.error(`[Telegram] Failed to reach AI Service for chunking:`, aiErr);
+          console.error(
+            `[Telegram] Failed to reach AI Service for chunking:`,
+            aiErr,
+          );
         }
       }
     }

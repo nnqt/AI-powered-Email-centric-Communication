@@ -4,6 +4,7 @@ export interface IMessage extends Document {
   id: string; // Gmail message ID
   threadId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
+  isMock?: boolean;
   from?: string;
   to: string[];
   subject?: string;
@@ -18,6 +19,7 @@ const MessageSchema: Schema<IMessage> = new Schema(
     id: { type: String, required: true, unique: true, index: true },
     threadId: { type: Schema.Types.ObjectId, ref: "Thread", required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    isMock: { type: Boolean, default: false },
     from: { type: String },
     to: { type: [String], default: [] },
     subject: { type: String },
@@ -26,7 +28,7 @@ const MessageSchema: Schema<IMessage> = new Schema(
     date: { type: Date },
     labelIds: { type: [String], default: [] },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export const Message: Model<IMessage> =

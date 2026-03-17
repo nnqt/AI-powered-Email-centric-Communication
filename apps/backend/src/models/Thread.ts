@@ -64,6 +64,7 @@ export interface IThreadSummary {
 export interface IThread extends Document {
   id: string; // Gmail thread ID
   userId: mongoose.Types.ObjectId;
+  isMock?: boolean;
   historyId?: string;
   snippet?: string;
   lastMessageDate?: Date;
@@ -90,6 +91,7 @@ const ThreadSchema: Schema<IThread> = new Schema(
   {
     id: { type: String, required: true, unique: true, index: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    isMock: { type: Boolean, default: false },
     historyId: { type: String },
     snippet: { type: String },
     lastMessageDate: { type: Date },
