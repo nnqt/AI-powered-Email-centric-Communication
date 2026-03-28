@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import apiClient from "@/lib/api";
+import { isSandboxUiEnabled } from "@/lib/sandbox";
 import { useToast } from "@/components/Toast";
 
 type SandboxFormState = {
@@ -11,6 +12,12 @@ type SandboxFormState = {
   senderEmail: string;
   subject: string;
   message: string;
+};
+
+type SandboxScenarioOption = {
+  slug: string;
+  title: string;
+  description: string;
 };
 
 const initialForm: SandboxFormState = {
@@ -28,15 +35,18 @@ export default function DevSandboxPage() {
   const [isClearing, setIsClearing] = useState(false);
   const [isSubmittingWebhook, setIsSubmittingWebhook] = useState(false);
   const [isLoadingScenario, setIsLoadingScenario] = useState(false);
+  const [isLoadingScenarioList, setIsLoadingScenarioList] = useState(false);
+  const [scenarioOptions, setScenarioOptions] = useState<SandboxScenarioOption[]>(
+    [],
+  );
+  const [selectedScenarioSlug, setSelectedScenarioSlug] = useState("");
   const [form, setForm] = useState<SandboxFormState>(initialForm);
 
-  const isDevelopment = process.env.NODE_ENV === "development";
-
   useEffect(() => {
-    if (!isDevelopment) {
+    if (!isSandboxUiEnabled) {
       router.replace("/");
     }
-  }, [isDevelopment, router]);
+  }, [router]);
 
   const canSubmitWebhook = useMemo(
     () =>
@@ -47,11 +57,45 @@ export default function DevSandboxPage() {
     [form],
   );
 
-  const loadAngryCustomerScenario = async () => {
+  const selectedScenario = useMemo(
+    () => scenarioOptions.find((item) => item.slug === selectedScenarioSlug),
+    [scenarioOptions, selectedScenarioSlug],
+  );
+
+  const loadScenarioOptions = async () => {
+    setIsLoadingScenarioList(true);
+    try {
+      const response = await apiClient.get<{ scenarios: SandboxScenarioOption[] }>(
+        "/api/sandbox/scenarios",
+      );
+      const options = response.data?.scenarios ?? [];
+      setScenarioOptions(options);
+
+      if (options.length > 0) {
+        setSelectedScenarioSlug((prev) =>
+          prev && options.some((item) => item.slug === prev)
+            ? prev
+            : options[0].slug,
+        );
+      }
+    } catch (error: any) {
+      const details =
+        error?.response?.data?.error || "Failed to load scenario list";
+      showToast(details, "error");
+    } finally {
+      setIsLoadingScenarioList(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadScenarioOptions();
+  }, []);
+
+  const loadScenarioBySlug = async (slug: string) => {
     setIsLoadingScenario(true);
     try {
       const response = await apiClient.get<{ scenario: unknown[] }>(
-        "/api/sandbox/scenarios/angry-customer",
+        `/api/sandbox/scenarios/${slug}`,
       );
       return response.data?.scenario ?? [];
     } finally {
@@ -60,14 +104,17 @@ export default function DevSandboxPage() {
   };
 
   const injectScenario = async () => {
-    const toastId = showToast(
-      "Injecting Angry Customer scenario...",
-      "processing",
-    );
+    if (!selectedScenarioSlug) {
+      showToast("Please choose a scenario first", "warning");
+      return;
+    }
+
+    const scenarioLabel = selectedScenario?.title || selectedScenarioSlug;
+    const toastId = showToast(`Injecting ${scenarioLabel}...`, "processing");
     setIsInjectingScenario(true);
 
     try {
-      const scenarioPayload = await loadAngryCustomerScenario();
+      const scenarioPayload = await loadScenarioBySlug(selectedScenarioSlug);
       if (!Array.isArray(scenarioPayload) || scenarioPayload.length === 0) {
         throw new Error("Scenario payload is empty");
       }
@@ -165,7 +212,7 @@ export default function DevSandboxPage() {
     }
   };
 
-  if (!isDevelopment) {
+  if (!isSandboxUiEnabled) {
     return (
       <div className="dev-sandbox-page dev-sandbox-page--blocked flex h-full items-center justify-center p-8">
         <div className="dev-sandbox-page__blocked-card max-w-md rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
@@ -173,7 +220,7 @@ export default function DevSandboxPage() {
             Sandbox is disabled
           </h2>
           <p className="mt-2 text-sm text-red-600">
-            This page is available only in development mode.
+            Enable sandbox UI with NEXT_PUBLIC_ENABLE_SANDBOX_UI=true or run in development mode.
           </p>
         </div>
       </div>
@@ -202,13 +249,48 @@ export default function DevSandboxPage() {
               Load Scenario
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              Seed inbox with an angry-customer escalation thread for response
-              workflow testing.
+              Choose a mock scenario and inject it into your inbox for flow
+              testing.
             </p>
+            <label className="dev-sandbox-card__scenario-field mt-3 grid gap-1">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Scenario
+              </span>
+              <select
+                value={selectedScenarioSlug}
+                onChange={(e) => setSelectedScenarioSlug(e.target.value)}
+                disabled={
+                  isLoadingScenarioList ||
+                  isInjectingScenario ||
+                  isLoadingScenario ||
+                  isClearing ||
+                  isSubmittingWebhook
+                }
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {scenarioOptions.length === 0 ? (
+                  <option value="">No scenarios available</option>
+                ) : (
+                  scenarioOptions.map((option) => (
+                    <option key={option.slug} value={option.slug}>
+                      {option.title}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+            {selectedScenario?.description && (
+              <p className="mt-2 text-xs text-slate-500">
+                {selectedScenario.description}
+              </p>
+            )}
             <button
               type="button"
               onClick={injectScenario}
               disabled={
+                scenarioOptions.length === 0 ||
+                !selectedScenarioSlug ||
+                isLoadingScenarioList ||
                 isInjectingScenario ||
                 isLoadingScenario ||
                 isClearing ||
@@ -216,9 +298,11 @@ export default function DevSandboxPage() {
               }
               className="mt-4 inline-flex items-center rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isInjectingScenario || isLoadingScenario
+              {isLoadingScenarioList
+                ? "Loading scenarios..."
+                : isInjectingScenario || isLoadingScenario
                 ? "Injecting..."
-                : "Load Scenario: Angry Customer"}
+                : "Load Selected Scenario"}
             </button>
           </article>
 

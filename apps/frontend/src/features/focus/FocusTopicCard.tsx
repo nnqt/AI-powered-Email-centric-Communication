@@ -32,7 +32,7 @@ interface Props {
 
 /** Single-letter avatar from name or email. */
 function ContactAvatar({ name, email }: { name?: string; email: string }) {
-  const letter = (name?.[0] ?? email[0]).toUpperCase();
+  const letter = (name?.[0] ?? email[0])?.toUpperCase();
   return (
     <div className="focus-topic-card__avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
       {letter}

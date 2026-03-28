@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useSocket } from "@/hooks/useSocket";
 import { useToast } from "@/components/Toast";
+import { isSandboxUiEnabled } from "@/lib/sandbox";
 
 interface SubNavItem {
   href: string;
@@ -174,9 +175,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { showToast, updateToast } = useToast();
   const navItems = useMemo(
     () =>
-      process.env.NODE_ENV === "development"
-        ? [...NAV_ITEMS, DEV_NAV_ITEM]
-        : NAV_ITEMS,
+      isSandboxUiEnabled ? [...NAV_ITEMS, DEV_NAV_ITEM] : NAV_ITEMS,
     [],
   );
 

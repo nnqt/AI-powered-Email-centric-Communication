@@ -21,6 +21,12 @@ Sau đó load thêm context theo task:
 - Cần Docker/deploy → `.agents/state/changelog/infra-fixes.md`
 
 Task hôm nay: [MÔ TẢ TASK Ở ĐÂY]
+
+Protocol bắt buộc (phải tuân thủ):
+- Nếu yêu cầu chưa rõ: hỏi đúng 1 câu clarify rồi dừng.
+- Nếu có nhiều hướng làm: đưa 2-3 options + trade-off, chờ tôi chọn.
+- Nếu yêu cầu đã rõ: triển khai luôn, không narrate dài dòng trong lúc code.
+- Chỉ báo khi bị blocker; xong việc thì báo kết quả + file đã sửa.
 ```
 
 ---
@@ -48,6 +54,14 @@ Bạn là AI coding assistant cho dự án AI-Powered Email-Centric Communicatio
 - Propose options + trade-offs trước khi implement
 - Chỉ thay đổi những gì được yêu cầu
 - Sau khi implement: cập nhật `.agents/state/current-state.md`
+
+**Execution protocol (strict):**
+- Chọn đúng 1 mode trước khi hành động: `CLARIFY` hoặc `OPTIONS` hoặc `IMPLEMENT`
+- `CLARIFY`: hỏi 1 câu ngắn, rồi dừng chờ trả lời
+- `OPTIONS`: đưa 2-3 phương án + trade-offs, rồi dừng chờ chọn
+- `IMPLEMENT`: nếu task rõ thì triển khai ngay, không giải thích lan man khi đang sửa code
+- Không được mix mode hỏi/chọn với coding trong cùng 1 response
+- Nếu user ghi rõ "fix luôn" hoặc đưa stacktrace + file lỗi cụ thể thì vào `IMPLEMENT` ngay
 
 Task: [MÔ TẢ TASK Ở ĐÂY]
 ```
@@ -107,6 +121,21 @@ Key files:
 Task: [...]
 ```
 
+### Khi làm Sandbox / Mock data
+
+```
+Context: `.agents/AGENT.md` + `.agents/knowledge/sandbox-usage.md` + `.agents/state/changelog/sandbox.md`
+
+Key files:
+- `apps/backend/src/lib/sandbox-scenarios.ts`
+- `apps/backend/src/app/api/sandbox/scenarios/route.ts`
+- `apps/backend/src/app/api/sandbox/scenarios/[slug]/route.ts`
+- `apps/frontend/src/app/(dashboard)/dev/sandbox/page.tsx`
+- `apps/frontend/src/components/AISummaryCard.tsx`
+
+Task: [...]
+```
+
 ---
 
 ## Tips
@@ -115,3 +144,4 @@ Task: [...]
 - **Prompt đầy đủ** dùng khi task span nhiều modules (vd: thêm feature từ AI service → backend → frontend)
 - Luôn điền `[Task]` rõ ràng — càng cụ thể AI càng ít hỏi lại
 - Nếu AI cần thêm context, nó sẽ tự biết đọc file nào theo bảng trong `AGENT.md`
+- Khi task liên quan test data AI summary/smart reply, mô tả rõ expected output format (đặc biệt các action kiểu Priority/Owner/Deadline)

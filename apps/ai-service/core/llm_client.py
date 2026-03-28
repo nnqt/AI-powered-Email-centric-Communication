@@ -16,6 +16,10 @@ from models.thread_category import (
 from models.topic_label import LabelTopicRequest
 from models.chat_analysis import AnalyzeChatRequest, AnalyzeChatResponse, ChatFragment
 from core.config import GEMINI_API_KEY, GEMINI_MODEL_NAME
+from core.prompts.summarization_prompt import (
+    build_summarization_prompt,
+    normalize_summarization_output,
+)
 
 
 if not GEMINI_API_KEY:
@@ -208,16 +212,7 @@ async def _gemini_with_retry(prompt: str, max_retries: int = 3, base_delay: floa
 class GeminiSummarizationClient:
     async def summarize_thread(self, request: SummarizeRequest) -> Dict[str, Any]:
         messages_text = _build_messages_text(request)
-        prompt = (
-            "You are an AI assistant that summarizes email threads for a CRM-like system. "
-            f"{_LANG_INSTRUCTION}\n\n"
-            "Analyze the following email thread and return a JSON object with exactly these fields:\n"
-            '- "summary": A concise summary of the thread (string)\n'
-            '- "key_issues": An array of key topics or issues discussed (array of strings)\n'
-            '- "action_required": An array of action items or next steps (array of strings)\n\n'
-            "Return ONLY valid JSON, no markdown formatting or extra text.\n\n"
-            f"Thread ID: {request.thread_id}\n\nEmails:\n{messages_text}"
-        )
+        prompt = build_summarization_prompt(request, messages_text, _LANG_INSTRUCTION)
 
         try:
             text = await _gemini_with_retry(prompt)
@@ -237,11 +232,7 @@ class GeminiSummarizationClient:
         except json.JSONDecodeError as exc:
             raise RuntimeError(f"Failed to parse Gemini response as JSON: {text[:200]}") from exc
 
-        return {
-            "summary": data.get("summary", ""),
-            "key_issues": data.get("key_issues", []),
-            "action_required": data.get("action_required", []),
-        }
+        return normalize_summarization_output(data)
 
 
 class GeminiReplyClient:

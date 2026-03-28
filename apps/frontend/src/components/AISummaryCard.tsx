@@ -2,6 +2,43 @@
 
 import { ThreadSummary } from "@/hooks/useThreads";
 
+interface ParsedAction {
+  priority?: string;
+  owner?: string;
+  deadline?: string;
+  action: string;
+}
+
+const ACTION_META_PATTERN =
+  /^\s*\[Priority:\s*([^\]]+)\]\s*\[Owner:\s*([^\]]+)\]\s*\[Deadline:\s*([^\]]+)\]\s*(.+)$/i;
+
+function parseActionItem(raw: string): ParsedAction {
+  const normalized = raw.trim();
+  const match = normalized.match(ACTION_META_PATTERN);
+
+  if (!match) {
+    return { action: normalized };
+  }
+
+  return {
+    priority: match[1].trim(),
+    owner: match[2].trim(),
+    deadline: match[3].trim(),
+    action: match[4].trim(),
+  };
+}
+
+function getPriorityClass(priority?: string): string {
+  const value = (priority || "").toLowerCase();
+  if (value.includes("cao")) {
+    return "bg-red-50 text-red-700 border border-red-200";
+  }
+  if (value.includes("trung")) {
+    return "bg-amber-50 text-amber-700 border border-amber-200";
+  }
+  return "bg-slate-100 text-slate-700 border border-slate-200";
+}
+
 interface AISummaryCardProps {
   summary?: ThreadSummary;
   onGenerate: () => void;
@@ -92,13 +129,64 @@ export function AISummaryCard({
       {summary.action_required.length > 0 && (
         <div className="ai-summary-card__action-required">
           <h4 className="mb-1 text-xs font-semibold uppercase text-purple-700">
-            Action Required
+            Next Actions
           </h4>
-          <ul className="space-y-1 text-sm text-gray-600">
+          <ul className="space-y-2 text-sm text-gray-700">
             {summary.action_required.map((action, idx) => (
-              <li key={idx} className="flex items-start gap-2">
-                <span className="text-purple-500">☐</span>
-                {action}
+              <li
+                key={idx}
+                className="rounded-md border border-purple-100 bg-white/80 p-2.5"
+              >
+                {(() => {
+                  const parsed = parseActionItem(action);
+                  return (
+                    <div className="flex items-start gap-2">
+                      <svg
+                        className="mt-0.5 h-4 w-4 shrink-0 text-purple-500"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                      >
+                        <rect
+                          x="3.5"
+                          y="3.5"
+                          width="13"
+                          height="13"
+                          rx="2"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        />
+                      </svg>
+                      <div className="flex-1 space-y-1">
+                        {(parsed.priority || parsed.owner || parsed.deadline) && (
+                          <div className="flex flex-wrap gap-1.5 text-xs">
+                            {parsed.priority && (
+                              <span
+                                className={`rounded-full px-2 py-0.5 font-medium ${getPriorityClass(parsed.priority)}`}
+                              >
+                                Priority: {parsed.priority}
+                              </span>
+                            )}
+                            {parsed.owner && (
+                              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-medium text-indigo-700">
+                                Owner: {parsed.owner}
+                              </span>
+                            )}
+                            {parsed.deadline && (
+                              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 font-medium text-sky-700">
+                                Deadline: {parsed.deadline}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <p className="leading-relaxed text-gray-700">
+                          {parsed.action}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
               </li>
             ))}
           </ul>

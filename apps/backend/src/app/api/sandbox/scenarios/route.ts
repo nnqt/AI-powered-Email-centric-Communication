@@ -1,9 +1,8 @@
-import { readFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
+import { getSandboxScenarioList } from "@/lib/sandbox-scenarios";
 
 export async function GET() {
   try {
@@ -22,18 +21,10 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const jsonPath = path.join(
-      process.cwd(),
-      "src/lib/mock-data/scenario-angry-customer.json",
-    );
-
-    const raw = await readFile(jsonPath, "utf-8");
-    const scenario = JSON.parse(raw);
-
-    return NextResponse.json({ scenario });
+    return NextResponse.json({ scenarios: getSandboxScenarioList() });
   } catch (error: any) {
     return NextResponse.json(
-      { error: "Failed to load sandbox scenario", details: error.message },
+      { error: "Failed to load sandbox scenarios", details: error.message },
       { status: 500 },
     );
   }

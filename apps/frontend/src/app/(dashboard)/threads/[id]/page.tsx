@@ -13,6 +13,17 @@ import { SmartReplyBar, ReplyItem } from "@/components/SmartReplyBar";
 import { useSocket } from "@/hooks/useSocket";
 import apiClient from "@/lib/api";
 
+function normalizeMessageBody(content: string): string {
+  return content
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t");
+}
+
+function looksLikeHtml(content: string): boolean {
+  return /<\/?[a-z][\s\S]*>/i.test(content);
+}
+
 export default function ThreadDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -210,12 +221,28 @@ export default function ThreadDetailPage() {
                   To: {msg.to.join(", ")}
                 </p>
               )}
-              <div
-                className="prose prose-sm max-w-none text-gray-700"
-                dangerouslySetInnerHTML={{
-                  __html: msg.body || msg.snippet || "",
-                }}
-              />
+              {(() => {
+                const normalizedContent = normalizeMessageBody(
+                  msg.body || msg.snippet || "",
+                );
+
+                if (!looksLikeHtml(normalizedContent)) {
+                  return (
+                    <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">
+                      {normalizedContent}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    className="prose prose-sm max-w-none text-gray-700"
+                    dangerouslySetInnerHTML={{
+                      __html: normalizedContent,
+                    }}
+                  />
+                );
+              })()}
             </article>
           ))}
         </section>

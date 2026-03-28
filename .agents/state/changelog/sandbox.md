@@ -54,7 +54,7 @@
 
 - Added dev sandbox page at `apps/frontend/src/app/(dashboard)/dev/sandbox/page.tsx`.
 - Added action cards and controls for:
-  - `POST /api/sandbox/inject` (Load Scenario: Angry Customer)
+  - `POST /api/sandbox/inject` (Load Selected Scenario)
   - `DELETE /api/sandbox/clear` (Clear All Sandbox Data)
   - Fake Webhook form to inject one inbound mock email via sandbox injector
 
@@ -68,7 +68,7 @@
 
 ### Safety Notes
 
-- Dev sandbox page is guarded by `NODE_ENV === "development"`; non-dev environments are redirected to home.
+- Dev sandbox page is enabled when `NODE_ENV === "development"` or `NEXT_PUBLIC_ENABLE_SANDBOX_UI=true`; otherwise redirects to home.
 
 ## 2026-03-17 — Sandbox Hardening & Docs Cleanup
 
@@ -77,12 +77,46 @@
 - Added backend environment guard for sandbox APIs:
   - `POST /api/sandbox/inject`
   - `DELETE /api/sandbox/clear`
-  - `GET /api/sandbox/scenarios/angry-customer`
+  - `GET /api/sandbox/scenarios/*`
 - Sandbox APIs now require either `NODE_ENV=development` or `ENABLE_SANDBOX_API=true`.
-- Frontend sandbox page now loads angry-customer scenario from backend endpoint (`/api/sandbox/scenarios/angry-customer`) instead of hardcoded payload.
+- Frontend sandbox page now loads scenarios from backend endpoints (`/api/sandbox/scenarios` + `/api/sandbox/scenarios/:slug`) instead of hardcoded payload.
 - Added dev-only sidebar navigation entry for Sandbox page (`/dev/sandbox`).
+
+## 2026-03-28 — Multi-Scenario & Vietnamese Dataset Update
+
+### Added
+
+- Added backend scenario registry at `apps/backend/src/lib/sandbox-scenarios.ts`.
+- Added route `GET /api/sandbox/scenarios` to return scenario list for UI dropdown.
+- Added route `GET /api/sandbox/scenarios/:slug` to return full scenario payload by slug.
+- Added second scenario file: `apps/backend/src/lib/mock-data/scenario-payment-dispute.json`.
+
+### Changed
+
+- Migrated scenario payload text to Vietnamese for both built-in scenarios.
+- Updated scenario metadata (`title`, `description`) in registry to Vietnamese.
+- Updated Sandbox UI to support selecting and injecting multiple scenarios instead of one hardcoded scenario.
 
 ### Docs
 
 - Added usage guide: `.agents/knowledge/sandbox-usage.md`.
 - Standardized docs wording to use `changelog` consistently.
+
+## 2026-03-28 — Scenario Realism, Summary Quality & Detail UX
+
+### Changed
+
+- Reworked both built-in scenarios into interrupted 4-email unresolved flows for Smart Reply testing realism.
+- Upgraded scenario email writing style to full professional format (salutation/body/signature) in Vietnamese.
+- Refined AI summarization prompt behavior to enforce:
+  - concise 2-3 sentence summary
+  - executable one-line actions
+  - optional metadata suffix for UI chips (`Priority/Owner/Deadline`)
+- Refactored summarization prompt construction from `core/llm_client.py` into dedicated module:
+  - `apps/ai-service/core/prompts/summarization_prompt.py`
+
+### Frontend UX
+
+- Updated `AISummaryCard` action rendering to parse metadata chips and display readable action blocks.
+- Replaced fragile checkbox character glyph with SVG icon for consistent display.
+- Improved thread detail plain-text rendering to decode escaped `\\n` and keep `whitespace-pre-wrap` formatting.

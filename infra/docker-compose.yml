@@ -4,6 +4,7 @@ services:
       context: ../apps/frontend
       args:
         - BACKEND_INTERNAL_URL=http://backend:4000
+        - NEXT_PUBLIC_ENABLE_SANDBOX_UI=true
     ports:
       - "3000:3000"
     depends_on:
@@ -39,6 +40,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - AI_SERVICE_URL=http://ai-service:5000
       - FRONTEND_URL=http://localhost:3000
+      - ENABLE_SANDBOX_API=true
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/api/health"]
       interval: 10s

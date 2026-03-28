@@ -49,6 +49,8 @@ types/            # Shared TypeScript types/interfaces
 - **Components**: functional only; no class components. React hooks only.
 - **Toast**: `const { toast } = useToast()` from `components/Toast.tsx`.
 - **BEM className**: Every component/page root element và các structural child phải có BEM identifier className để dễ debug. Đặt BEM class **trước** Tailwind classes trong `className`.
+- **AI actions rendering**: with `AISummaryCard`, keep one action per line and prefer metadata suffix `[Priority:...][Owner:...][Deadline:...]` for chip parsing.
+- **Message body rendering**: decode escaped newline sequences for plain text views, but preserve trusted HTML rendering path.
 
 ### BEM className Convention
 
@@ -141,6 +143,7 @@ types/                  # next-auth.d.ts extensions
 - No business logic in route files — delegate to `services/`.
 - Call `load_dotenv()` in `main.py` **before** importing `core/config.py`.
 - `Optional[str]` for nullable fields; `None` default where appropriate.
+- Keep prompt-building logic in dedicated modules under `core/prompts/`; `llm_client.py` should orchestrate calls, not hold long prompt literals.
 
 ### Error Handling (AI Service)
 
@@ -160,6 +163,15 @@ POST   /api/threads/:id/summarize       # AI action
 POST   /api/threads/:id/suggest-reply   # AI action
 POST   /api/contacts/:id/enrich         # AI action
 GET    /api/contacts/:id/timeline       # sub-collection
+```
+
+Sandbox scenario APIs should follow:
+
+```
+GET    /api/sandbox/scenarios           # list available scenarios
+GET    /api/sandbox/scenarios/:slug     # get selected scenario payload
+POST   /api/sandbox/inject              # inject mock entities
+DELETE /api/sandbox/clear               # clear mock entities
 ```
 
 ---

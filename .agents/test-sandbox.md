@@ -70,9 +70,10 @@ Bạn là AI coding assistant (Frontend & Backend). Hãy load cấu trúc file q
 
 **Yêu cầu công việc (Frontend Next.js):**
 1. Tạo Page dành riêng cho Dev tại `apps/frontend/src/app/(dashboard)/dev/sandbox/page.tsx`.
-   - Nếu `process.env.NODE_ENV !== "development"`, hiển thị màn hình 404 hoặc Redirect về trang chủ.
+   - Chỉ cho truy cập khi `process.env.NODE_ENV === "development"` hoặc `NEXT_PUBLIC_ENABLE_SANDBOX_UI=true`; ngoài ra redirect về trang chủ.
 2. Build UI (dùng Tailwind, áp dụng BEM convention):
-   - Nút "Load Scenario: Angry Customer" -> Gọi API `POST /api/sandbox/inject` kèm file JSON mock mẫu.
+   - Load options từ `GET /api/sandbox/scenarios` rồi cho phép chọn scenario.
+   - Khi click "Load Selected Scenario": gọi `GET /api/sandbox/scenarios/:slug` để lấy payload rồi gửi `POST /api/sandbox/inject`.
    - Nút đỏ "Clear All Sandbox Data" -> Gọi API `DELETE /api/sandbox/clear`.
    - Form giả lập "Fake Webhook": Chứa input (Sender Name, Email, Subject, Message) -> Nút Submit -> Gọi Injection tạo ra đúng 1 email ngay lập tức.
 3. Update giao diện hiển thị: Tại component `ThreadList.tsx` hoặc `ContactRow.tsx`, nếu item có `isMock === true`, hãy hiển thị một Badge nhỏ màu tím nhạt có text `[MOCK]` để team Dev dễ phân biệt phân biệt giữa data thật và giả.
@@ -81,6 +82,7 @@ Bạn là AI coding assistant (Frontend & Backend). Hãy load cấu trúc file q
 - Áp dụng triệt để hook SWR hoặc `axios` chuẩn từ `lib/api.ts`.
 - Có xử lý Loading state và `Toast` báo lỗi hoặc thành công.
 - Tuân thủ thiết kế đẹp, hiện đại.
+- Nếu có AI summary actions, giữ format 1 action/line; ưu tiên metadata `[Priority][Owner][Deadline]` để UI parse chip.
 
 Khi deploy xong chạy test thử, hãy update `.agents/state/current-state.md` để xác nhận done tính năng.
 ```
