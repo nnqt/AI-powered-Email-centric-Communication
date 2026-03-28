@@ -183,7 +183,7 @@ export default function ComposePage() {
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 placeholder="recipient@example.com"
-                className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-300"
+                className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-700 placeholder:font-medium"
               />
             </div>
 
@@ -197,7 +197,7 @@ export default function ComposePage() {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Email subject"
-                className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-300"
+                className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-700 placeholder:font-medium"
               />
             </div>
 

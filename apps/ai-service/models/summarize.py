@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Union
 
 
 class SummarizeMessage(BaseModel):
@@ -17,6 +17,6 @@ class SummarizeRequest(BaseModel):
 
 class SummarizeResponse(BaseModel):
     thread_id: str
-    summary: str
+    summary: Union[str, List[str]]
     key_issues: List[str]
     action_required: List[str]

@@ -86,7 +86,7 @@ export default function NewContactPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="contact@example.com"
-                  className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-300"
+                  className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-700 placeholder:font-medium"
                 />
               </div>
 
@@ -104,7 +104,7 @@ export default function NewContactPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Display name (optional)"
-                  className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-300"
+                  className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-700 placeholder:font-medium"
                 />
               </div>
 
@@ -122,7 +122,7 @@ export default function NewContactPage() {
                   value={org}
                   onChange={(e) => setOrg(e.target.value)}
                   placeholder="Acme Corp (optional)"
-                  className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-300"
+                  className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-700 placeholder:font-medium"
                 />
               </div>
             </div>

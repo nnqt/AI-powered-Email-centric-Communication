@@ -69,16 +69,52 @@
 
 - `POST /api/threads/[threadId]/summarize` → calls AI service → stored in `Thread.summary`.
 - AI output always in Vietnamese.
-- `AISummaryCard.tsx`: shows "Summarize" button when no summary; shows result with "Regenerate" link.
+- **Summary Format**:
+  - Returns timeline array: `["Hôm nay, event...", "Hôm qua, event..."]`
+  - Backward compatible with string format via Union type: `summary: Union[str, List[str]]`
+  - MongoDB schema uses `Schema.Types.Mixed` to accept both formats
+- **Frontend Display**:
+  - `AISummaryCard.tsx`: Timeline format with date groupings and left border accent
+  - Replaced emoji priority icons with colored text badges:
+    - "Cao" (High) → Red badge (`bg-red-100 text-red-700`)
+    - "Trung bình" (Medium) → Amber badge (`bg-amber-100 text-amber-700`)
+    - "Thấp" (Low) → Slate badge (`bg-slate-100 text-slate-700`)
+  - Deadline info shown with sky-blue chip (`bg-sky-100 text-sky-700`) + clock icon
+  - Helper functions: `getPriorityBadgeClass()`, `getDisplayPriority()`, `parseTimelineSummary()`
 - `SUMMARY_READY` socket event → `mutate()` refreshes card without page reload.
 
-### Smart Reply (FR-08)
+### Smart Reply (FR-08) — Studio Flow with Priority Badges
 
-- `SmartReplyBar.tsx`: format toggle (💬 Message / ✉ Email).
-  - Message format: compact chip buttons from `reply.body`.
-  - Email format: expanded cards with Subject + body preview + "Use this reply" button.
-- `handleSelectReply(reply)` → pre-fills `ComposeDrawer` with `initialBody` + `subjectOverride`.
-- Lazy-mount: API called only when user clicks "Generate suggestions".
+- Smart Reply Studio page: `/threads/[id]/smart-reply?format=email|message`
+- **Step 1 - Summary Display**:
+  - Shows timeline format matching thread detail (date-grouped blocks)
+  - "Refresh Summary" button to keep next actions up-to-date
+- **Step 2 - Context Selection**:
+  - Displays next actions with parsed priority/deadline metadata:
+    - Action text (extracted from priority/deadline wrapper)
+    - Priority badge (color-coded: Cao/Trung bình/Thấp)
+    - Deadline chip (⏰ deadline info)
+  - Checkbox UX improved: larger spacing (p-3), selected state with indigo background
+  - Additional context textarea with better placeholder visibility
+  - User context budget guard (1200 chars) with warning flash
+  - Helper function: `parseActionItem()` extracts priority/deadline using regex
+- **Step 3 - Context Preview**:
+  - Shows exact combined context before AI generation
+- **Email Generation**:
+  - `handleGenerate()` → calls `/api/threads/[threadId]/suggest-reply` with:
+    - `format` (email|message)
+    - `selectedNextActions[]` (user-selected action items)
+    - `additionalContext` (free-text user context)
+  - Backend validates context budget, returns error code `CONTEXT_BUDGET_EXCEEDED` if over limit
+- `SmartReplyBar.tsx`: Removed format selector buttons, now links to Studio page via "Open Studio"
+- Lazy-mount: API called only when user clicks "Generate suggestions" → navigates to Studio.
+
+### Thread Detail Email Display (FR-04 enhancement)
+
+- Emails now **default to collapsed** (previously expanded)
+- Collapsed header shows: From name (linkable) + relative time + subject line + body snippet (1-2 lines)
+- Users click expand button to view full email content
+- Toggle logic: `isExpanded = expandedMessages[msg._id] === true` (default false)
 
 ### AI Urgent Classification (enhancement on FR-04/FR-06)
 

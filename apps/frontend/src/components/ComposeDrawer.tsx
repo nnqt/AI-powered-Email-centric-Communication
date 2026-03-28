@@ -223,7 +223,7 @@ export function ComposeDrawer({
               value={to}
               onChange={(e) => setTo(e.target.value)}
               placeholder="recipient@example.com"
-              className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+              className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-700 placeholder:font-medium"
             />
           </div>
           <div className="flex items-center px-4 py-2">
@@ -235,7 +235,7 @@ export function ComposeDrawer({
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Subject"
-              className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+              className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-700 placeholder:font-medium"
             />
           </div>
         </div>

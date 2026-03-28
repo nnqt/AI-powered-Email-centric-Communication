@@ -24,6 +24,11 @@
 - Cursor: composite key `"${lastMessageDate.toISOString()}_${_id}"` parsed with `lastIndexOf("_")`
 - `ThreadFilter` = `"all" | "unread" | "archived" | "urgent"`
 - Search: regex on `subject`, `participants`, `snippet` (case-insensitive, escaped)
+- **Email Display Change** (March 28, 2026):
+  - Emails now default to **collapsed** (was expanded)
+  - Collapsed header shows: From name (linkable) + relative time + subject + body snippet
+  - Click expand to view full content
+  - Toggle logic: `isExpanded = expandedMessages[msg._id] === true` (default false)
 
 ### FR-05 Socket.IO Realtime
 - Custom `server.ts` wraps Next.js + Socket.IO + Redis adapter
@@ -35,9 +40,23 @@
 ### FR-07 AI Summarization
 - `POST /api/threads/[threadId]/summarize` → AI service `POST /summarize` → stored in `Thread.summary`
 - Output always in Vietnamese. Emits `SUMMARY_READY` socket event.
+- **Timeline Format** (March 28, 2026):
+  - AI returns array: `["Hôm nay, event...", "Hôm qua, event..."]` (backward compatible with string)
+  - `AISummaryCard.tsx`: Parses and groups by date with left border accent
+  - Replaced emoji priority icons with colored text badges
+  - Helper functions: `getPriorityBadgeClass()`, `getDisplayPriority()`, `parseTimelineSummary()`
+  - Priority mapping: Cao→red, Trung bình→amber, Thấp→slate
+  - Deadline shown in sky-blue chip with clock icon
 
 ### FR-08 Smart Reply
-- `SmartReplyBar.tsx` — format toggle (💬 Message / ✉ Email)
+- **UI Change** (March 28, 2026): Removed format toggle buttons from SmartReplyBar, now links to Studio
+- **Studio Flow** (`/threads/[id]/smart-reply?format=email|message`):
+  - Step 1: Display timeline-format summary (matching thread detail)
+  - Step 2: Select next actions with priority/deadline badges + add custom context
+  - Step 3: Preview combined context before generation
+  - Context budget guard: 1200 chars with warning toast
+  - Helper function: `parseActionItem()` extracts priority/deadline from action text
+- **Email Generation**: Sends `selectedNextActions[]` + `additionalContext` to backend
 - `handleSelectReply(reply)` → pre-fills `ComposeDrawer` with `initialBody` + `subjectOverride`
 
 ## Contact Management (FR-06)

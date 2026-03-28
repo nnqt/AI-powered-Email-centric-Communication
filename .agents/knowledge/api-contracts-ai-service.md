@@ -11,7 +11,7 @@ All endpoints `async`, return JSON. **No auth required** (internal service only)
 | Endpoint | FR | Input | Output |
 |----------|----|-------|--------|
 | `POST /summarize` | FR-07 | `{ thread_id, messages[] }` | `{ thread_id, summary, key_issues[], action_required[] }` |
-| `POST /suggest-reply` | FR-08 | `{ thread_id, conversation_context, latest_message, max_replies, format }` | `{ thread_id, format, replies[{ subject, body }] }` |
+| `POST /suggest-reply` | FR-08 | `{ thread_id, conversation_context, latest_message, max_replies, format, thread_intent?, sender_category?, selected_next_actions?, additional_context? }` | `{ thread_id, format, replies[{ subject, body }] }` |
 | `POST /enrich-contact` | FR-06 | `{ email, name, conversation_snippet, user_email_domain }` | `{ display_name, org, language, category_suggestion }` |
 | `POST /suggest-merge` | FR-06 | `{ contacts[{ contact_id, email, name, alternate_emails, sample_threads }] }` | `[{ source_id, target_id, confidence, reason }]` |
 | `POST /classify-urgent` | FR-04 | `{ thread_id, subject, snippet, sender_email?, sender_categories? }` | `{ thread_id, is_urgent, reason }` |
@@ -45,9 +45,24 @@ All endpoints `async`, return JSON. **No auth required** (internal service only)
 - Backend: cross-validate against MongoDB contact IDs before caching. Cap 100 contacts.
 
 ### Smart Reply Formats
-- `format: "email"` — full RFC 2822 style: greeting + body + sign-off + non-null `subject`
-- `format: "message"` — 1–3 short conversational sentences, `subject: null`
-- Fallback parser: if response not valid JSON → `[{ subject: null, body: text }]`
+
+**`format: "email"` — Action-oriented professional emails (context-aware)**
+- When `thread_intent` and/or `sender_category` provided, uses specialized prompt for better context
+- Prioritizes user-selected context from Smart Reply Studio (`selected_next_actions`, `additional_context`)
+- Style target: warm, customer-friendly language; avoid robotic heading templates
+- If key details are missing, asks for confirmation politely instead of fabricating facts
+- Optional input fields:
+  - `thread_intent`: e.g., `"complaint"`, `"inquiry"`, `"follow_up"`, `"proposal"`, `"negotiation"`
+  - `sender_category`: e.g., `"customer"`, `"vendor"`, `"colleague"`, `"supplier"`, `"manager"`
+  - `selected_next_actions`: array of actions selected by user from latest summary
+  - `additional_context`: free-text context entered by user
+
+**`format: "message"` — Conversational short replies**
+- 1–3 short conversational sentences, `subject: null`
+- No salutation or formal structure
+
+**Fallback parser:**
+- If response not valid JSON → `[{ subject: null, body: text }]`
 
 ### Thread Category Enum (22 values)
 ```

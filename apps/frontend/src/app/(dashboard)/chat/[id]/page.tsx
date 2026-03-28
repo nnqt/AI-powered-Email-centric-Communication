@@ -161,7 +161,7 @@ export default function ChatDetailPage({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 block w-full rounded-full border border-gray-300 px-4 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-50"
+            className="flex-1 block w-full rounded-full border border-gray-300 px-4 py-2 text-sm shadow-sm placeholder-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-50"
             disabled={isSending}
           />
           <button

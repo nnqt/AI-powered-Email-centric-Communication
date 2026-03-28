@@ -56,7 +56,7 @@ const THREAD_CATEGORY_VALUES: ThreadCategory[] = [
 ];
 
 export interface IThreadSummary {
-  text: string;
+  text: string | string[];
   key_issues: string[];
   action_required: string[];
 }
@@ -98,7 +98,7 @@ const ThreadSchema: Schema<IThread> = new Schema(
     participants: { type: [String], default: [] },
     subject: { type: String },
     summary: {
-      text: { type: String },
+      text: { type: Schema.Types.Mixed },
       key_issues: { type: [String], default: [] },
       action_required: { type: [String], default: [] },
     },

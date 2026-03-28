@@ -20,6 +20,7 @@ from core.prompts.summarization_prompt import (
     build_summarization_prompt,
     normalize_summarization_output,
 )
+from core.prompts.action_reply_prompt import build_action_reply_prompt
 
 
 if not GEMINI_API_KEY:
@@ -241,23 +242,32 @@ class GeminiReplyClient:
             request.conversation_context or "(No additional context provided)",
             _MAX_SNIPPET_CHARS,
         )
+        selected_next_actions_text = _truncate(
+            "\n".join(f"- {item}" for item in request.selected_next_actions)
+            or "(No selected next actions)",
+            _MAX_SNIPPET_CHARS,
+        )
+        additional_context = _truncate(
+            request.additional_context or "(No additional user context)",
+            _MAX_SNIPPET_CHARS,
+        )
         latest_text = _truncate(request.latest_message.text, _MAX_PER_MESSAGE_CHARS)
         reply_format = getattr(request, "format", "message")  # "email" or "message"
 
+        # Use action-oriented prompt for email format
         if reply_format == "email":
-            format_instruction = (
-                "Generate professional EMAIL replies in RFC 2822 style. "
-                "For EACH reply option, return a JSON object with:\n"
-                '- "subject": reply subject line (usually "Re: <original subject>")\n'
-                '- "body": full email body including greeting, content, and sign-off\n'
-            )
-            format_example = (
-                '[\n'
-                '  {"subject": "Re: Meeting", "body": "Dear Alice,\\n\\nThank you for your message...\\n\\nBest regards,\\n[Your name]"},\n'
-                '  ...\n'
-                ']'
+            prompt = build_action_reply_prompt(
+                thread_intent=request.thread_intent,
+                sender_category=request.sender_category,
+                conversation_context=context,
+                selected_next_actions_text=selected_next_actions_text,
+                additional_context=additional_context,
+                latest_message_from=request.latest_message.from_,
+                latest_message_text=latest_text,
+                max_replies=request.max_replies,
             )
         else:
+            # Original message format prompt
             format_instruction = (
                 "Generate short, conversational message replies. "
                 "For EACH reply option, return a JSON object with:\n"
@@ -271,18 +281,18 @@ class GeminiReplyClient:
                 ']'
             )
 
-        prompt = (
-            "You are an AI assistant generating reply suggestions for an email thread. "
-            f"{_LANG_INSTRUCTION}\n\n"
-            f"{format_instruction}"
-            f"Return a JSON array of exactly {request.max_replies} reply objects. "
-            f"Example format:\n{format_example}\n\n"
-            "Return ONLY a valid JSON array, no markdown, no extra text.\n\n"
-            f"Thread ID: {request.thread_id}\n"
-            f"Conversation context: {context}\n\n"
-            "Latest message to reply to:\n"
-            f"From: {request.latest_message.from_}\nText: {latest_text}\n"
-        )
+            prompt = (
+                "You are an AI assistant generating reply suggestions for an email thread. "
+                f"{_LANG_INSTRUCTION}\n\n"
+                f"{format_instruction}"
+                f"Return a JSON array of exactly {request.max_replies} reply objects. "
+                f"Example format:\n{format_example}\n\n"
+                "Return ONLY a valid JSON array, no markdown, no extra text.\n\n"
+                f"Thread ID: {request.thread_id}\n"
+                f"Conversation context: {context}\n\n"
+                "Latest message to reply to:\n"
+                f"From: {request.latest_message.from_}\nText: {latest_text}\n"
+            )
 
         try:
             text = await _gemini_with_retry(prompt)

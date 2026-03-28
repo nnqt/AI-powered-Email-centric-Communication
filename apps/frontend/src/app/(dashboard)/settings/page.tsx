@@ -124,7 +124,7 @@ export default function SettingsPage() {
                   value={inputPhone}
                   onChange={(e) => setInputPhone(e.target.value)}
                   placeholder="+1234567890"
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm placeholder-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
                   disabled={loading}
                 />
                 <button

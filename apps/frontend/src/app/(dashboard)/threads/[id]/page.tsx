@@ -9,7 +9,7 @@ import { useSession } from "next-auth/react";
 import { useThreadDetail } from "@/hooks/useThreadDetail";
 import { AISummaryCard } from "@/components/AISummaryCard";
 import { ComposeDrawer } from "@/components/ComposeDrawer";
-import { SmartReplyBar, ReplyItem } from "@/components/SmartReplyBar";
+import { SmartReplyBar } from "@/components/SmartReplyBar";
 import { useSocket } from "@/hooks/useSocket";
 import apiClient from "@/lib/api";
 
@@ -37,6 +37,7 @@ export default function ThreadDetailPage() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [initialBody, setInitialBody] = useState("");
   const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
+  const [expandedMessages, setExpandedMessages] = useState<Record<string, boolean>>({});
 
   // Realtime: refresh thread detail when AI finishes summarizing this thread
   useSocket(userId, {
@@ -73,12 +74,6 @@ export default function ThreadDetailPage() {
   const handleOpenReply = (prefillBody = "") => {
     setInitialBody(prefillBody);
     setSubjectOverride(null);
-    setComposeOpen(true);
-  };
-
-  const handleSelectReply = (reply: ReplyItem) => {
-    setInitialBody(reply.body);
-    setSubjectOverride(reply.subject ?? null);
     setComposeOpen(true);
   };
 
@@ -179,72 +174,140 @@ export default function ThreadDetailPage() {
           isGenerating={isGenerating}
         />
 
-        <SmartReplyBar threadId={threadId} onSelect={handleSelectReply} />
+        <SmartReplyBar threadId={threadId} />
 
-        <section className="thread-detail__messages space-y-4">
-          {messages?.map((msg) => (
-            <article
-              key={msg._id}
-              className="thread-detail__message rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-            >
-              <div className="thread-detail__message-meta mb-2 flex items-center justify-between">
-                {(() => {
-                  const emailMatch = msg.from?.match(/[^\s<>]+@[^\s<>]+/);
-                  const fromEmail = emailMatch?.[0];
-                  const fromName =
-                    msg.from?.replace(/<[^>]*>/, "").trim() ||
-                    msg.from ||
-                    "Unknown Sender";
-                  return fromEmail ? (
-                    <Link
-                      href={`/contacts?q=${encodeURIComponent(fromEmail)}`}
-                      className="text-sm font-medium text-indigo-700 hover:underline"
-                    >
-                      {fromName}
-                    </Link>
-                  ) : (
-                    <span className="text-sm font-medium text-gray-800">
-                      {fromName}
-                    </span>
-                  );
-                })()}
-                <span className="text-xs text-gray-500">
-                  {msg.date
-                    ? formatDistanceToNow(new Date(msg.date), {
-                        addSuffix: true,
-                      })
-                    : ""}
-                </span>
-              </div>
-              {msg.to && msg.to.length > 0 && (
-                <p className="mb-2 text-xs text-gray-500">
-                  To: {msg.to.join(", ")}
-                </p>
-              )}
-              {(() => {
-                const normalizedContent = normalizeMessageBody(
-                  msg.body || msg.snippet || "",
-                );
-
-                if (!looksLikeHtml(normalizedContent)) {
-                  return (
-                    <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">
-                      {normalizedContent}
+        <section className="thread-detail__messages space-y-2">
+          {messages?.map((msg, msgIdx) => {
+            const isExpanded = expandedMessages[msg._id] === true; // Default collapsed
+            const emailMatch = msg.from?.match(/[^\s<>]+@[^\s<>]+/);
+            const fromEmail = emailMatch?.[0];
+            const fromName =
+              msg.from?.replace(/<[^>]*>/, "").trim() ||
+              msg.from ||
+              "Unknown Sender";
+            const toDisplay = msg.to?.slice(0, 1).join(", ") || "";
+            const toText = msg.to && msg.to.length > 1 ? `to ${msg.to.length} recipients` : `to ${toDisplay}`;
+            return (
+              <article
+                key={msg._id}
+                className="thread-detail__message rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden"
+              >
+                {/* Collapsible header */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedMessages((prev) => ({
+                      ...prev,
+                      [msg._id]: !prev[msg._id],
+                    }))
+                  }
+                  className="w-full flex items-start justify-between gap-4 p-4 hover:bg-gray-50 transition-colors text-left"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <svg
+                        className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                      {fromEmail ? (
+                        <Link
+                          href={`/contacts?q=${encodeURIComponent(fromEmail)}`}
+                          className="text-sm font-medium text-indigo-700 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {fromName}
+                        </Link>
+                      ) : (
+                        <span className="text-sm font-medium text-gray-800">
+                          {fromName}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-500">
+                        {msg.date
+                          ? formatDistanceToNow(new Date(msg.date), {
+                              addSuffix: true,
+                            })
+                          : ""}
+                      </span>
                     </div>
-                  );
-                }
+                    {!isExpanded && (
+                      <>
+                        <p className="text-xs text-gray-500 mb-1">{toText}</p>
+                        {msg.subject && (
+                          <p className="text-xs font-medium text-gray-700 truncate mb-1">
+                            {msg.subject}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-600 line-clamp-1">
+                          {msg.body || msg.snippet || "(No content)"}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </button>
 
-                return (
-                  <div
-                    className="prose prose-sm max-w-none text-gray-700"
-                    dangerouslySetInnerHTML={{
-                      __html: normalizedContent,
-                    }}
-                  />
-                );
-              })()}
-            </article>
-          ))}
+                {/* Expanded content */}
+                {isExpanded && (
+                  <div className="border-t border-gray-200 p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        {msg.to && msg.to.length > 0 && (
+                          <p className="mb-1 text-xs text-gray-500">
+                            To: {msg.to.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedMessages((prev) => ({
+                            ...prev,
+                            [msg._id]: false,
+                          }))
+                        }
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                      >
+                        ▲ Collapse
+                      </button>
+                    </div>
+                    {(() => {
+                      const normalizedContent = normalizeMessageBody(
+                        msg.body || msg.snippet || "",
+                      );
+
+                      if (!looksLikeHtml(normalizedContent)) {
+                        return (
+                          <div className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">
+                            {normalizedContent}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          className="prose prose-sm max-w-none text-gray-700"
+                          dangerouslySetInnerHTML={{
+                            __html: normalizedContent,
+                          }}
+                        />
+                      );
+                    })()}
+                  </div>
+                )}
+              </article>
+            );
+          })}
         </section>
       </div>
 

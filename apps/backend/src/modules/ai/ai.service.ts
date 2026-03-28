@@ -18,7 +18,7 @@ interface SummarizeRequest {
 
 interface SummarizeResponse {
   thread_id: string;
-  summary: string;
+  summary: string | string[];
   key_issues: string[];
   action_required: string[];
 }
@@ -33,6 +33,10 @@ interface SuggestReplyRequest {
   };
   max_replies: number;
   format?: "email" | "message";
+  thread_intent?: string;
+  sender_category?: string;
+  selected_next_actions?: string[];
+  additional_context?: string;
 }
 
 interface ReplyItem {
@@ -134,6 +138,10 @@ export class AIService {
     context?: string,
     maxReplies = 3,
     format: "email" | "message" = "message",
+    threadIntent?: string,
+    senderCategory?: string,
+    selectedNextActions?: string[],
+    additionalContext?: string,
   ): Promise<{ format: string; replies: ReplyItem[] }> {
     const payload: SuggestReplyRequest = {
       thread_id: threadId,
@@ -145,6 +153,10 @@ export class AIService {
       },
       max_replies: maxReplies,
       format,
+      thread_intent: threadIntent,
+      sender_category: senderCategory,
+      selected_next_actions: selectedNextActions,
+      additional_context: additionalContext,
     };
 
     try {

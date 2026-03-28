@@ -10,63 +10,95 @@
 | FR-04 | Inbox + Thread timeline + pagination             | ✅                                           |
 | FR-05 | Real-time UI (Socket.IO)                         | ✅                                           |
 | FR-06 | Contact management (enrich + merge + categories) | ✅                                           |
-| FR-07 | Thread AI summarization (Vietnamese)             | ✅                                           |
-| FR-08 | Smart reply suggestions                          | ✅                                           |
+| FR-07 | Thread AI summarization (Vietnamese)             | ✅ Timeline format + colored badges           |
+| FR-08 | Smart reply suggestions                          | ✅ Studio flow + priority badges              |
 | FR-09 | Multi-channel Telegram (Phases 1–5)              | ✅                                           |
 | FR-10 | Topic Intelligence (Phases 1–6)                  | ✅                                           |
 
-## Recent Bug Fixes (March 28, 2026)
+## Latest Updates (March 28, 2026 - UX Timeline & Badges)
 
-| Bug                                                       | Fix                                                                                              |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `GET /api/telegram/chats` returned `[]` (no initial sync) | Added `syncDialogs(userId)` in `telegramManager.ts`; route triggers on empty DB                  |
-| Chat messages empty when opening chat                     | Added `syncChatHistory(userId, chatId)`; `GET /api/telegram/chats/[chatId]` triggers on empty DB |
-| Contact detail "Contact not found" — missing route        | Created `api/contacts/[id]/route.ts` with GET + PATCH handlers                                   |
-| Frontend build failed at `ThreadList.tsx` with `Unexpected token {` | Removed misplaced JSX from `useThreads` destructuring and rendered `[MOCK]` badge inside thread row JSX |
-| Sandbox menu missing on localhost in non-dev mode         | Replaced strict `NODE_ENV === "development"` gate with `NEXT_PUBLIC_ENABLE_SANDBOX_UI=true` or dev-mode gate in frontend layout/page |
-| Sandbox controls unavailable in Docker local run          | Added `NEXT_PUBLIC_ENABLE_SANDBOX_UI=true` build arg for frontend and `ENABLE_SANDBOX_API=true` runtime env for backend in `infra/docker-compose.yml` |
-| `ENOENT` loading sandbox scenario JSON in backend runtime | Switched scenario route to static JSON import (no runtime fs path dependency) and expanded angry-customer data to a long multi-message thread |
-| Sandbox could only inject one hardcoded scenario          | Added scenario registry + list API (`GET /api/sandbox/scenarios`) + slug API (`GET /api/sandbox/scenarios/:slug`) and updated frontend Sandbox page with scenario dropdown |
-| Scenario content/docs not localized                        | Translated built-in scenario datasets and metadata to Vietnamese; updated sandbox markdown docs for multi-scenario endpoints and new UI flow |
-| Smart Reply test lacked interrupted unresolved context     | Reworked built-in scenarios into professional 4-email interrupted threads ending with unresolved customer request that requires immediate reply |
-| Summary output too long and next action unclear            | Refined summarization prompt with strict 2-3 sentence summary, executable action format (priority/owner/deadline) and refactored prompt logic into `core/prompts/summarization_prompt.py` |
-| Thread detail summary/actions hard to scan                 | Upgraded `AISummaryCard` action UI to parse metadata into chips (Priority/Owner/Deadline) and replaced fragile checkbox character with SVG icon |
-| Mock email bodies showed literal `\\n` on detail page      | Added message body normalization and safe plain-text rendering (`whitespace-pre-wrap`) in thread detail page while preserving HTML rendering path |
+### FR-07 AI Summarization — Timeline Format with Badges
+- **Summary Display Redesign**:
+  - AI now returns timeline array: `["Hôm nay, event...", "Hôm qua, event..."]`
+  - `AISummaryCard.tsx` parses and groups timeline entries by date with left border accent
+  - Removed paragraph format; replaced with date-grouped timeline blocks
+  - Clean visual hierarchy with bullet points per date entry
 
-## Active Tech Debt / Known Limitations
+- **Priority Badge System** (replaces emoji icons):
+  - Priority mapping: "Cao" (High) → Red badge, "Trung bình" (Medium) → Amber badge, "Thấp" (Low) → Slate badge
+  - Deadline chip: sky-blue with clock icon
+  - Applied to: Summary action items + Smart Reply Studio next actions
+  - Functions: `getPriorityBadgeClass()` → Tailwind classes, `getDisplayPriority()` → Vietnamese labels
 
-- Gmail webhook (Pub/Sub) not implemented — manual sync only
-- Telegram `syncDialogs` fetches last 50 dialogs; no pagination
-- `syncChatHistory` fetches last 50 messages; no infinite scroll yet
+- **Backend Compatibility**:
+  - `summarization_prompt.py`: Updated "Trung" → "Trung bình" in examples
+  - `normalize_summarization_output()`: Preserves array format (not converted to string)
+  - `SummarizeResponse` Pydantic model: `summary: Union[str, List[str]]` (backward compatible)
+  - MongoDB schema: `summary.text: Schema.Types.Mixed` accepts both string and array formats
+  - `Thread.summary` interface updated: `text: string | string[]`
 
-## Recent Updates (March 17, 2026 - Sandbox Phase 1)
+### FR-08 Smart Reply Studio — Enhanced Context Selection
+- **Step 1 - Summary Display**:
+  - Shows timeline format matching thread detail, not plain text
+  - Grouped by date with visual indentation
 
-- Added `isMock` field (default `false`) to models: Thread, Message, Contact, Topic, TelegramChat, TelegramMessage.
-- Added guard in Gmail send flow: replying to mock thread now skips Google API and stores only local mock message.
-- Added guard in Telegram send flow: mock chats/messages now skip MTProto send and store local mock message only.
-- Added API `DELETE /api/sandbox/clear` to remove all mock data for current user across 6 collections.
+- **Step 2 - Next Actions with Badges**:
+  - Each action checkbox displays:
+    - Extracted action text (without priority/deadline wrapper)
+    - Priority badge (Cao/Trung bình/Thấp with color)
+    - Deadline chip (⏰ deadline info)
+  - Checkbox UX improved: larger p-3 spacing, selected state with indigo background
+  - Functions: `parseActionItem()` extracts priority/deadline using regex pattern
 
-## Recent Updates (March 17, 2026 - Sandbox Phase 2)
+- **Placeholder Text Improvement**:
+  - Textarea: `text-black` default + `placeholder-gray-500 placeholder:font-medium` for better visibility
 
-- Added sandbox payload type definitions in `apps/backend/src/types/sandbox.ts`.
-- Added API `POST /api/sandbox/inject` at `apps/backend/src/app/api/sandbox/inject/route.ts`.
-- Injector now validates session user id, inserts mock Contact -> Thread -> Message with `isMock: true`, and backdated message dates for sorting tests.
-- Injector emits `EMAIL_SYNCED` to refresh frontend inbox and triggers `SUMMARY_READY` per injected thread after AI summarize call.
-- Injector triggers Topic Intelligence pipeline (`cluster -> label -> score`) for injected mock threads.
-- Added sample scenario file `apps/backend/src/lib/mock-data/scenario-angry-customer.json`.
+### FR-04 Thread Detail — Default Collapsed Emails
+- Emails now **collapsed by default** instead of expanded
+- Changed logic: `isExpanded = expandedMessages[msg._id] === true` (default false)
+- Users click to expand and view full content
+- Collapsed header shows: From name (linkable) + relative time + subject + body snippet
 
-## Recent Updates (March 17, 2026 - Sandbox Phase 3)
+## Affected Files (March 28, 2026 - UX Timeline & Badges)
 
-- Added dev-only dashboard page at `apps/frontend/src/app/(dashboard)/dev/sandbox/page.tsx`.
-- Sandbox page includes:
-  - "Load Selected Scenario" action (`POST /api/sandbox/inject`).
-  - "Clear All Sandbox Data" button (`DELETE /api/sandbox/clear`).
-  - "Fake Webhook" form to inject one inbound mock email instantly.
-- Added loading states and Toast feedback for all sandbox actions via `apiClient` from `lib/api.ts`.
-- Added `[MOCK]` badges in UI:
-  - Thread rows in `features/inbox/ThreadList.tsx` when `thread.isMock === true`.
-  - Contact rows in `app/(dashboard)/contacts/page.tsx` when `contact.isMock === true`.
-- Extended frontend DTOs (`useThreads.ts`, `useContacts.ts`) with optional `isMock` field.
+| File | Changes | Impact |
+|------|---------|--------|
+| `apps/frontend/src/components/AISummaryCard.tsx` | Added timeline parsing, replaced emoji with colored badges, new helper functions | FR-07 summary display |
+| `apps/ai-service/core/prompts/summarization_prompt.py` | Updated "Trung" → "Trung bình", emphasized "must be exactly" for priority values | AI prompt accuracy |
+| `apps/ai-service/models/summarize.py` | `summary: Union[str, List[str]]` | Allow array format from AI |
+| `apps/backend/src/models/Thread.ts` | `IThreadSummary.text: string \| string[]`, `schema.text: Schema.Types.Mixed` | Support both formats in DB |
+| `apps/backend/src/modules/ai/ai.service.ts` | `SummarizeResponse.summary: string \| string[]` | Type compatibility |
+| `apps/backend/src/app/api/threads/[threadId]/suggest-reply/route.ts` | Added array-to-string join for timeline in context builder | Handle new format |
+| `apps/frontend/src/app/(dashboard)/threads/[id]/smart-reply/page.tsx` | Added timeline parsing, priority badges, action item parsing | Studio Step 1 & 2 display |
+| `apps/frontend/src/app/(dashboard)/threads/[id]/page.tsx` | Changed default collapse: `isExpanded === true` (was `!== false`) | Email default collapsed |
+
+## Data Model Updates
+
+### Thread Summary Format
+- **Old format** (string): `"Alex requested update on AC-1042, support acknowledged within 4h..."`
+- **New format** (array): `["Hôm nay sáng, Alex thông báo AC-1042 trễ 3 ngày", "Hôm nay 8:57, Support phản hồi..."]`
+- **Migration**: Automatic via Union type + parseTimelineSummary() fallback
+
+### Action Item Format
+- **Unchanged** but now parsed and styled with badges
+- Format: `"Action text (Priority | Deadline)"` → extracted and colored separately
+
+## Known Limitations / Next Steps
+
+- Timeline grouping relies on date parsing from AI response (format must include date label)
+- If AI returns array without date markers, falls back to "Summary" grouping
+- No UI yet for users to manually edit summary or next actions
+
+---
+
+## Recent Bug Fixes Previously (March 28, 2026)
+
+| Bug | Fix | Date |
+|-----|-----|------|
+| Pydantic validation error: summary as array not string | Updated SummarizeResponse to Union[str, List[str]] | 28-Mar |
+| MongoDB schema cast error for array summary | Changed summary.text to Schema.Types.Mixed | 28-Mar |
+| TypeScript type mismatch in suggest-reply context | Added array-to-string join logic | 28-Mar |
+| Summary parsing in suggest-reply route | Handles both string and array formats | 28-Mar |
 
 ## Recent Updates (March 17, 2026 - Sandbox Hardening)
 

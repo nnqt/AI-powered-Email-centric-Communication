@@ -1,16 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import { ThreadSummary } from "@/hooks/useThreads";
 
 interface ParsedAction {
   priority?: string;
-  owner?: string;
   deadline?: string;
   action: string;
 }
 
+interface TimelineEntry {
+  date: string;
+  points: string[];
+}
+
+// Parse natural language format: "action text (Priority | deadline)"
 const ACTION_META_PATTERN =
-  /^\s*\[Priority:\s*([^\]]+)\]\s*\[Owner:\s*([^\]]+)\]\s*\[Deadline:\s*([^\]]+)\]\s*(.+)$/i;
+  /^(.+?)\s*\(([^|]+)\s*\|\s*([^)]+)\)\s*$/i;
 
 function parseActionItem(raw: string): ParsedAction {
   const normalized = raw.trim();
@@ -21,22 +27,53 @@ function parseActionItem(raw: string): ParsedAction {
   }
 
   return {
-    priority: match[1].trim(),
-    owner: match[2].trim(),
+    action: match[1].trim(),
+    priority: match[2].trim(),
     deadline: match[3].trim(),
-    action: match[4].trim(),
   };
 }
 
-function getPriorityClass(priority?: string): string {
+function getPriorityBadgeClass(priority?: string): string {
   const value = (priority || "").toLowerCase();
   if (value.includes("cao")) {
-    return "bg-red-50 text-red-700 border border-red-200";
+    return "bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full text-xs font-medium";
   }
   if (value.includes("trung")) {
-    return "bg-amber-50 text-amber-700 border border-amber-200";
+    return "bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full text-xs font-medium";
   }
-  return "bg-slate-100 text-slate-700 border border-slate-200";
+  return "bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-full text-xs font-medium";
+}
+
+function getDisplayPriority(priority?: string): string {
+  const value = (priority || "").toLowerCase();
+  if (value.includes("cao")) return "Cao";
+  if (value.includes("trung")) return "Trung bình";
+  return "Thấp";
+}
+
+function parseTimelineSummary(summary: any): TimelineEntry[] {
+  if (typeof summary === "string") {
+    // Fallback: old format
+    return [{ date: "Summary", points: [summary] }];
+  }
+  if (Array.isArray(summary)) {
+    // New timeline format: ["Hôm nay sáng, point 1", "Hôm nay chiều, point 2", "Hôm qua, point 3"]
+    const entries: Record<string, string[]> = {};
+    summary.forEach((point: string) => {
+      const match = point.match(/^([^,]+),\s*(.+)$/);
+      if (match) {
+        const date = match[1].trim();
+        const content = match[2].trim();
+        if (!entries[date]) entries[date] = [];
+        entries[date].push(content);
+      } else {
+        if (!entries["Summary"]) entries["Summary"] = [];
+        entries["Summary"].push(point);
+      }
+    });
+    return Object.entries(entries).map(([date, points]) => ({ date, points }));
+  }
+  return [{ date: "Summary", points: [] }];
 }
 
 interface AISummaryCardProps {
@@ -50,6 +87,7 @@ export function AISummaryCard({
   onGenerate,
   isGenerating,
 }: AISummaryCardProps) {
+  const [collapsed, setCollapsed] = useState(!summary?.text);
   if (isGenerating) {
     return (
       <div className="ai-summary-card ai-summary-card--loading mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
@@ -97,21 +135,71 @@ export function AISummaryCard({
     );
   }
 
+  // Return collapsed view when collapsed
+  if (collapsed) {
+    return (
+      <div className="ai-summary-card ai-summary-card--collapsed mb-4">
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="flex w-full items-center justify-between rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-medium text-purple-800 transition hover:bg-purple-100"
+        >
+          <span className="flex items-center gap-2">
+            <span>✨</span>
+            View AI Summary
+          </span>
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="ai-summary-card mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
       <div className="ai-summary-card__header mb-2 flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-purple-800">
           <span>✨</span> AI Summary
         </h3>
-        <button
-          type="button"
-          onClick={onGenerate}
-          className="ai-summary-card__regenerate text-xs text-purple-600 hover:text-purple-800 hover:underline"
-        >
-          Regenerate
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onGenerate}
+            className="ai-summary-card__regenerate text-xs text-purple-600 hover:text-purple-800 hover:underline"
+          >
+            Regenerate
+          </button>
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            className="text-xs text-purple-600 hover:text-purple-800"
+            aria-label="Collapse summary"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
-      <p className="mb-3 text-sm text-gray-700">{summary.text}</p>
+      {/* Timeline view */}
+      {(() => {
+        const timeline = parseTimelineSummary(summary.text);
+        return (
+          <div className="mb-3 space-y-2">
+            {timeline.map((entry, idx) => (
+              <div key={idx} className="border-l-2 border-purple-300 pl-3">
+                <p className="text-xs font-semibold text-purple-700">{entry.date}</p>
+                <ul className="space-y-1 text-sm text-gray-700">
+                  {entry.points.map((point, pidx) => (
+                    <li key={pidx} className="list-disc list-inside">{point}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {summary.key_issues.length > 0 && (
         <div className="ai-summary-card__key-issues mb-3">
@@ -159,30 +247,29 @@ export function AISummaryCard({
                         />
                       </svg>
                       <div className="flex-1 space-y-1">
-                        {(parsed.priority || parsed.owner || parsed.deadline) && (
-                          <div className="flex flex-wrap gap-1.5 text-xs">
-                            {parsed.priority && (
-                              <span
-                                className={`rounded-full px-2 py-0.5 font-medium ${getPriorityClass(parsed.priority)}`}
-                              >
-                                Priority: {parsed.priority}
-                              </span>
-                            )}
-                            {parsed.owner && (
-                              <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-medium text-indigo-700">
-                                Owner: {parsed.owner}
-                              </span>
-                            )}
-                            {parsed.deadline && (
-                              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 font-medium text-sky-700">
-                                Deadline: {parsed.deadline}
-                              </span>
-                            )}
-                          </div>
+                        {parsed.priority || parsed.deadline ? (
+                          <>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {parsed.priority && (
+                                <span className={getPriorityBadgeClass(parsed.priority)}>
+                                  {getDisplayPriority(parsed.priority)}
+                                </span>
+                              )}
+                              {parsed.deadline && (
+                                <span className="bg-sky-100 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full text-xs font-medium">
+                                  ⏰ {parsed.deadline}
+                                </span>
+                              )}
+                            </div>
+                            <p className="leading-relaxed text-gray-700">
+                              {parsed.action}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="leading-relaxed text-gray-700">
+                            {parsed.action}
+                          </p>
                         )}
-                        <p className="leading-relaxed text-gray-700">
-                          {parsed.action}
-                        </p>
                       </div>
                     </div>
                   );
