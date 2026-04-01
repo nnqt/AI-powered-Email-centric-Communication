@@ -4,6 +4,7 @@ import { connectToDatabase } from "@/lib/db";
 import { Thread, IThread } from "@/models/Thread";
 import { Topic, ITopic } from "@/models/Topic";
 import { Contact, IContact } from "@/models/Contact";
+import { TelegramMessage } from "@/models/TelegramMessage";
 import { User } from "@/models/User";
 import { AIService } from "@/modules/ai/ai.service";
 
@@ -11,6 +12,134 @@ import { AIService } from "@/modules/ai/ai.service";
 
 // Prefixes to strip before comparing subjects (case-insensitive).
 const _SUBJECT_PREFIX_RE = /^(re|fwd?|fw|tr|r|sv|antw|aw|rép|enc):\s*/i;
+const _TOKEN_SPLIT_RE = /[^a-z0-9]+/i;
+const _REFERENCE_CODE_RE = /\b([a-z]{1,6}-\d{1,8})\b/gi;
+
+const _STOP_WORDS = new Set([
+  "va",
+  "voi",
+  "cho",
+  "cua",
+  "tren",
+  "duoi",
+  "trong",
+  "ngoai",
+  "nhung",
+  "nhung",
+  "the",
+  "la",
+  "mot",
+  "cac",
+  "anh",
+  "chi",
+  "team",
+  "gui",
+  "cap",
+  "nhat",
+  "thong",
+  "nhat",
+  "ke",
+  "hoach",
+  "dot",
+  "sau",
+  "truoc",
+  "today",
+  "tomorrow",
+  "re",
+  "fwd",
+  "fw",
+]);
+
+function _stripDiacritics(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function _normalizeForKey(value: string): string {
+  return _stripDiacritics(value.toLowerCase())
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function _extractKeyTokens(value: string): string[] {
+  return _normalizeForKey(value)
+    .split(_TOKEN_SPLIT_RE)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3 && !_STOP_WORDS.has(t));
+}
+
+function _extractReferenceCodes(value: string): string[] {
+  const normalized = _stripDiacritics(value.toLowerCase());
+  const matches = normalized.match(_REFERENCE_CODE_RE) ?? [];
+  return Array.from(new Set(matches.map((code) => code.trim()))).slice(0, 5);
+}
+
+function _deriveClusterKey(thread: IThread): string | undefined {
+  const normalizedSubject = normalizeSubject(thread.subject ?? "");
+  const summaryText = Array.isArray(thread.summary?.text)
+    ? thread.summary?.text.join(" ")
+    : (thread.summary?.text ?? "");
+  const sourceText = [normalizedSubject, thread.snippet ?? "", summaryText]
+    .filter(Boolean)
+    .join(" ");
+
+  const tokens = _extractKeyTokens(sourceText);
+  if (tokens.length === 0) return undefined;
+
+  const tokenSet = new Set(tokens);
+  const dimensions: string[] = [];
+
+  if (tokenSet.has("crm")) dimensions.push("crm");
+  if (tokenSet.has("erp")) dimensions.push("erp");
+  if (tokenSet.has("uat") || tokenSet.has("release") || tokenSet.has("backlog")) {
+    dimensions.push("delivery");
+  }
+  if (
+    tokenSet.has("pham") ||
+    tokenSet.has("scope") ||
+    tokenSet.has("module") ||
+    tokenSet.has("ban") ||
+    tokenSet.has("giao")
+  ) {
+    dimensions.push("scope");
+  }
+
+  if (dimensions.length > 0) {
+    return `h:${dimensions.join("-")}`;
+  }
+
+  const top = Array.from(new Set(tokens)).sort().slice(0, 3);
+  return top.length > 0 ? `h:${top.join("-")}` : undefined;
+}
+
+function _collectBusinessMarkers(threadOrTopic: {
+  subject?: string;
+  snippet?: string;
+  summaryText?: string;
+  threadSubjects?: string[];
+  threadCategories?: string[];
+  clusterKey?: string;
+}): string[] {
+  const pool = [
+    threadOrTopic.subject ?? "",
+    threadOrTopic.snippet ?? "",
+    threadOrTopic.summaryText ?? "",
+    ...(threadOrTopic.threadSubjects ?? []),
+    ...(threadOrTopic.threadCategories ?? []),
+    threadOrTopic.clusterKey ?? "",
+  ]
+    .join(" ")
+    .trim();
+
+  if (!pool) return [];
+
+  const refs = _extractReferenceCodes(pool).map((code) => `ref:${code}`);
+  const keyTokens = _extractKeyTokens(pool)
+    .slice(0, 12)
+    .map((token) => `kw:${token}`);
+
+  return Array.from(new Set([...refs, ...keyTokens])).slice(0, 20);
+}
 
 /**
  * Strip reply/forward prefixes (handles multi-level "Re: Re: ...")
@@ -104,6 +233,13 @@ export interface FocusTopicDTO extends TopicDTO {
   };
 }
 
+export interface FocusOverviewDTO {
+  totalFocusTopics: number;
+  highPriorityCount: number;
+  topFocusScore: number;
+  lastScoredAt?: string;
+}
+
 function toTopicDTO(t: ITopic): TopicDTO {
   const doc = t as any;
   return {
@@ -195,8 +331,8 @@ export class TopicService {
   async clusterThreadsIntoTopics(
     userId: string,
     threadDocIds: (mongoose.Types.ObjectId | string)[],
-  ): Promise<void> {
-    if (threadDocIds.length === 0) return;
+  ): Promise<string[]> {
+    if (threadDocIds.length === 0) return [];
     await connectToDatabase();
 
     const userObjectId = new mongoose.Types.ObjectId(userId);
@@ -217,7 +353,7 @@ export class TopicService {
       topicId: { $exists: false },
     }).lean();
 
-    if (threads.length === 0) return;
+    if (threads.length === 0) return [];
 
     // Build set of contact emails we need to look up
     const emailSet = new Set<string>();
@@ -257,8 +393,18 @@ export class TopicService {
     }
 
     // Process each thread sequentially to avoid race conditions on topic creation
+    const touchedContactIds = new Set<string>();
     for (const thread of threads) {
       try {
+        const contactEmail = this._primaryContactEmail(
+          thread.participants ?? [],
+          userEmail,
+        );
+        const contact = contactEmail ? contactsRaw[contactEmail] : undefined;
+        if (contact?._id) {
+          touchedContactIds.add(contact._id.toString());
+        }
+
         await this._assignThread(
           thread as unknown as IThread,
           userObjectId,
@@ -268,6 +414,180 @@ export class TopicService {
         );
       } catch (err: any) {
         console.warn("[topic.service] _assignThread error:", err.message);
+      }
+    }
+
+    if (touchedContactIds.size > 0) {
+      await this.mergeLikelyTopicsForUser(userId, Array.from(touchedContactIds));
+    }
+
+    return Array.from(touchedContactIds);
+  }
+
+  async mergeLikelyTopicsForUser(
+    userId: string,
+    contactIds?: string[],
+  ): Promise<void> {
+    await connectToDatabase();
+
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const match: Record<string, any> = { userId: userObjectId };
+
+    if (contactIds && contactIds.length > 0) {
+      match.contactId = {
+        $in: contactIds.map((id) => new mongoose.Types.ObjectId(id)),
+      };
+    }
+
+    const rows = await Topic.aggregate([
+      { $match: match },
+      { $group: { _id: "$contactId", count: { $sum: 1 } } },
+      { $match: { count: { $gt: 1 } } },
+    ]);
+
+    for (const row of rows) {
+      await this._mergeLikelyTopicsForContact(userObjectId, row._id);
+    }
+  }
+
+  async aiConsolidateTopicsForContacts(
+    userId: string,
+    contactIds?: string[],
+    minConfidence = 0.8,
+  ): Promise<void> {
+    await connectToDatabase();
+
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const match: Record<string, any> = { userId: userObjectId };
+
+    if (contactIds && contactIds.length > 0) {
+      match._id = { $in: contactIds.map((id) => new mongoose.Types.ObjectId(id)) };
+    }
+
+    const contacts = await Contact.find(match)
+      .select("_id name email telegramId")
+      .lean<any[]>();
+
+    for (const contact of contacts) {
+      const topics = await Topic.find({
+        userId: userObjectId,
+        contactId: contact._id,
+      })
+        .sort({ createdAt: 1 })
+        .lean<any[]>();
+
+      if (topics.length < 1) continue;
+
+      const allThreadIds = topics.flatMap((t) => (t.threadIds ?? []).map((id: any) => new mongoose.Types.ObjectId(id)));
+      const threads = await Thread.find({ _id: { $in: allThreadIds } })
+        .select("_id subject snippet summary categories")
+        .lean<any[]>();
+      const threadMap = new Map(threads.map((t: any) => [t._id.toString(), t]));
+
+      const recentTelegramMessages = contact.telegramId
+        ? await TelegramMessage.find({
+            userId: userObjectId,
+            $or: [{ senderId: contact.telegramId }, { chatId: contact.telegramId }],
+          })
+            .sort({ date: -1 })
+            .limit(20)
+            .select("text")
+            .lean<any[]>()
+        : [];
+
+      const telegramMessageTexts = recentTelegramMessages
+        .map((m: any) => this._truncateTopicContext((m.text || "").trim(), 220))
+        .filter(Boolean)
+        .slice(0, 10);
+
+      const candidates = topics.map((topic) => {
+        const topicThreads = (topic.threadIds ?? [])
+          .map((id: any) => threadMap.get(id.toString()))
+          .filter(Boolean);
+
+        const threadSummaries = topicThreads
+          .map((t: any) => {
+            const text = t?.summary?.text;
+            if (Array.isArray(text)) return text.join(" ");
+            return typeof text === "string" ? text : "";
+          })
+          .map((text: string) => this._truncateTopicContext(text, 900))
+          .filter(Boolean);
+
+        const threadKeyIssues = topicThreads
+          .flatMap((t: any) => (Array.isArray(t?.summary?.key_issues) ? t.summary.key_issues : []))
+          .map((text: string) => this._truncateTopicContext(text, 220))
+          .filter(Boolean)
+          .slice(0, 20);
+
+        const threadActionRequired = topicThreads
+          .flatMap((t: any) => (Array.isArray(t?.summary?.action_required) ? t.summary.action_required : []))
+          .map((text: string) => this._truncateTopicContext(text, 220))
+          .filter(Boolean)
+          .slice(0, 20);
+
+        const threadCategories: string[] = Array.from(
+          new Set<string>(
+            topicThreads.flatMap((t: any) =>
+              Array.isArray(t?.categories)
+                ? (t.categories as unknown[])
+                    .filter((c): c is string => typeof c === "string")
+                : [],
+            ),
+          ),
+        ).slice(0, 20);
+
+        const telegramInsights = (topic.chatInsights ?? [])
+          .map((ins: any) => this._truncateTopicContext(`${ins.intent}: ${ins.summary}`, 260))
+          .filter(Boolean)
+          .slice(0, 12);
+
+        const businessMarkers = _collectBusinessMarkers({
+          subject: topic.name,
+          snippet: topicThreads.map((t: any) => t?.snippet || "").join(" "),
+          summaryText: threadSummaries.join(" "),
+          threadSubjects: topicThreads
+            .map((t: any) => (t?.subject || "").trim())
+            .filter(Boolean),
+          threadCategories,
+          clusterKey: topic.clusterKey,
+        });
+
+        return {
+          topic_id: topic._id.toString(),
+          name: topic.name,
+          cluster_key: topic.clusterKey,
+          name_edited_by_user: !!topic.nameEditedByUser,
+          thread_subjects: topicThreads
+            .map((t: any) => this._truncateTopicContext((t?.subject || "").trim(), 140))
+            .filter(Boolean)
+            .slice(0, 25),
+          thread_summaries: threadSummaries,
+          thread_key_issues: threadKeyIssues,
+          thread_action_required: threadActionRequired,
+          thread_categories: threadCategories,
+          business_markers: businessMarkers,
+          last_inbound_at: topic.lastInboundAt?.toISOString?.() || topic.lastInboundAt,
+          last_outbound_at: topic.lastOutboundAt?.toISOString?.() || topic.lastOutboundAt,
+          telegram_chat_insights: telegramInsights,
+          telegram_recent_messages: telegramMessageTexts,
+        };
+      });
+
+      const aiResult = await this._aiService.consolidateTopics(
+        contact._id.toString(),
+        contact.name || contact.email,
+        candidates,
+        minConfidence,
+      );
+
+      for (const cluster of aiResult.clusters) {
+        if (!Array.isArray(cluster.topic_ids) || cluster.topic_ids.length < 2) continue;
+        await this._applyAiClusterDecision(cluster);
+      }
+
+      if (Array.isArray(aiResult.topicNameOverrides) && aiResult.topicNameOverrides.length > 0) {
+        await this._applyAiTopicNameOverrides(aiResult.topicNameOverrides);
       }
     }
   }
@@ -626,6 +946,62 @@ export class TopicService {
     }));
   }
 
+  async getFocusOverview(userId: string): Promise<FocusOverviewDTO> {
+    await connectToDatabase();
+
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const rows = await Topic.aggregate([
+      { $match: { userId: userObjectId, focusScore: { $gt: 0 } } },
+      {
+        $lookup: {
+          from: "contacts",
+          localField: "contactId",
+          foreignField: "_id",
+          as: "_contact",
+        },
+      },
+      {
+        $addFields: {
+          _contactDoc: { $arrayElemAt: ["$_contact", 0] },
+        },
+      },
+      {
+        $match: {
+          "_contactDoc.category": { $ne: "spam" },
+          "_contactDoc.email": {
+            $not: {
+              $regex:
+                "^(noreply|no-reply|donotreply|do-not-reply|notifications?|newsletter|bounce|postmaster|mailer-daemon|auto-?reply)@",
+              $options: "i",
+            },
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalFocusTopics: { $sum: 1 },
+          highPriorityCount: {
+            $sum: {
+              $cond: [{ $gte: ["$focusScore", 60] }, 1, 0],
+            },
+          },
+          topFocusScore: { $max: "$focusScore" },
+          lastScoredAt: { $max: "$lastScoredAt" },
+        },
+      },
+    ]);
+
+    const row = rows[0];
+    return {
+      totalFocusTopics: row?.totalFocusTopics ?? 0,
+      highPriorityCount: row?.highPriorityCount ?? 0,
+      topFocusScore: row?.topFocusScore ?? 0,
+      lastScoredAt: row?.lastScoredAt?.toISOString?.(),
+    };
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private _aiService = new AIService();
@@ -664,21 +1040,58 @@ export class TopicService {
 
     const contactIdStr = contact._id.toString();
     const normalizedSubject = normalizeSubject(thread.subject ?? "");
+    const threadClusterKey = thread.topicKey || _deriveClusterKey(thread);
+
+    if (threadClusterKey && thread.topicKey !== threadClusterKey) {
+      await Thread.updateOne(
+        { _id: (thread as any)._id },
+        {
+          topicKey: threadClusterKey,
+          topicKeySource: thread.topicKey ? "ai" : "heuristic",
+          topicKeyConfidence:
+            typeof (thread as any).topicKeyConfidence === "number"
+              ? (thread as any).topicKeyConfidence
+              : 0.65,
+        },
+      );
+    }
 
     // Try to find a matching active topic for this contact
     const candidateTopics = topicsByContact.get(contactIdStr) ?? [];
-    const matchedTopic = candidateTopics.find((tp) =>
-      subjectMatchesTopic(normalizedSubject, tp.name),
-    );
+    let matchedTopic =
+      threadClusterKey
+        ? candidateTopics.find((tp: any) => tp.clusterKey === threadClusterKey)
+        : undefined;
+
+    if (!matchedTopic) {
+      matchedTopic = candidateTopics.find((tp) =>
+        subjectMatchesTopic(normalizedSubject, tp.name),
+      );
+    }
 
     if (matchedTopic) {
+      if (threadClusterKey && !(matchedTopic as any).clusterKey) {
+        await Topic.updateOne(
+          { _id: matchedTopic._id },
+          {
+            clusterKey: threadClusterKey,
+            clusterKeySource: thread.topicKey ? "ai" : "heuristic",
+            clusterVersion: 1,
+          },
+        );
+      }
       await this._addThreadToTopic(thread, matchedTopic._id);
     } else {
       // Create a new Topic with the normalized subject as a temporary name
       const newTopic = await Topic.create({
         userId: userObjectId,
         contactId: contact._id,
+        isMock: !!thread.isMock,
         name: normalizedSubject || thread.subject || "Untitled",
+        clusterKey: threadClusterKey,
+        clusterKeySource:
+          threadClusterKey && thread.topicKey ? "ai" : threadClusterKey ? "heuristic" : undefined,
+        clusterVersion: threadClusterKey ? 1 : undefined,
         nameEditedByUser: false,
         threadIds: [thread._id],
         threadCount: 1,
@@ -757,5 +1170,244 @@ export class TopicService {
     });
 
     await Topic.updateOne({ _id: topicId }, { unansweredCount });
+  }
+
+  private _tokenOverlapRatio(a: string, b: string): number {
+    const aSet = new Set(_extractKeyTokens(a));
+    const bSet = new Set(_extractKeyTokens(b));
+    if (aSet.size === 0 || bSet.size === 0) return 0;
+
+    let overlap = 0;
+    for (const token of aSet) {
+      if (bSet.has(token)) overlap += 1;
+    }
+
+    return overlap / Math.max(aSet.size, bSet.size);
+  }
+
+  private _truncateTopicContext(text: string, limit: number): string {
+    if (!text) return "";
+    if (text.length <= limit) return text;
+    return `${text.slice(0, limit)}...`;
+  }
+
+  private async _applyAiClusterDecision(cluster: {
+    canonical_cluster_key: string;
+    canonical_name: string;
+    topic_ids: string[];
+    confidence: number;
+    reason: string;
+  }): Promise<void> {
+    const topicIds = cluster.topic_ids
+      .map((id) => id.trim())
+      .filter(Boolean)
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    const topics = await Topic.find({ _id: { $in: topicIds } }).lean<any[]>();
+    if (topics.length < 2) return;
+
+    let target = topics[0];
+    for (let i = 1; i < topics.length; i += 1) {
+      target = this._pickMergeTarget(target, topics[i]);
+    }
+
+    target.clusterKey = cluster.canonical_cluster_key;
+    target.clusterKeySource = "ai";
+    target.clusterVersion = Math.max(1, (target.clusterVersion ?? 1) + 1);
+
+    await Topic.updateOne(
+      { _id: target._id },
+      {
+        clusterKey: target.clusterKey,
+        clusterKeySource: "ai",
+        clusterVersion: target.clusterVersion,
+        ...(target.nameEditedByUser
+          ? {}
+          : { name: this._truncateTopicContext(cluster.canonical_name || target.name, 100) }),
+      },
+    );
+
+    for (const topic of topics) {
+      if (topic._id.toString() === target._id.toString()) continue;
+      await this._mergeTopicPair(target, topic);
+    }
+  }
+
+  private async _applyAiTopicNameOverrides(
+    overrides: Array<{ topic_id: string; name: string; confidence: number }>,
+  ): Promise<void> {
+    for (const row of overrides) {
+      const topicId = row.topic_id?.trim();
+      const name = row.name?.trim();
+      if (!topicId || !name) continue;
+
+      try {
+        const existing = await Topic.findById(topicId)
+          .select("nameEditedByUser")
+          .lean<any>();
+        if (!existing || existing.nameEditedByUser) continue;
+
+        await Topic.updateOne(
+          { _id: new mongoose.Types.ObjectId(topicId) },
+          {
+            name: this._truncateTopicContext(name, 100),
+            aiLabeled: true,
+            aiLabeledAt: new Date(),
+          },
+        );
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  private _shouldMergeTopics(a: any, b: any): boolean {
+    if (a.nameEditedByUser || b.nameEditedByUser) return false;
+
+    if (a.clusterKey && b.clusterKey && a.clusterKey === b.clusterKey) {
+      return true;
+    }
+
+    const nameA = normalizeSubject(a.name ?? "");
+    const nameB = normalizeSubject(b.name ?? "");
+
+    if (subjectMatchesTopic(nameA, nameB)) {
+      return true;
+    }
+
+    const overlap = this._tokenOverlapRatio(
+      `${nameA} ${a.clusterKey ?? ""}`,
+      `${nameB} ${b.clusterKey ?? ""}`,
+    );
+
+    const latestA = a.lastInboundAt || a.lastOutboundAt || a.updatedAt || a.createdAt;
+    const latestB = b.lastInboundAt || b.lastOutboundAt || b.updatedAt || b.createdAt;
+    const ageGapDays = Math.abs(
+      (new Date(latestA).getTime() - new Date(latestB).getTime()) /
+        (24 * 60 * 60 * 1000),
+    );
+
+    return overlap >= 0.72 && ageGapDays <= 45;
+  }
+
+  private _pickMergeTarget(a: any, b: any): any {
+    if (a.nameEditedByUser && !b.nameEditedByUser) return a;
+    if (b.nameEditedByUser && !a.nameEditedByUser) return b;
+    if ((a.threadCount ?? 0) !== (b.threadCount ?? 0)) {
+      return (a.threadCount ?? 0) >= (b.threadCount ?? 0) ? a : b;
+    }
+    return new Date(a.createdAt).getTime() <= new Date(b.createdAt).getTime()
+      ? a
+      : b;
+  }
+
+  private async _mergeTopicPair(target: any, source: any): Promise<void> {
+    const targetId = target._id as mongoose.Types.ObjectId;
+    const sourceId = source._id as mongoose.Types.ObjectId;
+
+    if (targetId.toString() === sourceId.toString()) return;
+
+    const sourceThreadIds = (source.threadIds ?? []).map((id: any) =>
+      new mongoose.Types.ObjectId(id),
+    );
+
+    const threadUpdate: Record<string, any> = { topicId: targetId };
+    if (target.clusterKey) {
+      threadUpdate.topicKey = target.clusterKey;
+      threadUpdate.topicKeySource = target.clusterKeySource ?? "heuristic";
+    }
+
+    await Thread.updateMany({ _id: { $in: sourceThreadIds } }, threadUpdate);
+
+    const mergedChatInsights = [
+      ...(target.chatInsights ?? []),
+      ...(source.chatInsights ?? []),
+    ];
+
+    const allThreads = await Thread.find({ topicId: targetId })
+      .select(
+        "_id noiseFiltered lastMessageDirection lastInboundAt lastMessageDate isMock",
+      )
+      .lean<any[]>();
+
+    const unansweredCount = allThreads.filter(
+      (t) => t.lastMessageDirection === "inbound",
+    ).length;
+    const noiseCount = allThreads.filter((t) => t.noiseFiltered).length;
+
+    const inboundDates = allThreads
+      .map((t) => t.lastInboundAt || (t.lastMessageDirection === "inbound" ? t.lastMessageDate : undefined))
+      .filter((d): d is Date => d instanceof Date);
+
+    const outboundDates = allThreads
+      .map((t) => (t.lastMessageDirection === "outbound" ? t.lastMessageDate : undefined))
+      .filter((d): d is Date => d instanceof Date);
+
+    await Topic.updateOne(
+      { _id: targetId },
+      {
+        threadIds: allThreads.map((t) => t._id),
+        threadCount: allThreads.length,
+        noiseCount,
+        unansweredCount,
+        isMock: !!target.isMock || !!source.isMock,
+        ...(inboundDates.length > 0
+          ? {
+              lastInboundAt: new Date(
+                Math.max(...inboundDates.map((d) => d.getTime())),
+              ),
+            }
+          : {}),
+        ...(outboundDates.length > 0
+          ? {
+              lastOutboundAt: new Date(
+                Math.max(...outboundDates.map((d) => d.getTime())),
+              ),
+            }
+          : {}),
+        chatInsights: mergedChatInsights,
+      },
+    );
+
+    await Topic.deleteOne({ _id: sourceId });
+  }
+
+  private async _mergeLikelyTopicsForContact(
+    userObjectId: mongoose.Types.ObjectId,
+    contactId: mongoose.Types.ObjectId,
+  ): Promise<void> {
+    let safetyCounter = 0;
+
+    while (safetyCounter < 30) {
+      safetyCounter += 1;
+
+      const topics = await Topic.find({ userId: userObjectId, contactId })
+        .sort({ createdAt: 1 })
+        .lean<any[]>();
+
+      if (topics.length < 2) return;
+
+      let merged = false;
+
+      for (let i = 0; i < topics.length; i += 1) {
+        for (let j = i + 1; j < topics.length; j += 1) {
+          const a = topics[i];
+          const b = topics[j];
+
+          if (!this._shouldMergeTopics(a, b)) continue;
+
+          const target = this._pickMergeTarget(a, b);
+          const source =
+            target._id.toString() === a._id.toString() ? b : a;
+
+          await this._mergeTopicPair(target, source);
+          merged = true;
+          break;
+        }
+        if (merged) break;
+      }
+
+      if (!merged) return;
+    }
   }
 }

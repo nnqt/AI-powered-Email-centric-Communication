@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import useSWR, { useSWRConfig } from "swr";
 
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import { useSocket } from "@/hooks/useSocket";
 import { useToast } from "@/components/Toast";
 import { isSandboxUiEnabled } from "@/lib/sandbox";
+import apiClient from "@/lib/api";
 
 interface SubNavItem {
   href: string;
@@ -114,8 +116,8 @@ const NAV_ITEMS: NavItem[] = [
         ),
       },
       {
-        href: "/contacts/duplicates",
-        label: "Check Duplicates",
+        href: "/contacts/verify",
+        label: "Verify Hub",
         icon: (
           <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -173,6 +175,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const unreadCount = useUnreadCount();
   const { showToast, updateToast } = useToast();
+  const { mutate: mutateGlobal } = useSWRConfig();
   const navItems = useMemo(
     () =>
       isSandboxUiEnabled ? [...NAV_ITEMS, DEV_NAV_ITEM] : NAV_ITEMS,
@@ -180,6 +183,48 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   );
 
   const userId = (session?.user as any)?.id as string | undefined;
+  const { data: contactReviewData, mutate: mutateContactReview } = useSWR<{ total: number }>(
+    userId ? "/api/contacts?unverified=true&limit=1" : null,
+    async (url: string) => {
+      const res = await apiClient.get<{ total: number }>(url);
+      return res.data;
+    },
+    { refreshInterval: 60_000 },
+  );
+  const contactReviewCount = contactReviewData?.total ?? 0;
+  const { data: focusOverviewData, mutate: mutateFocusOverview } = useSWR<{
+    totalFocusTopics: number;
+    highPriorityCount: number;
+    topFocusScore: number;
+    lastScoredAt?: string;
+  }>(
+    userId ? "/api/focus/overview" : null,
+    async (url: string) => {
+      const res = await apiClient.get(url);
+      return res.data;
+    },
+    { refreshInterval: 60_000 },
+  );
+  // API still returns `highPriorityCount`; in UI we treat this as
+  // "topics needing follow-up" to avoid confusion with thread-level urgency.
+  const focusFollowUpCount = focusOverviewData?.highPriorityCount ?? 0;
+  const revalidateContactReview = () => {
+    void mutateContactReview();
+    void mutateGlobal(
+      (key: unknown) =>
+        typeof key === "string" && key.startsWith("/api/contacts"),
+      undefined,
+      { revalidate: true },
+    );
+  };
+  const revalidateFocusOverview = () => {
+    void mutateFocusOverview();
+    void mutateGlobal(
+      (key: unknown) => typeof key === "string" && key.startsWith("/api/focus"),
+      undefined,
+      { revalidate: true },
+    );
+  };
   // Map AI jobId → toastId so AI_JOB_DONE can update the right toast
   const aiJobToastMap = useRef<Record<string, string>>({});
 
@@ -203,6 +248,22 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         updateToast(toastId, label, success ? "success" : "info");
         delete aiJobToastMap.current[jobId];
       }
+    },
+    EMAIL_SYNCED: () => {
+      revalidateContactReview();
+      revalidateFocusOverview();
+    },
+    EMAIL_SENT: () => {
+      revalidateContactReview();
+      revalidateFocusOverview();
+    },
+    NEW_TELEGRAM_MESSAGE: () => {
+      revalidateContactReview();
+      revalidateFocusOverview();
+    },
+    CONTACTS_UPDATED: () => {
+      revalidateContactReview();
+      revalidateFocusOverview();
     },
   });
 
@@ -322,6 +383,20 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                           {unreadCount > 99 ? "99+" : unreadCount}
                         </span>
                       )}
+                      {item.href === "/contacts" && contactReviewCount > 0 && (
+                        <span className="rounded-full bg-amber-500 px-1.5 py-0.5 text-xs font-semibold text-white tabular-nums">
+                          {contactReviewCount > 99 ? "99+" : contactReviewCount}
+                        </span>
+                      )}
+                      {item.href === "/focus" && focusFollowUpCount > 0 && (
+                        <span
+                          className="rounded-full bg-rose-500 px-1.5 py-0.5 text-xs font-semibold text-white tabular-nums"
+                          title="Topics cần follow-up"
+                          aria-label={`Topics cần follow-up: ${focusFollowUpCount}`}
+                        >
+                          {focusFollowUpCount > 99 ? "99+" : focusFollowUpCount}
+                        </span>
+                      )}
                     </Link>
                     {/* Expand / collapse chevron */}
                     {item.subItems && item.subItems.length > 0 && (
@@ -372,7 +447,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                               >
                                 {sub.icon}
                               </span>
-                              {sub.label}
+                              <span className="flex-1">{sub.label}</span>
+                              {sub.href === "/contacts/verify" &&
+                                contactReviewCount > 0 && (
+                                  <span className="rounded-full bg-amber-500 px-1 py-0.5 text-[10px] font-semibold text-white tabular-nums">
+                                    {contactReviewCount > 99
+                                      ? "99+"
+                                      : contactReviewCount}
+                                  </span>
+                                )}
                             </Link>
                           </li>
                         );

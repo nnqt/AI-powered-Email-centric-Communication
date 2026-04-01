@@ -15,11 +15,164 @@ All endpoints `async`, return JSON. **No auth required** (internal service only)
 | `POST /enrich-contact` | FR-06 | `{ email, name, conversation_snippet, user_email_domain }` | `{ display_name, org, language, category_suggestion }` |
 | `POST /suggest-merge` | FR-06 | `{ contacts[{ contact_id, email, name, alternate_emails, sample_threads }] }` | `[{ source_id, target_id, confidence, reason }]` |
 | `POST /classify-urgent` | FR-04 | `{ thread_id, subject, snippet, sender_email?, sender_categories? }` | `{ thread_id, is_urgent, reason }` |
-| `POST /classify-thread-category` | FR-10 | `{ thread_id, subject, snippet, sender_email }` | `{ thread_id, categories[], noise_filtered }` |
-| `POST /label-topic` | FR-10 | `{ topic_id, thread_subjects[], contact_name? }` | `{ topic_id, name }` |
+| `POST /classify-thread-category` | FR-10 | `{ thread_id, subject, snippet, sender_email }` | `{ thread_id, categories[], noise_filtered, topic_key?, topic_key_confidence? }` |
+| `POST /label-topic` | FR-10 | `mode="label": { topic_id, thread_subjects[], contact_name? }` or `mode="consolidate": { contact_id, contact_name?, candidates[], min_confidence? }` | `mode="label": { topic_id, name }` or `mode="consolidate": { clusters[], topic_name_overrides[], unmerged_topic_ids[] }` |
+| `POST /analyze-thread` | FR-10 | `{ thread_id, subject?, snippet?, sender_email?, sender_categories?, messages[] }` | `{ thread_id, categories[], noise_filtered, topic_key?, topic_key_confidence?, summary?, key_issues[], action_required[], quality_tier, should_cluster, should_summarize }` |
 | `POST /analyze-chat-chunk` | FR-09 | `{ text_chunk, active_topics[] }` | `{ fragments[{ intent, summary, topic_action, topic_name }] }` |
 
 ---
+
+## FR-10 Contract Details
+
+### `POST /classify-thread-category`
+
+**Request:**
+```json
+{
+  "thread_id": "t-001",
+  "subject": "Cap nhat tien do UAT CRM",
+  "snippet": "Can xac nhan moc ban giao build",
+  "sender_email": "linh.pm.client@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "thread_id": "t-001",
+  "categories": ["project_update"],
+  "noise_filtered": false,
+  "topic_key": "crm-delivery-project",
+  "topic_key_confidence": 0.82
+}
+```
+
+Notes:
+- `topic_key` is optional and null for automated/noise threads.
+- `topic_key_confidence` is optional float `0.0..1.0`.
+
+### `POST /label-topic` with `mode="label"`
+
+**Request:**
+```json
+{
+  "mode": "label",
+  "topic_id": "topic-001",
+  "thread_subjects": [
+    "Cap nhat tien do ban giao module CRM",
+    "Thong nhat backlog sau UAT"
+  ],
+  "contact_name": "Linh Tran"
+}
+```
+
+**Response:**
+```json
+{
+  "mode": "label",
+  "topic_id": "topic-001",
+  "name": "Tien do CRM UAT",
+  "clusters": [],
+  "unmerged_topic_ids": []
+}
+```
+
+### `POST /label-topic` with `mode="consolidate"`
+
+**Request:**
+```json
+{
+  "mode": "consolidate",
+  "contact_id": "contact-001",
+  "contact_name": "Linh Tran",
+  "min_confidence": 0.8,
+  "candidates": [
+    {
+      "topic_id": "topic-a",
+      "name": "CRM UAT Dot 1",
+      "cluster_key": "crm-delivery-project",
+      "name_edited_by_user": false,
+      "thread_subjects": ["Cap nhat tien do UAT"],
+      "thread_summaries": ["Khach hang can moc ban giao"],
+      "thread_key_issues": ["Thieu scope baseline"],
+      "thread_action_required": ["Xac nhan moc 16:00"],
+      "thread_categories": ["project_update"],
+      "telegram_chat_insights": ["intent: follow_up"],
+      "telegram_recent_messages": ["Can gui bang budget hom nay"]
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "mode": "consolidate",
+  "topic_id": null,
+  "name": null,
+  "clusters": [
+    {
+      "canonical_cluster_key": "crm-delivery-project",
+      "canonical_name": "CRM Delivery Project",
+      "topic_ids": ["topic-a", "topic-b"],
+      "confidence": 0.86,
+      "reason": "Cung context UAT/backlog/release"
+    }
+  ],
+  "topic_name_overrides": [
+    {
+      "topic_id": "topic-a",
+      "name": "CRM Delivery Project",
+      "confidence": 0.86
+    }
+  ],
+  "unmerged_topic_ids": ["topic-c"]
+}
+```
+
+Notes:
+- `clusters[].topic_ids` must contain at least 2 ids.
+- `topic_name_overrides` lets backend rename merged/singleton topics in the same consolidate pass.
+- Backend applies merge decisions only for valid topic ids within the same contact scope.
+
+### `POST /analyze-thread`
+
+**Request:**
+```json
+{
+  "thread_id": "t-001",
+  "subject": "Cap nhat tien do UAT CRM",
+  "snippet": "Can xac nhan moc ban giao build",
+  "sender_email": "linh.pm.client@example.com",
+  "sender_categories": ["customer"],
+  "messages": [
+    {
+      "id": "m-001",
+      "from": "linh.pm.client@example.com",
+      "to": ["po@yourcompany.com"],
+      "sent_at": "2026-03-31T09:15:00.000Z",
+      "text": "Nho xac nhan scope baseline truoc 16:00"
+    }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "thread_id": "t-001",
+  "categories": ["project_update"],
+  "noise_filtered": false,
+  "topic_key": "crm-delivery-project",
+  "topic_key_confidence": 0.82,
+  "summary": ["Khach hang can xac nhan scope baseline truoc 16:00"],
+  "key_issues": ["Moc xac nhan scope sap den han"],
+  "action_required": ["Gui scope baseline da chot"],
+  "quality_tier": "high",
+  "should_cluster": true,
+  "should_summarize": true
+}
+```
 
 ## Key Behaviors
 

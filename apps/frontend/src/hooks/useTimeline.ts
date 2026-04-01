@@ -20,11 +20,15 @@ export interface TimelineItemDTO {
 
 export function useUnifiedTimeline(contactId: string) {
   const { data, error, isLoading, mutate } = useSWR<{ timeline: TimelineItemDTO[] }>(
-    `/api/contacts/${contactId}/timeline`,
+    contactId ? `/api/contacts/${contactId}/timeline` : null,
     async (url: string) => {
       const res = await apiClient.get(url);
       return res.data;
-    }
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
   );
 
   return {

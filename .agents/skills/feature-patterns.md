@@ -1,14 +1,23 @@
-# Feature Implementation Patterns — Skill Reference
+# Feature Implementation Patterns
 
-## Adding a New Backend API Route
+This file keeps only reusable patterns used frequently in day-to-day changes.
+Long FR-10 optimization details were moved to:
 
-1. Create route file: `apps/backend/src/app/api/<resource>/route.ts`
-2. Import session auth: `const session = await getServerSession(authOptions)`; return 401 if not authenticated.
-3. Call service function from `modules/<feature>/<feature>.service.ts`.
-4. Return `NextResponse.json(result)` or `NextResponse.json({ error }, { status })`.
-5. Emit Socket.IO event if needed: `emitToUser(session.user.id, "EVENT_NAME", payload)`.
+- `.agents/skills/patterns/topic-focus-optimization.md`
 
-**Route handler template:**
+For endpoint payloads, always use contract docs as source of truth:
+
+- `.agents/knowledge/api-contracts-backend.md`
+- `.agents/knowledge/api-contracts-ai-service.md`
+
+## Backend API Route Pattern
+
+1. Create route at `apps/backend/src/app/api/<resource>/route.ts`.
+2. Guard with NextAuth session (`401` if unauthenticated).
+3. Delegate logic to module service (`apps/backend/src/modules/*`).
+4. Return consistent JSON (`result` or `{ error }`).
+
+Template:
 
 ```typescript
 import { NextRequest, NextResponse } from "next/server";
@@ -17,118 +26,56 @@ import { authOptions } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id)
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const body = await req.json();
-  // validate body...
-
   const result = await myService.doThing(session.user.id, body);
   return NextResponse.json(result);
 }
 ```
 
----
+## Backend AI Adapter Pattern
 
-## Adding a New AI Feature (Backend → AI Service)
+### Architecture Hygiene
 
-1. Add method to `apps/backend/src/modules/ai/ai.service.ts`:
-   ```typescript
-   async myAiFeature(input: MyInput): Promise<MyOutput> {
-     const res = await this.axiosClient.post("/my-endpoint", input);
-     return res.data;
-   }
-   ```
-2. Add fallback: wrap in try/catch, return safe default on error (non-fatal).
-3. Add route: `POST /api/<resource>/[id]/my-action/route.ts` → call `AIService.myAiFeature()`.
+1. Keep one backend AI adapter only: `apps/backend/src/modules/ai/ai.service.ts`.
+2. Do not create parallel adapters under `apps/backend/src/services/*`.
+3. AI routes import from `@/modules/ai/ai.service` only.
+4. If AI contract changes, update both contract docs in the same change-set.
 
----
+### Add New AI Call
 
-## Adding a New AI Endpoint (AI Service)
+1. Add typed method in `AIService`.
+2. Wrap in `try/catch` with non-breaking fallback when possible.
+3. Log/measure latency if endpoint is in sync pipeline or user-triggered hot path.
 
-1. **Model** (`models/my_feature.py`): Pydantic `MyRequest`, `MyResponse`.
-2. **Service** (`services/my_service.py`): `async def do_thing(request: MyRequest) -> MyResponse`.
-3. **Client** (`core/llm_client.py`): new class `GeminiMyClient` with `_gemini_with_retry` call.
-4. **Route** (`routes/my_feature.py`):
-   ```python
-   @router.post("/my-endpoint", response_model=MyResponse)
-   async def my_endpoint(request: MyRequest) -> MyResponse:
-       return await do_thing(request)
-   ```
-5. **Wire** in `main.py`: `app.include_router(my_router)`.
+## AI Service Endpoint Pattern
 
----
+1. Add request/response models under `apps/ai-service/models`.
+2. Add business logic under `apps/ai-service/services`.
+3. Add route under `apps/ai-service/routes`.
+4. Register route in `apps/ai-service/main.py`.
 
-## Adding a New Contact Field
+## Contacts Pattern (Field or Flow Changes)
 
-1. `apps/backend/src/models/Contact.ts` — add to Mongoose schema + TypeScript interface.
-2. `apps/backend/src/modules/contacts/contact.service.ts` — if needed, update `updateContact()` allowed fields.
-3. `apps/frontend/src/hooks/useContacts.ts` — add to `ContactDTO` interface.
-4. Update `contacts/[id]/page.tsx` to display/edit the new field.
-5. Update `.agents/knowledge/database-schema.md` and `.agents/state/implementation-status.md`.
+1. Update `apps/backend/src/models/Contact.ts`.
+2. Update DTO + service mapping in `apps/backend/src/modules/contacts/contact.service.ts`.
+3. Update `ContactDTO` in `apps/frontend/src/hooks/useContacts.ts`.
+4. Update related UI pages under contacts dashboard.
+5. Sync `.agents/knowledge/database-schema.md` if schema changed.
 
----
+## Focus Refresh Pattern (Current)
 
-## Thread Filter Pattern
+1. Use `GET /api/focus/overview` for sidebar counters/badges.
+2. Use `GET /api/focus?limit=` for focus list.
+3. Use `POST /api/focus/recompute?limit=` for explicit recompute.
+4. Do not re-introduce old double-fetch refresh style.
 
-`TimelineService.getThreads()` builds MongoDB query from `filter: ThreadFilter`:
+## SWR Optimistic Update Pattern
 
 ```typescript
-type ThreadFilter = "all" | "unread" | "archived";
-
-const filterQuery = {
-  all: { isArchived: { $ne: true } },
-  unread: { isRead: false, isArchived: { $ne: true } },
-  archived: { isArchived: true },
-}[filter];
-```
-
-> Note: `"urgent"` filter tab was removed. The `isUrgent` badge still shows on thread rows.
-
-To add a new filter:
-
-1. Extend `ThreadFilter` type.
-2. Add case to `filterQuery` map in `timeline.service.ts`.
-3. Add to valid filter list in `GET /api/threads` route validation.
-4. Add `ThreadFilter` export and handling in `useThreads.ts`.
-5. Add tab to `ThreadList.tsx`.
-
----
-
-## Cursor Pagination Pattern
-
-```typescript
-// Encode
-const cursor = `${thread.lastMessageDate.toISOString()}_${thread._id}`;
-
-// Decode (safe for ISO dates containing _)
-const lastUnderscore = cursor.lastIndexOf("_");
-const date = cursor.substring(0, lastUnderscore);
-const id = cursor.substring(lastUnderscore + 1);
-
-// Query
-{
-  lastMessageDate: {
-    $lt: new Date(date);
-  }
-}
-// or
-{
-  $or: [
-    { lastMessageDate: { $lt: new Date(date) } },
-    { lastMessageDate: new Date(date), _id: { $lt: new ObjectId(id) } },
-  ];
-}
-```
-
----
-
-## Optimistic UI Pattern (SWR)
-
-```typescript
-const { mutate } = useThreads();
-
-// Optimistic update
 mutate(
   (prev) =>
     prev
@@ -139,123 +86,47 @@ mutate(
           ),
         }
       : prev,
-  false, // don't revalidate yet
+  false,
 );
 
 try {
   await api.patch(`/api/threads/${threadId}/read`, { read: true });
-  mutate(); // revalidate from server
+  mutate();
 } catch {
-  mutate(); // revert on error
+  mutate();
 }
 ```
 
----
-
-## Fire-and-Forget Pattern (Backend)
-
-Used for: urgent classification after sync, contact upsert after sync.
+## Cursor Pagination Pattern
 
 ```typescript
-// After upsert:
-if (!threadDoc.urgentClassifiedAt) {
-  aiService
-    .classifyUrgent(threadId, subject, snippet)
-    .then(({ isUrgent }) =>
-      Thread.updateOne(
-        { id: threadId },
-        { isUrgent, urgentClassifiedAt: new Date() },
-      ),
-    )
-    .catch(() => {}); // never block the main flow
-}
+const cursor = `${thread.lastMessageDate.toISOString()}_${thread._id}`;
+
+const lastUnderscore = cursor.lastIndexOf("_");
+const date = cursor.substring(0, lastUnderscore);
+const id = cursor.substring(lastUnderscore + 1);
 ```
 
----
+## Socket Event + AI Progress Pattern
 
-## Contact Merge Suggestion Flow
+1. Emit domain events with `emitToUser(userId, "EVENT_NAME", payload)`.
+2. For long AI operations, emit both:
+  - `AI_JOB_START { jobId, label }`
+  - `AI_JOB_DONE { jobId, label, success }`
+3. Keep global toast behavior in dashboard layout (single place).
 
-1. Frontend: `GET /api/contacts/merge-suggestions` (cached 6h in Redis).
-2. Backend route: check Redis, return cached if hit; else call `contact.service.getContactsForMergeSuggestions()`.
-3. Service: 2 DB queries → in-memory match → build `ContactSnippetDTO[]` with real `sample_threads`.
-4. Backend: send to AI service `POST /suggest-merge` (capped 100 contacts).
-5. AI service: Gemini returns pairs; `valid_ids` Set guards hallucinations.
-6. Backend: `validIdSet` cross-validation → cache in Redis → return `{ suggestions, fromCache }`.
-7. On merge: `POST /api/contacts/merge` → soft-merge → delete Redis cache key.
+## Sandbox Revalidation Pattern
 
----
+After sandbox write operations (`inject`, `clear`, fake webhook), revalidate:
 
-## Adding a New Socket.IO Event
+1. `/api/contacts*`
+2. `/api/threads*`
+3. `/api/focus*`
+4. `/api/topics*`
 
-1. **Backend** — emit after relevant action:
-   ```typescript
-   import { emitToUser } from "@/lib/socketServer";
-   emitToUser(userId, "MY_EVENT", { payload });
-   ```
-2. **Frontend** — add listener in relevant page/component:
-   ```typescript
-   useSocket(session.user.id, {
-     MY_EVENT: (data) => { mutate(); toast(...); }
-   });
-   ```
+## Thread Category + Topic Pipeline Reference
 
----
+When touching topic clustering and consolidation, read:
 
-## Global AI Progress Toast Pattern (AI_JOB_START / AI_JOB_DONE)
-
-For any long-running AI operation, emit start + done events so `layout.tsx` shows a persistent toast automatically.
-
-**Backend:**
-
-```typescript
-const jobId = `my-job-${Date.now()}`;
-emitToUser(userId, "AI_JOB_START", { jobId, label: "Doing AI thing..." });
-try {
-  const result = await doAiThing();
-  emitToUser(userId, "AI_JOB_DONE", { jobId, label: "Done!", success: true });
-} catch {
-  emitToUser(userId, "AI_JOB_DONE", { jobId, label: "Failed", success: false });
-}
-```
-
-**Frontend (layout.tsx handles globally — no per-page code needed):**
-
-- `AI_JOB_START` → `showToast(label, "processing")` (no auto-dismiss).
-- `AI_JOB_DONE` → `updateToast(id, label, success ? "success" : "info")` (4s auto-dismiss).
-- Map stored in `aiJobToastMap = useRef<Record<string, string>>({})`.
-
----
-
-## Email Header Decoding (Vietnamese / Non-ASCII Names)
-
-All `From` / `To` header values from Gmail API must be decoded before storing:
-
-```typescript
-import { decodeEmailHeader } from "@/modules/contacts/contact.service";
-
-const from = decodeEmailHeader(getHeader("From")); // handles RFC 2047 + Mojibake
-```
-
-`decodeEmailHeader()` applies:
-
-1. RFC 2047 (`=?charset?B/Q?...?=`) decode.
-2. Up to 2 passes of Mojibake fix (UTF-8 bytes misread as Latin-1/CP1252).
-
-Always use this for raw Gmail API header values before storing in `Thread.participants` or `Message.from`.
-
----
-
-## FR → Module Mapping Quick Reference
-
-| FR    | Backend modules                                                   | AI Service endpoint                 | Frontend                                       |
-| ----- | ----------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------- |
-| FR-01 | `modules/email/gmail.service.ts`, `api/emails/sync`               | —                                   | `SyncButton`, `useSocket`                      |
-| FR-02 | `gmail.service.ts (sendEmail)`, `api/emails/send`                 | —                                   | `ComposeDrawer`                                |
-| FR-03 | `gmail.service.ts (markRead/archive)`, `api/threads/:id/read`     | —                                   | `ThreadList` (optimistic)                      |
-| FR-04 | `modules/timeline/timeline.service.ts`, `api/threads`             | —                                   | `ThreadList`, `useThreads`, thread `[id]` page |
-| FR-05 | `server.ts`, `lib/socketServer.ts`                                | —                                   | `useSocket`, `useBackgroundSync`               |
-| FR-06 | `modules/contacts/contact.service.ts`, `api/contacts`             | `/enrich-contact`, `/suggest-merge` | contacts pages, `useContacts`                  |
-| FR-07 | `modules/ai/ai.service.ts`, `api/threads/:id/summarize`           | `/summarize`                        | `AISummaryCard`                                |
-| FR-08 | `ai.service.ts (suggestReplies)`, `api/threads/:id/suggest-reply` | `/suggest-reply`                    | `SmartReplyBar`, thread `[id]` page            |
-| FR-09 | `lib/telegramManager.ts`, `api/telegram/*`, `TelegramChat/Message` models | `/analyze-chat-chunk`       | `chat/page.tsx`, `settings/page.tsx`           |
-| FR-10 | `modules/topics/topic.service.ts`, `api/topics`, `api/focus`      | `/classify-thread-category`, `/label-topic` | `FocusTopicCard`, `ContactTopicGroup`, `/focus` |
+1. `.agents/skills/patterns/topic-focus-optimization.md`
+2. `.agents/state/changelog/topic-intelligence.md`

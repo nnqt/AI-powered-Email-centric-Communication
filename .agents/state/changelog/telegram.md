@@ -1,3 +1,15 @@
+# 2026-03-29 — Telegram Contact Display Name Fallback
+
+## Changed
+
+- Updated contact DTO mapping in `apps/backend/src/modules/contacts/contact.service.ts` to derive user-friendly display names for Telegram-created contacts.
+- Name resolution order:
+	- `contact.name`
+	- `contact.telegramName`
+	- `@contact.telegramUsername`
+	- fallback from placeholder email pattern `tg-<id>@telegram.local` as `Telegram <id>`.
+- Result: Contacts UI no longer shows raw placeholder email as the main contact label when Telegram profile metadata exists.
+
 # Changelog — FR-09 Multi-Channel Telegram (Phases 1–5)
 
 > Load file này khi làm việc liên quan Telegram: auth, chat, messages, sync.
@@ -64,9 +76,9 @@ Auto-groups consecutive Telegram messages into time-based chunks → `POST /anal
 - `FocusTopicCard.tsx` — unified timeline with 💬 icon for chat insights
 - `ContactTopicGroup.tsx` — same unified timeline logic
 
-## Bug Fixes (March 17, 2026)
+## Runtime Behavior Updates (March 17, 2026)
 
-| Bug | Root Cause | Fix |
-|-----|-----------|-----|
-| `GET /api/telegram/chats` returns `[]` | `TelegramChat` only created on live message — no initial sync | Added `syncDialogs()` in `telegramManager.ts`; route calls it when DB empty |
-| Chat messages empty when opening chat | `TelegramMessage` only created on live message | Added `syncChatHistory()` in `telegramManager.ts`; route calls it when DB empty |
+| Behavior | Cause | Update |
+|----------|-------|--------|
+| `GET /api/telegram/chats` could return `[]` before first live message | `TelegramChat` records were only created on realtime listener path | Added `syncDialogs()` in `telegramManager.ts`; route now triggers sync when DB is empty |
+| Chat thread could open without persisted history | `TelegramMessage` records were only created on realtime listener path | Added `syncChatHistory()` in `telegramManager.ts`; route now triggers history sync when DB is empty |

@@ -1,0 +1,669 @@
+[
+  {
+    "scenarioName": "Hard 02 - Phòng chiến dịch release với escalation email và Telegram",
+    "contacts": [
+      {
+        "email": "khanh.teacher.client@example.com",
+        "name": "Khánh Vũ",
+        "org": "Future Skills Academy",
+        "language": "vi",
+        "telegram": {
+          "telegramId": "tg-khanh-edu-101",
+          "telegramUsername": "khanh_fsa",
+          "telegramName": "Khánh Vũ",
+          "chats": [
+            {
+              "chatId": "tg-khanh-edu-101",
+              "title": "Khánh Vũ - Future Skills Academy",
+              "type": "private",
+              "unreadCount": 3,
+              "dateOffsetMs": 1200000,
+              "messages": [
+                {
+                  "senderId": "tg-khanh-edu-101",
+                  "text": "Thầy/cô {{USER_NAME}}, học viên không nộp được bài trên mobile. Cần hướng xử lý ngay.",
+                  "dateOffsetMs": 4200000
+                },
+                {
+                  "senderId": "tg-khanh-edu-101",
+                  "text": "Bên tôi cần ETA fix cụ thể để thông báo cho phòng Đào tạo trong 15 phút tới.",
+                  "dateOffsetMs": 2400000
+                },
+                {
+                  "senderId": "owner-{{USER_EMAIL}}",
+                  "text": "Đã rõ thầy Khánh, đội dev đang rollback và phát hành bản hotfix trước 11:00.",
+                  "isOutbound": true,
+                  "dateOffsetMs": 1200000
+                }
+              ]
+            }
+          ]
+        },
+        "threads": [
+          {
+            "subject": "Không nộp được bài tập trên ứng dụng mobile",
+            "snippet": "Issue nghiêm trọng trong giai đoạn giữa kỳ.",
+            "dateOffsetMs": 9600000,
+            "messages": [
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Không nộp được bài tập trên ứng dụng mobile",
+                "body": "Kính gửi thầy/cô {{USER_NAME}},\n\nTừ 08:30 sáng nay, nhiều học viên phản ánh không thể nộp bài tập trên ứng dụng mobile. Lỗi xuất hiện ở bước tải file lên hệ thống.\n\nĐề nghị đội dự án cập nhật nguyên nhân và ETA khôi phục trước 10:30 để chúng tôi thông báo đến toàn bộ giảng viên.\n\nTrân trọng,\nKhánh Vũ\nĐiều phối học vụ, Future Skills Academy",
+                "dateOffsetMs": 25200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Không nộp được bài tập trên ứng dụng mobile",
+                "body": "Kính gửi thầy Khánh,\n\nBên em đã xác định nguyên nhân do cấu hình storage token trên mobile app. Đội dev đang rollback cấu hình và đang kiểm tra lại luồng nộp bài.\n\nETA khôi phục dự kiến 10:45 và bên em sẽ gửi xác nhận chính thức ngay sau khi monitor ổn định.\n\nTrân trọng,\n{{USER_NAME}}\nTechnical Lead",
+                "dateOffsetMs": 9600000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Không nộp được bài tập trên ứng dụng mobile",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nKhánh Vũ",
+                "dateOffsetMs": 3200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Follow-up kế hoạch triển khai tuần này - Future Skills Academy",
+            "snippet": "Thread bổ sung để tăng độ phủ bối cảnh theo dõi.",
+            "dateOffsetMs": 5100000,
+            "messages": [
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Follow-up kế hoạch triển khai tuần này - Future Skills Academy",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị cập nhật giúp kế hoạch triển khai tuần này và các đầu việc có rủi ro cao để bên tôi chủ động sắp xếp nguồn lực.\n\nTrân trọng,\nKhánh Vũ",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Future Skills Academy",
+                "body": "Kính gửi anh/chị,\n\nBên em đã rà soát lại kế hoạch tuần này và sẽ gửi bảng cập nhật theo từng đầu việc cùng mức ưu tiên trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Future Skills Academy",
+                "body": "Cảm ơn anh/chị. Bên tôi chờ bản cập nhật để chốt lịch làm việc với các bộ phận liên quan.\n\nTrân trọng,\nKhánh Vũ",
+                "dateOffsetMs": 4200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nKhánh Vũ",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Kính gửi Khánh Vũ,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nKhánh Vũ",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 36000000,
+            "messages": [
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nKhánh Vũ",
+                "dateOffsetMs": 79200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Kính gửi Khánh Vũ,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 50400000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nKhánh Vũ",
+                "dateOffsetMs": 36000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+            "snippet": "Thread nhiễu dài 24 email để stress test phân cụm topic và tóm tắt.",
+            "dateOffsetMs": 5400000,
+            "messages": [
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 1/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 70200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Đã nhận cập nhật 2/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 67500000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 3/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 64800000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 4/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 62100000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Đã nhận cập nhật 5/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 59400000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 6/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 56700000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 7/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Đã nhận cập nhật 8/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 51300000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 9/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 48600000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 10/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 45900000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Đã nhận cập nhật 11/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 43200000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 12/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 40500000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 13/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 37800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Đã nhận cập nhật 14/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 35100000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 15/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 32400000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 16/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 29700000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Đã nhận cập nhật 17/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 27000000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 18/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 24300000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 19/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 21600000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Đã nhận cập nhật 20/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 18900000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 21/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 16200000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 22/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 13500000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "khanh.teacher.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Đã nhận cập nhật 23/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 10800000
+              },
+              {
+                "from": "khanh.teacher.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Future Skills Academy",
+                "body": "Cập nhật nhanh 24/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 8100000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "nhi.pm.client@example.com",
+        "name": "Nhi Trần",
+        "org": "Future Skills Academy",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "Theo dõi release note và cam kết SLA sau sự cố",
+            "snippet": "Chuỗi thư PM để theo dõi hành động sau khắc phục.",
+            "dateOffsetMs": 3000000,
+            "messages": [
+              {
+                "from": "nhi.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Theo dõi release note và cam kết SLA sau sự cố",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nSau sự cố sáng nay, bên tôi cần release note chi tiết và cam kết SLA cập nhật để trình Ban Giám đốc.\n\nĐề nghị gửi tài liệu trước 14:00 gồm: mô tả sự cố, phạm vi ảnh hưởng, hành động khắc phục, và biện pháp phòng ngừa tái diễn.\n\nTrân trọng,\nNhi Trần\nPMO, Future Skills Academy",
+                "dateOffsetMs": 12600000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nhi.pm.client@example.com"
+                ],
+                "subject": "Re: Theo dõi release note và cam kết SLA sau sự cố",
+                "body": "Kính gửi Nhi Trần,\n\nBên em đã ghi nhận thông tin và đang phối hợp các bên liên quan để hoàn tất đầu việc.\n\nEm sẽ gửi bản cập nhật chi tiết trước 17:00 hôm nay.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 1500000
+              },
+              {
+                "from": "nhi.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Theo dõi release note và cam kết SLA sau sự cố",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nNhi Trần",
+                "dateOffsetMs": 1000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Follow-up kế hoạch triển khai tuần này - Future Skills Academy",
+            "snippet": "Thread bổ sung để tăng độ phủ bối cảnh theo dõi.",
+            "dateOffsetMs": 5100000,
+            "messages": [
+              {
+                "from": "nhi.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Follow-up kế hoạch triển khai tuần này - Future Skills Academy",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị cập nhật giúp kế hoạch triển khai tuần này và các đầu việc có rủi ro cao để bên tôi chủ động sắp xếp nguồn lực.\n\nTrân trọng,\nNhi Trần",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nhi.pm.client@example.com"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Future Skills Academy",
+                "body": "Kính gửi anh/chị,\n\nBên em đã rà soát lại kế hoạch tuần này và sẽ gửi bảng cập nhật theo từng đầu việc cùng mức ưu tiên trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "nhi.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Future Skills Academy",
+                "body": "Cảm ơn anh/chị. Bên tôi chờ bản cập nhật để chốt lịch làm việc với các bộ phận liên quan.\n\nTrân trọng,\nNhi Trần",
+                "dateOffsetMs": 4200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 16416000000,
+            "messages": [
+              {
+                "from": "nhi.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nNhi Trần",
+                "dateOffsetMs": 16588800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nhi.pm.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Kính gửi Nhi Trần,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 16502400000
+              },
+              {
+                "from": "nhi.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nNhi Trần",
+                "dateOffsetMs": 16416000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 39600000,
+            "messages": [
+              {
+                "from": "nhi.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nNhi Trần",
+                "dateOffsetMs": 82800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nhi.pm.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Kính gửi Nhi Trần,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "nhi.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nNhi Trần",
+                "dateOffsetMs": 39600000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "duc.cto.client@example.com",
+        "name": "Đức Hoàng",
+        "org": "Future Skills Academy",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "War-room: Tổng hợp quyết định kỹ thuật sau sự cố mobile",
+            "snippet": "Bổ sung vai trò CTO để tăng chiều sâu quyết định.",
+            "dateOffsetMs": 3600000,
+            "messages": [
+              {
+                "from": "duc.cto.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "War-room: Tổng hợp quyết định kỹ thuật sau sự cố mobile",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nSau sự cố mobile sáng nay, Ban kỹ thuật cần biên bản quyết định gồm phương án tạm thời và phương án phòng ngừa tái diễn.\n\nNhờ anh/chị gửi bản tổng hợp trước 14:30 để CTO review.\n\nTrân trọng,\nĐức Hoàng\nCTO Office"
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "duc.cto.client@example.com"
+                ],
+                "subject": "Re: War-room: Tổng hợp quyết định kỹ thuật sau sự cố mobile",
+                "body": "Kính gửi anh Đức,\n\nBên em đã tổng hợp biên bản quyết định kỹ thuật và kế hoạch phòng ngừa theo từng mốc thời gian.\n\nEm gửi bản đầy đủ trước 14:00 để anh rà soát.\n\nTrân trọng,\n{{USER_NAME}}"
+              },
+              {
+                "from": "duc.cto.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: War-room: Tổng hợp quyết định kỹ thuật sau sự cố mobile",
+                "body": "Cảm ơn anh/chị. Sau khi rà soát, tôi sẽ phản hồi các điểm cần bổ sung trong phiên họp 15:00.\n\nTrân trọng,\nĐức Hoàng"
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "duc.cto.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nĐức Hoàng",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "duc.cto.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Kính gửi Đức Hoàng,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "duc.cto.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Future Skills Academy",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nĐức Hoàng",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 43200000,
+            "messages": [
+              {
+                "from": "duc.cto.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nĐức Hoàng",
+                "dateOffsetMs": 86400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "duc.cto.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Kính gửi Đức Hoàng,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 57600000
+              },
+              {
+                "from": "duc.cto.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Future Skills Academy",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nĐức Hoàng",
+                "dateOffsetMs": 43200000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -12,16 +12,18 @@ Load these files in priority order. Only load what you need for the current task
 
 1. [`knowledge/project-overview.md`](knowledge/project-overview.md) — Stack, ports, request flow, auth, Docker
 2. [`skills/code-conventions.md`](skills/code-conventions.md) — Naming, patterns, file structure (TypeScript + Python)
+3. [`state/current-state.md`](state/current-state.md) — Current runtime snapshot + guardrails
 
 ### Load When Relevant
 
 | Task type | Load |
 |-----------|------|
 | Frontend / Backend routes | [`knowledge/api-contracts-backend.md`](knowledge/api-contracts-backend.md), [`skills/feature-patterns.md`](skills/feature-patterns.md) |
+| Topic / Focus optimization work | [`skills/patterns/topic-focus-optimization.md`](skills/patterns/topic-focus-optimization.md), [`state/changelog/topic-intelligence.md`](state/changelog/topic-intelligence.md) |
 | AI Service (Python) | [`knowledge/api-contracts-ai-service.md`](knowledge/api-contracts-ai-service.md), [`knowledge/ai-service.md`](knowledge/ai-service.md) |
 | Database / Mongoose models | [`knowledge/database-schema.md`](knowledge/database-schema.md) |
 | Feature implementation status | [`state/implementation-status.md`](state/implementation-status.md) |
-| Current bugs / active work | [`state/current-state.md`](state/current-state.md) |
+| Current bugs / active work timeline | [`state/changelog/email-core.md`](state/changelog/email-core.md), [`state/changelog/topic-intelligence.md`](state/changelog/topic-intelligence.md) |
 | Telegram features | [`state/changelog/telegram.md`](state/changelog/telegram.md) |
 | Topic Intelligence / Focus | [`state/changelog/topic-intelligence.md`](state/changelog/topic-intelligence.md) |
 | Email / Contact / AI features | [`state/changelog/email-core.md`](state/changelog/email-core.md) |

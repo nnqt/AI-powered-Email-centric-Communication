@@ -5,6 +5,9 @@ export interface ITopic extends Document {
   contactId: mongoose.Types.ObjectId; // primary contact this topic belongs to
   isMock?: boolean;
   name: string; // AI-generated (Phase 3) or normalized subject (Phase 2 temp)
+  clusterKey?: string; // canonical key used for stable clustering
+  clusterKeySource?: "heuristic" | "ai";
+  clusterVersion?: number;
   nameEditedByUser: boolean; // if true → never overwrite with AI name
   threadIds: mongoose.Types.ObjectId[]; // _id refs to Thread documents
   threadCount: number; // denormalized
@@ -48,6 +51,9 @@ const TopicSchema: Schema<ITopic> = new Schema(
     },
     isMock: { type: Boolean, default: false },
     name: { type: String, required: true },
+    clusterKey: { type: String, index: true },
+    clusterKeySource: { type: String, enum: ["heuristic", "ai"] },
+    clusterVersion: { type: Number, default: 1 },
     nameEditedByUser: { type: Boolean, default: false },
     threadIds: { type: [Schema.Types.ObjectId], ref: "Thread", default: [] },
     threadCount: { type: Number, default: 0 },

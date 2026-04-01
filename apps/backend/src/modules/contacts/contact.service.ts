@@ -8,6 +8,7 @@ import {
   CategorySource,
 } from "@/models/Contact";
 import { Thread, IThread } from "@/models/Thread";
+import { Topic } from "@/models/Topic";
 import { User } from "@/models/User";
 
 // Well-known spam / disposable domains to auto-classify as spam
@@ -204,6 +205,11 @@ export interface ContactSnippetDTO {
   name?: string;
   alternate_emails: string[];
   sample_threads: string[];
+  categories?: ContactCategory[];
+  category_source?: CategorySource;
+  telegram_username?: string;
+  telegram_name?: string;
+  telegram_id?: string;
 }
 
 export interface PaginatedContactsResult {
@@ -213,11 +219,12 @@ export interface PaginatedContactsResult {
 }
 
 function toDTO(c: IContact): ContactDTO {
+  const resolvedName = resolveDisplayName(c);
   const doc = c as any;
   return {
     _id: doc._id.toString(),
     email: c.email,
-    name: c.name,
+    name: resolvedName,
     org: c.org,
     language: c.language,
     alternateEmails: c.alternateEmails,
@@ -234,6 +241,28 @@ function toDTO(c: IContact): ContactDTO {
     telegramUsername: (c as any).telegramUsername,
     telegramName: (c as any).telegramName,
   };
+}
+
+function resolveDisplayName(c: IContact): string | undefined {
+  const directName = c.name?.trim();
+  if (directName) return directName;
+
+  const telegramName = (c as any).telegramName?.trim();
+  if (telegramName) return telegramName;
+
+  const telegramUsername = (c as any).telegramUsername?.trim();
+  if (telegramUsername) {
+    return telegramUsername.startsWith("@")
+      ? telegramUsername
+      : `@${telegramUsername}`;
+  }
+
+  const match = c.email.match(/^tg-(.+)@telegram\.local$/i);
+  if (match?.[1]) {
+    return `Telegram ${match[1]}`;
+  }
+
+  return undefined;
 }
 
 export class ContactService {
@@ -466,6 +495,18 @@ export class ContactService {
       mergedInto: new mongoose.Types.ObjectId(targetId),
     });
 
+    // Move topic ownership to the target contact so focus/topics continue
+    // on the merged identity instead of splitting by hidden source contact.
+    await Topic.updateMany(
+      {
+        userId: uid,
+        contactId: new mongoose.Types.ObjectId(sourceId),
+      },
+      {
+        contactId: new mongoose.Types.ObjectId(targetId),
+      },
+    );
+
     const updated = await Contact.findById(targetId).lean<IContact>();
     return toDTO(updated!);
   }
@@ -566,6 +607,9 @@ export class ContactService {
         name: c.name,
         alternate_emails: c.alternateEmails,
         sample_threads: threadSnippets,
+        categories: (c as any).categories ?? [],
+        category_source: (c as any).categorySource ?? "rule",
+        telegram_id: (c as any).telegramId,
         telegram_username: (c as any).telegramUsername,
         telegram_name: (c as any).telegramName,
         recent_chat_snippets: chatSnippets,

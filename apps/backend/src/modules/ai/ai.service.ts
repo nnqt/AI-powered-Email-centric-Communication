@@ -1,5 +1,6 @@
 import axios from "axios";
 import { IThreadSummary } from "@/models/Thread";
+import { incrementMetric, observeMetricMs } from "@/lib/runtimeMetrics";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:5000";
 
@@ -21,6 +22,37 @@ interface SummarizeResponse {
   summary: string | string[];
   key_issues: string[];
   action_required: string[];
+}
+
+interface AnalyzeThreadMessage {
+  id: string;
+  from: string;
+  to: string[];
+  sent_at: string;
+  text: string;
+}
+
+interface AnalyzeThreadRequest {
+  thread_id: string;
+  subject?: string;
+  snippet?: string;
+  sender_email?: string;
+  sender_categories?: string[];
+  messages: AnalyzeThreadMessage[];
+}
+
+interface AnalyzeThreadResponse {
+  thread_id: string;
+  categories: string[];
+  noise_filtered: boolean;
+  topic_key?: string | null;
+  topic_key_confidence?: number | null;
+  summary?: string | string[] | null;
+  key_issues?: string[];
+  action_required?: string[];
+  quality_tier?: "noise" | "low" | "normal" | "high";
+  should_cluster?: boolean;
+  should_summarize?: boolean;
 }
 
 interface SuggestReplyRequest {
@@ -86,9 +118,107 @@ interface SuggestMergeResponse {
   suggestions: MergeSuggestion[];
 }
 
+interface TopicConsolidationCandidate {
+  topic_id: string;
+  name?: string;
+  cluster_key?: string;
+  name_edited_by_user?: boolean;
+  thread_subjects: string[];
+  thread_summaries: string[];
+  thread_key_issues: string[];
+  thread_action_required: string[];
+  thread_categories: string[];
+  business_markers: string[];
+  last_inbound_at?: string;
+  last_outbound_at?: string;
+  telegram_chat_insights: string[];
+  telegram_recent_messages: string[];
+}
+
+interface TopicConsolidationCluster {
+  canonical_cluster_key: string;
+  canonical_name: string;
+  topic_ids: string[];
+  confidence: number;
+  reason: string;
+}
+
+interface TopicNameOverride {
+  topic_id: string;
+  name: string;
+  confidence: number;
+}
+
 export type { EnrichContactResponse, MergeSuggestion, ReplyItem };
 
 export class AIService {
+  async analyzeThread(payload: AnalyzeThreadRequest): Promise<{
+    categories: string[];
+    noiseFiltered: boolean;
+    topicKey?: string;
+    topicKeyConfidence?: number;
+    summary?: IThreadSummary;
+    qualityTier?: "noise" | "low" | "normal" | "high";
+    shouldCluster?: boolean;
+    shouldSummarize?: boolean;
+  }> {
+    const startedAt = Date.now();
+    try {
+      const response = await axios.post<AnalyzeThreadResponse>(
+        `${AI_SERVICE_URL}/analyze-thread`,
+        payload,
+        { timeout: 45_000 },
+      );
+
+      console.info(
+        JSON.stringify({
+          metric: "ai.analyze_thread",
+          thread_id: payload.thread_id,
+          latency_ms: Date.now() - startedAt,
+          noise_filtered: !!response.data.noise_filtered,
+          quality_tier: response.data.quality_tier ?? "normal",
+        }),
+      );
+      incrementMetric("ai.analyze_thread.success");
+      if (response.data.noise_filtered) {
+        incrementMetric("ai.analyze_thread.noise");
+      }
+      observeMetricMs("ai.analyze_thread.latency", Date.now() - startedAt);
+
+      const hasSummary =
+        response.data.summary !== null && response.data.summary !== undefined;
+
+      return {
+        categories: response.data.categories ?? [],
+        noiseFiltered: !!response.data.noise_filtered,
+        topicKey: response.data.topic_key ?? undefined,
+        topicKeyConfidence: response.data.topic_key_confidence ?? undefined,
+        summary: hasSummary
+          ? {
+              text: response.data.summary as string | string[],
+              key_issues: response.data.key_issues ?? [],
+              action_required: response.data.action_required ?? [],
+            }
+          : undefined,
+        qualityTier: response.data.quality_tier,
+        shouldCluster: response.data.should_cluster,
+        shouldSummarize: response.data.should_summarize,
+      };
+    } catch (error: any) {
+      incrementMetric("ai.analyze_thread.error");
+      observeMetricMs("ai.analyze_thread.latency", Date.now() - startedAt);
+      console.error(
+        "AI analyze-thread failed:",
+        error.response?.data || error.message,
+      );
+      throw new Error(
+        `AI analyze-thread failed: ${
+          error.response?.data?.detail || error.message
+        }`,
+      );
+    }
+  }
+
   async summarizeThread(
     threadId: string,
     messages: Array<{
@@ -249,12 +379,19 @@ export class AIService {
     snippet?: string,
     senderEmail?: string,
     senderCategories?: string[],
-  ): Promise<{ categories: string[]; noiseFiltered: boolean }> {
+  ): Promise<{
+    categories: string[];
+    noiseFiltered: boolean;
+    topicKey?: string;
+    topicKeyConfidence?: number;
+  }> {
     try {
       const response = await axios.post<{
         thread_id: string;
         categories: string[];
         noise_filtered: boolean;
+        topic_key?: string | null;
+        topic_key_confidence?: number | null;
       }>(
         `${AI_SERVICE_URL}/classify-thread-category`,
         {
@@ -269,6 +406,8 @@ export class AIService {
       return {
         categories: response.data.categories,
         noiseFiltered: response.data.noise_filtered,
+        topicKey: response.data.topic_key ?? undefined,
+        topicKeyConfidence: response.data.topic_key_confidence ?? undefined,
       };
     } catch (error: any) {
       console.error("AI classify-thread-category failed:", error.message);
@@ -292,6 +431,7 @@ export class AIService {
       const response = await axios.post<{ topic_id: string; name: string }>(
         `${AI_SERVICE_URL}/label-topic`,
         {
+          mode: "label",
           topic_id: topicId,
           thread_subjects: threadSubjects,
           contact_name: contactName,
@@ -302,6 +442,45 @@ export class AIService {
     } catch (error: any) {
       console.warn("[AIService.labelTopic]", error.message);
       return { name: threadSubjects[0] ?? "Untitled" };
+    }
+  }
+
+  async consolidateTopics(
+    contactId: string,
+    contactName: string | undefined,
+    candidates: TopicConsolidationCandidate[],
+    minConfidence = 0.8,
+  ): Promise<{
+    clusters: TopicConsolidationCluster[];
+    topicNameOverrides: TopicNameOverride[];
+    unmergedTopicIds: string[];
+  }> {
+    try {
+      const response = await axios.post<{
+        mode: "consolidate";
+        clusters?: TopicConsolidationCluster[];
+        topic_name_overrides?: TopicNameOverride[];
+        unmerged_topic_ids?: string[];
+      }>(
+        `${AI_SERVICE_URL}/label-topic`,
+        {
+          mode: "consolidate",
+          contact_id: contactId,
+          contact_name: contactName,
+          candidates,
+          min_confidence: minConfidence,
+        },
+        { timeout: 20_000 },
+      );
+
+      return {
+        clusters: response.data.clusters ?? [],
+        topicNameOverrides: response.data.topic_name_overrides ?? [],
+        unmergedTopicIds: response.data.unmerged_topic_ids ?? [],
+      };
+    } catch (error: any) {
+      console.warn("[AIService.consolidateTopics]", error.message);
+      return { clusters: [], topicNameOverrides: [], unmergedTopicIds: [] };
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSWRConfig } from "swr";
 
 import apiClient from "@/lib/api";
 import { isSandboxUiEnabled } from "@/lib/sandbox";
@@ -30,6 +31,36 @@ const initialForm: SandboxFormState = {
 export default function DevSandboxPage() {
   const router = useRouter();
   const { showToast, updateToast } = useToast();
+  const { mutate } = useSWRConfig();
+
+  const revalidateAfterSandboxWrite = async () => {
+    await Promise.all([
+      mutate(
+        (key: unknown) =>
+          typeof key === "string" && key.startsWith("/api/contacts"),
+        undefined,
+        { revalidate: true },
+      ),
+      mutate(
+        (key: unknown) =>
+          typeof key === "string" && key.startsWith("/api/threads"),
+        undefined,
+        { revalidate: true },
+      ),
+      mutate(
+        (key: unknown) =>
+          typeof key === "string" && key.startsWith("/api/focus"),
+        undefined,
+        { revalidate: true },
+      ),
+      mutate(
+        (key: unknown) =>
+          typeof key === "string" && key.startsWith("/api/topics"),
+        undefined,
+        { revalidate: true },
+      ),
+    ]);
+  };
 
   const [isInjectingScenario, setIsInjectingScenario] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -130,6 +161,7 @@ export default function DevSandboxPage() {
         `Injected: ${created?.contacts ?? 0} contacts, ${created?.threads ?? 0} threads, ${created?.messages ?? 0} messages`,
         "success",
       );
+      await revalidateAfterSandboxWrite();
     } catch (error: any) {
       const details =
         error?.response?.data?.error || "Failed to inject scenario";
@@ -152,6 +184,7 @@ export default function DevSandboxPage() {
         `Cleared: ${deleted?.threads ?? 0} threads, ${deleted?.messages ?? 0} messages`,
         "success",
       );
+      await revalidateAfterSandboxWrite();
     } catch (error: any) {
       const details =
         error?.response?.data?.error || "Failed to clear sandbox data";
@@ -202,6 +235,7 @@ export default function DevSandboxPage() {
     try {
       await apiClient.post("/api/sandbox/inject", payload);
       updateToast(toastId, "Fake webhook injected successfully", "success");
+      await revalidateAfterSandboxWrite();
       setForm(initialForm);
     } catch (error: any) {
       const details =

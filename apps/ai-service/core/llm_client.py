@@ -587,7 +587,7 @@ class GeminiUrgentClassifier:
             "or an action is actively blocking someone).\n"
             "Do NOT mark as urgent: newsletters, promotions, automated notifications, "
             "routine follow-ups, or reminders without a concrete deadline.\n"
-            "Return ONLY a JSON object with exactly two fields:\n"
+            "Return ONLY a JSON object with exactly four fields:\n"
             '- "is_urgent": boolean\n'
             '- "reason": one short sentence explaining the decision\n\n'
             "Return ONLY valid JSON, no markdown.\n\n"
@@ -639,6 +639,37 @@ _AUTOMATED_SUBJECT_PATTERNS = [
 ]
 
 
+def _normalize_topic_key(raw_key: str) -> str:
+    key = raw_key.lower().strip()
+    key = key.replace("_", "-")
+    key = "".join(ch if ch.isalnum() or ch == "-" else "-" for ch in key)
+    while "--" in key:
+        key = key.replace("--", "-")
+    return key.strip("-")[:64]
+
+
+def _heuristic_topic_key(subject: str, snippet: str, categories: List[str]) -> Optional[str]:
+    text = f"{subject} {snippet}".lower()
+    dims: List[str] = []
+
+    if "crm" in text:
+        dims.append("crm")
+    if "erp" in text:
+        dims.append("erp")
+    if any(k in text for k in ["uat", "release", "backlog", "ban giao", "scope", "pham vi"]):
+        dims.append("delivery")
+
+    if "project_update" in categories or "task_request" in categories:
+        dims.append("project")
+    if "complaint" in categories or "support_request" in categories:
+        dims.append("support")
+
+    if not dims:
+        return None
+
+    return _normalize_topic_key("-".join(sorted(set(dims))))
+
+
 def _is_noreply_sender(sender_email: Optional[str]) -> bool:
     """Return True if the sender address looks like an automated no-reply account."""
     if not sender_email:
@@ -664,6 +695,8 @@ class GeminiThreadCategoryClient:
             return {
                 "categories": ["notification"],
                 "noise_filtered": True,
+                "topic_key": None,
+                "topic_key_confidence": None,
             }
 
         # 2. Sender email matches no-reply pattern
@@ -671,6 +704,8 @@ class GeminiThreadCategoryClient:
             return {
                 "categories": ["notification"],
                 "noise_filtered": True,
+                "topic_key": None,
+                "topic_key_confidence": None,
             }
 
         # 3. Subject matches automated/transactional patterns
@@ -678,11 +713,18 @@ class GeminiThreadCategoryClient:
             return {
                 "categories": ["notification"],
                 "noise_filtered": True,
+                "topic_key": None,
+                "topic_key_confidence": None,
             }
 
         # No content to classify
         if not subject and not snippet:
-            return {"categories": ["other"], "noise_filtered": False}
+            return {
+                "categories": ["other"],
+                "noise_filtered": False,
+                "topic_key": None,
+                "topic_key_confidence": None,
+            }
 
         # ── Gemini classification ───────────────────────────────────────────
         categories_list = ", ".join(sorted(VALID_THREAD_CATEGORIES))
@@ -696,7 +738,10 @@ class GeminiThreadCategoryClient:
             '- "categories": array of 1–3 category strings from the allowed list\n'
             '- "noise_filtered": boolean — true ONLY if this is a fully automated/system '
             "email (newsletter, receipt, OTP, order confirmation, system alert) that requires "
-            "no human reply whatsoever\n\n"
+            "no human reply whatsoever\n"
+            '- "topic_key": optional canonical kebab-case key for topic clustering (2-5 tokens), '
+            'use null for automated/noise threads\n'
+            '- "topic_key_confidence": float 0.0-1.0 (confidence for topic_key), use null if topic_key is null\n\n'
             "Return ONLY valid JSON, no markdown.\n\n"
             f"Subject: {_truncate(subject, 200)}\n"
             f"Snippet: {_truncate(snippet, _MAX_SNIPPET_CHARS)}"
@@ -706,7 +751,12 @@ class GeminiThreadCategoryClient:
             text = await _gemini_with_retry(prompt, max_retries=2, base_delay=1.0)
         except Exception as exc:
             # Non-fatal: fallback to "other"
-            return {"categories": ["other"], "noise_filtered": False}
+            return {
+                "categories": ["other"],
+                "noise_filtered": False,
+                "topic_key": _heuristic_topic_key(subject, snippet, ["other"]),
+                "topic_key_confidence": 0.55,
+            }
 
         if text.startswith("```"):
             lines = text.split("\n")
@@ -723,9 +773,41 @@ class GeminiThreadCategoryClient:
             # Double-check: if Gemini returns noise categories, force noise_filtered=True
             if any(c in NOISE_CATEGORIES for c in valid_cats):
                 noise = True
-            return {"categories": valid_cats, "noise_filtered": noise}
+
+            raw_topic_key = data.get("topic_key")
+            topic_key: Optional[str] = None
+            topic_key_confidence: Optional[float] = None
+
+            if isinstance(raw_topic_key, str) and raw_topic_key.strip() and not noise:
+                topic_key = _normalize_topic_key(raw_topic_key)
+                try:
+                    confidence_raw = data.get("topic_key_confidence")
+                    if confidence_raw is not None:
+                        parsed_conf = float(confidence_raw)
+                        topic_key_confidence = min(1.0, max(0.0, parsed_conf))
+                    else:
+                        topic_key_confidence = 0.75
+                except (TypeError, ValueError):
+                    topic_key_confidence = 0.75
+
+            if not topic_key and not noise:
+                topic_key = _heuristic_topic_key(subject, snippet, valid_cats)
+                topic_key_confidence = 0.58 if topic_key else None
+
+            return {
+                "categories": valid_cats,
+                "noise_filtered": noise,
+                "topic_key": topic_key,
+                "topic_key_confidence": topic_key_confidence,
+            }
         except json.JSONDecodeError:
-            return {"categories": ["other"], "noise_filtered": False}
+            fallback_key = _heuristic_topic_key(subject, snippet, ["other"])
+            return {
+                "categories": ["other"],
+                "noise_filtered": False,
+                "topic_key": fallback_key,
+                "topic_key_confidence": 0.52 if fallback_key else None,
+            }
 
 
 def get_thread_category_client() -> GeminiThreadCategoryClient:
@@ -838,6 +920,287 @@ class GeminiTopicLabelClient:
         except Exception:
             # Fallback: return first subject
             return subjects[0][:100]
+
+    def _fallback_consolidation(self, request: LabelTopicRequest) -> Dict[str, Any]:
+        by_key: Dict[str, List[str]] = {}
+        singleton_ids: List[str] = []
+
+        for candidate in request.candidates:
+            key = (candidate.cluster_key or "").strip().lower()
+            if key:
+                by_key.setdefault(key, []).append(candidate.topic_id)
+            else:
+                singleton_ids.append(candidate.topic_id)
+
+        clusters: List[Dict[str, Any]] = []
+        overrides: List[Dict[str, Any]] = []
+        for key, topic_ids in by_key.items():
+            if len(topic_ids) < 2:
+                singleton_ids.extend(topic_ids)
+                continue
+            canonical_name = key.replace("-", " ")[:80] or "Consolidated Topic"
+            clusters.append(
+                {
+                    "canonical_cluster_key": key,
+                    "canonical_name": canonical_name,
+                    "topic_ids": topic_ids,
+                    "confidence": 0.75,
+                    "reason": "Fallback grouping by existing cluster key",
+                }
+            )
+            for tid in topic_ids:
+                overrides.append(
+                    {
+                        "topic_id": tid,
+                        "name": canonical_name,
+                        "confidence": 0.75,
+                    }
+                )
+
+        candidate_map = {c.topic_id: c for c in request.candidates}
+        for tid in singleton_ids:
+            c = candidate_map.get(tid)
+            fallback_name = (c.name or "").strip() if c else ""
+            if not fallback_name and c and c.cluster_key:
+                fallback_name = c.cluster_key.replace("-", " ")[:100]
+            if not fallback_name:
+                fallback_name = "Untitled"
+            overrides.append(
+                {
+                    "topic_id": tid,
+                    "name": fallback_name[:100],
+                    "confidence": 0.7,
+                }
+            )
+
+        return {
+            "clusters": clusters,
+            "topic_name_overrides": overrides,
+            "unmerged_topic_ids": singleton_ids,
+        }
+
+    async def consolidate(self, request: LabelTopicRequest) -> Dict[str, Any]:
+        candidates = request.candidates or []
+        if len(candidates) < 1:
+            return {
+                "clusters": [],
+                "topic_name_overrides": [],
+                "unmerged_topic_ids": [c.topic_id for c in candidates],
+            }
+
+        def _pack_list(items: List[str], each: int, total: int) -> List[str]:
+            packed: List[str] = []
+            used = 0
+            for raw in items:
+                clipped = _truncate(raw.strip(), each)
+                if not clipped:
+                    continue
+                if used + len(clipped) > total:
+                    break
+                packed.append(clipped)
+                used += len(clipped)
+            return packed
+
+        candidate_lines: List[str] = []
+        for c in candidates[:12]:
+            subjects = _pack_list(c.thread_subjects, 120, 800)
+            summaries = _pack_list(c.thread_summaries, 800, 2800)
+            key_issues = _pack_list(c.thread_key_issues, 200, 1000)
+            actions = _pack_list(c.thread_action_required, 200, 1000)
+            categories = _pack_list(c.thread_categories, 32, 400)
+            markers = _pack_list(c.business_markers, 48, 500)
+            chat_insights = _pack_list(c.telegram_chat_insights, 240, 1200)
+            recent_msgs = _pack_list(c.telegram_recent_messages, 220, 1400)
+
+            block = [
+                f"TopicId: {c.topic_id}",
+                f"CurrentName: {c.name or ''}",
+                f"ClusterKey: {c.cluster_key or ''}",
+                f"NameEditedByUser: {str(c.name_edited_by_user).lower()}",
+                f"LastInboundAt: {c.last_inbound_at or ''}",
+                f"LastOutboundAt: {c.last_outbound_at or ''}",
+                "ThreadSubjects:",
+                *(f"- {s}" for s in subjects),
+                "ThreadSummaries:",
+                *(f"- {s}" for s in summaries),
+                "ThreadKeyIssues:",
+                *(f"- {s}" for s in key_issues),
+                "ThreadActionRequired:",
+                *(f"- {s}" for s in actions),
+                "ThreadCategories:",
+                *(f"- {s}" for s in categories),
+                "BusinessMarkers:",
+                *(f"- {s}" for s in markers),
+                "TelegramChatInsights:",
+                *(f"- {s}" for s in chat_insights),
+                "TelegramRecentMessages:",
+                *(f"- {s}" for s in recent_msgs),
+            ]
+            candidate_lines.append("\n".join(block))
+
+        payload_text = _truncate("\n\n".join(candidate_lines), _MAX_TOTAL_CONTENT_CHARS)
+
+        prompt = (
+            f"{_LANG_INSTRUCTION}\n\n"
+            "You are an AI topic consolidation assistant for an email + Telegram workspace. "
+            "Your task is to decide which existing topics from the SAME contact should be merged.\n\n"
+            "Rules:\n"
+            "- Merge only when semantic intent is truly the same across business context, not just overlapping words.\n"
+            "- Treat BusinessMarkers as high-signal evidence (e.g., ref:cr-52, kw:budget).\n"
+            "- If two topics share the same stable reference marker (like ref:cr-52), prefer merging unless their intent clearly conflicts.\n"
+            "- Use both email and Telegram context signals.\n"
+            "- Respect NameEditedByUser=true (avoid merging these unless very strong evidence).\n"
+            "- Confidence must be 0.0 to 1.0.\n"
+            "- Use kebab-case for canonical_cluster_key.\n"
+            f"- Only produce clusters with confidence >= {request.min_confidence:.2f}.\n\n"
+            "Return ONLY valid JSON object with this exact structure:\n"
+            "{\n"
+            '  "clusters": [\n'
+            "    {\n"
+            '      "canonical_cluster_key": "...",\n'
+            '      "canonical_name": "...",\n'
+            '      "topic_ids": ["...", "..."],\n'
+            '      "confidence": 0.0,\n'
+            '      "reason": "..."\n'
+            "    }\n"
+            "  ],\n"
+            '  "topic_name_overrides": [\n'
+            "    {\n"
+            '      "topic_id": "...",\n'
+            '      "name": "...",\n'
+            '      "confidence": 0.0\n'
+            "    }\n"
+            "  ],\n"
+            '  "unmerged_topic_ids": ["..."]\n'
+            "}\n\n"
+            f"ContactName: {request.contact_name or ''}\n"
+            f"ContactId: {request.contact_id or ''}\n"
+            "Topic Candidates:\n"
+            f"{payload_text}"
+        )
+
+        try:
+            text = await _gemini_with_retry(prompt, max_retries=2, base_delay=1.0)
+            if text.startswith("```"):
+                lines = text.split("\n")
+                text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+            data = json.loads(text)
+            raw_clusters = data.get("clusters", []) if isinstance(data, dict) else []
+            if not isinstance(raw_clusters, list):
+                raw_clusters = []
+
+            raw_overrides = data.get("topic_name_overrides", []) if isinstance(data, dict) else []
+            if not isinstance(raw_overrides, list):
+                raw_overrides = []
+
+            valid_topic_ids = {c.topic_id for c in candidates}
+            clusters: List[Dict[str, Any]] = []
+            overrides: List[Dict[str, Any]] = []
+            covered_ids = set()
+
+            for item in raw_clusters:
+                try:
+                    ids = [str(tid).strip() for tid in item.get("topic_ids", [])]
+                    ids = [tid for tid in ids if tid in valid_topic_ids]
+                    ids = list(dict.fromkeys(ids))
+                    if len(ids) < 2:
+                        continue
+
+                    conf = float(item.get("confidence", 0.0))
+                    conf = min(1.0, max(0.0, conf))
+                    if conf < request.min_confidence:
+                        continue
+
+                    ckey = _normalize_topic_key(str(item.get("canonical_cluster_key", "")))
+                    if not ckey:
+                        continue
+
+                    cname = str(item.get("canonical_name", "")).strip()[:100]
+                    if not cname:
+                        cname = ckey.replace("-", " ")[:100]
+
+                    reason = str(item.get("reason", "")).strip()[:240]
+                    clusters.append(
+                        {
+                            "canonical_cluster_key": ckey,
+                            "canonical_name": cname,
+                            "topic_ids": ids,
+                            "confidence": conf,
+                            "reason": reason or "AI consolidation",
+                        }
+                    )
+                    covered_ids.update(ids)
+                except Exception:
+                    continue
+
+            for item in raw_overrides:
+                try:
+                    topic_id = str(item.get("topic_id", "")).strip()
+                    if topic_id not in valid_topic_ids:
+                        continue
+
+                    name = str(item.get("name", "")).strip()[:100]
+                    if not name:
+                        continue
+
+                    confidence = float(item.get("confidence", 0.7))
+                    confidence = min(1.0, max(0.0, confidence))
+
+                    overrides.append(
+                        {
+                            "topic_id": topic_id,
+                            "name": name,
+                            "confidence": confidence,
+                        }
+                    )
+                except Exception:
+                    continue
+
+            # Ensure merged clusters always carry canonical naming overrides.
+            covered_override_ids = {item["topic_id"] for item in overrides}
+            for cluster in clusters:
+                canonical_name = cluster["canonical_name"]
+                for topic_id in cluster["topic_ids"]:
+                    if topic_id in covered_override_ids:
+                        continue
+                    overrides.append(
+                        {
+                            "topic_id": topic_id,
+                            "name": canonical_name[:100],
+                            "confidence": cluster.get("confidence", 0.8),
+                        }
+                    )
+                    covered_override_ids.add(topic_id)
+
+            unmerged = [tid for tid in valid_topic_ids if tid not in covered_ids]
+
+            # For topics still unmerged and unnamed by AI, keep current topic name as stable fallback.
+            candidate_map = {c.topic_id: c for c in candidates}
+            for topic_id in unmerged:
+                if topic_id in covered_override_ids:
+                    continue
+                c = candidate_map.get(topic_id)
+                fallback_name = (c.name or "").strip() if c else ""
+                if not fallback_name and c and c.cluster_key:
+                    fallback_name = c.cluster_key.replace("-", " ")[:100]
+                if not fallback_name:
+                    fallback_name = "Untitled"
+                overrides.append(
+                    {
+                        "topic_id": topic_id,
+                        "name": fallback_name[:100],
+                        "confidence": 0.7,
+                    }
+                )
+
+            return {
+                "clusters": clusters,
+                "topic_name_overrides": overrides,
+                "unmerged_topic_ids": unmerged,
+            }
+        except Exception:
+            return self._fallback_consolidation(request)
 
 
 def get_topic_label_client() -> GeminiTopicLabelClient:

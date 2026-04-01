@@ -34,16 +34,33 @@ All routes require session auth unless noted. Auth failure → 401.
 
 | Method | Route | Body / Query | Response |
 |--------|-------|-------------|----------|
-| GET | `/api/contacts` | `q?, category?` | `ContactDTO[]` |
+| GET | `/api/contacts` | `limit?, skip?, unverified?=true` | `{ contacts: ContactDTO[], total, hasNext }` |
 | POST | `/api/contacts` | `{ email, name?, org?, language? }` | `ContactDTO` |
 | GET | `/api/contacts/[id]` | — | `ContactDTO` |
 | PATCH | `/api/contacts/[id]` | `{ name?, org?, language?, alternateEmails?, category?, categories?, categorySource?, categoryAiSuggestion? }` | `ContactDTO` |
 | GET | `/api/contacts/[id]/timeline` | — | `ThreadDTO[]` |
 | POST | `/api/contacts/[id]/enrich` | `force?=true` | `{ contact: ContactDTO, cached?: boolean }` |
 | POST | `/api/contacts/bulk-enrich` | — | `{ processed, skipped, failed, total }` |
-| GET | `/api/contacts/merge-suggestions` | `refresh?=true` | `{ suggestions: MergeSuggestion[], fromCache }` |
+| GET | `/api/contacts/merge-suggestions` | `refresh?=true, selectedContactId?` | `{ suggestions: MergeSuggestion[], fromCache? }` |
 | POST | `/api/contacts/merge` | `{ sourceId, targetId }` | `{ success: true }` |
+| POST | `/api/contacts/merge/batch` | `{ merges: { sourceId, targetId }[] }` | `{ applied, failed, errors[] }` |
 | GET | `/api/contacts/[id]/topics` | — | `{ topics: TopicDTO[] }` |
+
+**MergeSuggestion fields (current):**
+```typescript
+interface MergeSuggestion {
+  source_id: string;
+  target_id: string;
+  source_email: string;
+  target_email: string;
+  source_display_name?: string;
+  target_display_name?: string;
+  confidence: number;
+  reason: string;
+  strategy?: "verified_anchor" | "selected_anchor" | "default";
+  target_is_verified?: boolean;
+}
+```
 
 **ContactDTO:**
 ```typescript
@@ -65,7 +82,15 @@ interface ContactDTO {
 | GET | `/api/topics` | `limit?` | `{ topics: TopicDTO[] }` |
 | GET | `/api/topics/[id]` | — | `{ topic: TopicDTO, threads: ThreadDTO[] }` |
 | PATCH | `/api/topics/[id]` | `{ name }` | `{ topic: TopicDTO }` |
-| GET | `/api/focus` | `limit?, refresh?=1` | `{ topics: FocusTopicDTO[] }` |
+| GET | `/api/focus` | `limit?` | `{ topics: FocusTopicDTO[] }` |
+| GET | `/api/focus/overview` | — | `{ totalFocusTopics, highPriorityCount, topFocusScore, lastScoredAt? }` |
+| POST | `/api/focus/recompute` | `limit?` (query) | `{ topics: FocusTopicDTO[], overview }` |
+
+## Runtime Metrics
+
+| Method | Route | Body / Query | Response |
+|--------|-------|-------------|----------|
+| GET | `/api/metrics/overview` | — | `{ counters, timers }` |
 
 **TopicDTO / FocusTopicDTO:**
 ```typescript

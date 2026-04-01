@@ -1,0 +1,664 @@
+[
+  {
+    "scenarioName": "Hard 01 - Nhiều khách hàng follow-up qua email và Telegram",
+    "contacts": [
+      {
+        "email": "mai.pm.client@example.com",
+        "name": "Mai Lê",
+        "org": "Apollo Health",
+        "language": "vi",
+        "telegram": {
+          "telegramId": "tg-mai-le-001",
+          "telegramUsername": "mai_apollo",
+          "telegramName": "Mai Lê",
+          "chats": [
+            {
+              "chatId": "tg-mai-le-001",
+              "title": "Mai Lê - Apollo Health",
+              "type": "private",
+              "unreadCount": 2,
+              "dateOffsetMs": 2400000,
+              "messages": [
+                {
+                  "senderId": "tg-mai-le-001",
+                  "text": "Anh/chị {{USER_NAME}}, team tôi cần file release note bổ sung ngay hôm nay để trình Ban Điều hành.",
+                  "dateOffsetMs": 5400000
+                },
+                {
+                  "senderId": "owner-{{USER_EMAIL}}",
+                  "text": "Đã rõ chị Mai, tôi sẽ gửi release note trước 15:30 cùng ngày.",
+                  "isOutbound": true,
+                  "dateOffsetMs": 2400000
+                }
+              ]
+            }
+          ]
+        },
+        "threads": [
+          {
+            "subject": "Theo dõi UAT module hồ sơ bệnh án điện tử",
+            "snippet": "Kênh email song song Telegram cho cùng một topic.",
+            "dateOffsetMs": 9000000,
+            "messages": [
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Theo dõi UAT module hồ sơ bệnh án điện tử",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nChúng tôi cần cập nhật kết quả UAT module hồ sơ bệnh án điện tử trước 17:00 hôm nay.\n\nĐề nghị gửi danh sách lỗi tồn đọng theo mức độ ưu tiên và ETA fix cho từng lỗi.\n\nTrân trọng,\nMai Lê\nPM, Apollo Health",
+                "dateOffsetMs": 43200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Theo dõi UAT module hồ sơ bệnh án điện tử",
+                "body": "Kính gửi chị Mai,\n\nBên em đang tổng hợp danh sách lỗi tồn đọng và sẽ gửi bản cập nhật trước 16:00.\n\nPhiên bản fix đầu tiên dự kiến deploy tới môi trường UAT vào 18:30.\n\nTrân trọng,\n{{USER_NAME}}\nProject Manager",
+                "dateOffsetMs": 9000000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Theo dõi UAT module hồ sơ bệnh án điện tử",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nMai Lê",
+                "dateOffsetMs": 3000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Follow-up kế hoạch triển khai tuần này - Apollo Health",
+            "snippet": "Thread bổ sung để tăng độ phủ bối cảnh theo dõi.",
+            "dateOffsetMs": 5100000,
+            "messages": [
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Follow-up kế hoạch triển khai tuần này - Apollo Health",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị cập nhật giúp kế hoạch triển khai tuần này và các đầu việc có rủi ro cao để bên tôi chủ động sắp xếp nguồn lực.\n\nTrân trọng,\nMai Lê",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Apollo Health",
+                "body": "Kính gửi anh/chị,\n\nBên em đã rà soát lại kế hoạch tuần này và sẽ gửi bảng cập nhật theo từng đầu việc cùng mức ưu tiên trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Apollo Health",
+                "body": "Cảm ơn anh/chị. Bên tôi chờ bản cập nhật để chốt lịch làm việc với các bộ phận liên quan.\n\nTrân trọng,\nMai Lê",
+                "dateOffsetMs": 4200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nMai Lê",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Kính gửi Mai Lê,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nMai Lê",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 36000000,
+            "messages": [
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nMai Lê",
+                "dateOffsetMs": 79200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Kính gửi Mai Lê,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 50400000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nMai Lê",
+                "dateOffsetMs": 36000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+            "snippet": "Thread nhiễu dài 24 email để stress test phân cụm topic và tóm tắt.",
+            "dateOffsetMs": 5400000,
+            "messages": [
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 1/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 70200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Đã nhận cập nhật 2/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 67500000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 3/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 64800000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 4/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 62100000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Đã nhận cập nhật 5/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 59400000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 6/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 56700000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 7/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Đã nhận cập nhật 8/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 51300000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 9/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 48600000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 10/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 45900000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Đã nhận cập nhật 11/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 43200000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 12/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 40500000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 13/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 37800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Đã nhận cập nhật 14/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 35100000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 15/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 32400000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 16/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 29700000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Đã nhận cập nhật 17/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 27000000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 18/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 24300000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 19/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 21600000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Đã nhận cập nhật 20/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 18900000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 21/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 16200000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 22/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 13500000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "mai.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Đã nhận cập nhật 23/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 10800000
+              },
+              {
+                "from": "mai.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Apollo Health",
+                "body": "Cập nhật nhanh 24/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 8100000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "bao.ops.client@example.com",
+        "name": "Bảo Phạm",
+        "org": "Apollo Health",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "Cảnh báo gián đoạn đồng bộ dữ liệu bệnh nhân",
+            "snippet": "Topic độc lập, dùng để test nhiều khách hàng trong hard mode.",
+            "dateOffsetMs": 1800000,
+            "messages": [
+              {
+                "from": "bao.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Cảnh báo gián đoạn đồng bộ dữ liệu bệnh nhân",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nHệ thống ghi nhận hiện tượng gián đoạn đồng bộ dữ liệu bệnh nhân tại cơ sở 3 trong 20 phút qua.\n\nĐề nghị đội dự án xác nhận nguyên nhân và cập nhật phương án khôi phục tạm thời ngay lập tức.\n\nTrân trọng,\nBảo Phạm\nVận hành hệ thống",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "bao.ops.client@example.com"
+                ],
+                "subject": "Re: Cảnh báo gián đoạn đồng bộ dữ liệu bệnh nhân",
+                "body": "Kính gửi Bảo Phạm,\n\nBên em đã ghi nhận thông tin và đang phối hợp các bên liên quan để hoàn tất đầu việc.\n\nEm sẽ gửi bản cập nhật chi tiết trước 17:00 hôm nay.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 900000
+              },
+              {
+                "from": "bao.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Cảnh báo gián đoạn đồng bộ dữ liệu bệnh nhân",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nBảo Phạm",
+                "dateOffsetMs": 600000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Follow-up kế hoạch triển khai tuần này - Apollo Health",
+            "snippet": "Thread bổ sung để tăng độ phủ bối cảnh theo dõi.",
+            "dateOffsetMs": 5100000,
+            "messages": [
+              {
+                "from": "bao.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Follow-up kế hoạch triển khai tuần này - Apollo Health",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị cập nhật giúp kế hoạch triển khai tuần này và các đầu việc có rủi ro cao để bên tôi chủ động sắp xếp nguồn lực.\n\nTrân trọng,\nBảo Phạm",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "bao.ops.client@example.com"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Apollo Health",
+                "body": "Kính gửi anh/chị,\n\nBên em đã rà soát lại kế hoạch tuần này và sẽ gửi bảng cập nhật theo từng đầu việc cùng mức ưu tiên trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "bao.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Apollo Health",
+                "body": "Cảm ơn anh/chị. Bên tôi chờ bản cập nhật để chốt lịch làm việc với các bộ phận liên quan.\n\nTrân trọng,\nBảo Phạm",
+                "dateOffsetMs": 4200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 16416000000,
+            "messages": [
+              {
+                "from": "bao.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nBảo Phạm",
+                "dateOffsetMs": 16588800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "bao.ops.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Kính gửi Bảo Phạm,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 16502400000
+              },
+              {
+                "from": "bao.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nBảo Phạm",
+                "dateOffsetMs": 16416000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 39600000,
+            "messages": [
+              {
+                "from": "bao.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nBảo Phạm",
+                "dateOffsetMs": 82800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "bao.ops.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Kính gửi Bảo Phạm,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "bao.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nBảo Phạm",
+                "dateOffsetMs": 39600000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "nhung.qa.client@example.com",
+        "name": "Nhung Trần",
+        "org": "Apollo Health",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "Theo dõi checklist regression sau bản vá UAT",
+            "snippet": "Bổ sung đầu mối QA để tăng độ dày kịch bản hard.",
+            "dateOffsetMs": 4200000,
+            "messages": [
+              {
+                "from": "nhung.qa.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Theo dõi checklist regression sau bản vá UAT",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên QA cần checklist regression sau bản vá UAT để xác nhận phạm vi retest trước khi đóng vòng kiểm thử.\n\nNhờ anh/chị gửi bản checklist và owner từng nhóm test case trước 17:00.\n\nTrân trọng,\nNhung Trần\nQA Lead"
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nhung.qa.client@example.com"
+                ],
+                "subject": "Re: Theo dõi checklist regression sau bản vá UAT",
+                "body": "Kính gửi chị Nhung,\n\nBên em đã chuẩn bị checklist regression theo module và trạng thái fix.\n\nEm gửi bản tổng hợp trước 16:30 để chị xác nhận.\n\nTrân trọng,\n{{USER_NAME}}"
+              },
+              {
+                "from": "nhung.qa.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Theo dõi checklist regression sau bản vá UAT",
+                "body": "Đã nhận thông tin. Bên tôi sẽ cập nhật kết quả retest ngay sau khi hoàn tất vòng chạy tối nay.\n\nTrân trọng,\nNhung Trần"
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "nhung.qa.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nNhung Trần",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nhung.qa.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Kính gửi Nhung Trần,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "nhung.qa.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Apollo Health",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nNhung Trần",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 43200000,
+            "messages": [
+              {
+                "from": "nhung.qa.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nNhung Trần",
+                "dateOffsetMs": 86400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nhung.qa.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Kính gửi Nhung Trần,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 57600000
+              },
+              {
+                "from": "nhung.qa.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Apollo Health",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nNhung Trần",
+                "dateOffsetMs": 43200000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      }
+    ]
+  }
+]

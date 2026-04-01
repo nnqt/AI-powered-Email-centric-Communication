@@ -85,6 +85,9 @@ export interface IThread extends Document {
   noiseFiltered?: boolean;
   // Phase 2: Topic clustering
   topicId?: mongoose.Types.ObjectId;
+  topicKey?: string;
+  topicKeySource?: "heuristic" | "ai";
+  topicKeyConfidence?: number;
 }
 
 const ThreadSchema: Schema<IThread> = new Schema(
@@ -120,6 +123,9 @@ const ThreadSchema: Schema<IThread> = new Schema(
     noiseFiltered: { type: Boolean, default: false },
     // Phase 2: Topic clustering
     topicId: { type: Schema.Types.ObjectId, ref: "Topic", index: true },
+    topicKey: { type: String, index: true },
+    topicKeySource: { type: String, enum: ["heuristic", "ai"] },
+    topicKeyConfidence: { type: Number },
   },
   { timestamps: true },
 );

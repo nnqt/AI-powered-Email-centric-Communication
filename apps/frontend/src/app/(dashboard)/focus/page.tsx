@@ -5,21 +5,34 @@ import { useState, useCallback } from "react";
 import { useFocusTopics, FocusTopicDTO } from "@/hooks/useFocusTopics";
 import { FocusTopicCard } from "@/features/focus/FocusTopicCard";
 import apiClient from "@/lib/api";
+import { scoreToPriority } from "@/components/PriorityBadge";
+
+type FocusLevelTab = "high" | "medium";
 
 export default function FocusPage() {
   const { topics: rawTopics, isLoading, error, mutate } = useFocusTopics(30);
   const [topics, setTopics] = useState<FocusTopicDTO[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<FocusLevelTab>("high");
 
   // Use local state when we have mutations (rename), otherwise fall through to SWR data
   const displayTopics = topics ?? rawTopics;
+  const visibleTopics = displayTopics.filter((topic) => {
+    const level = scoreToPriority(topic.focusScore);
+    if (activeTab === "high") {
+      return level === "critical" || level === "high";
+    }
+    return level === "medium";
+  });
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await apiClient.get("/api/focus?refresh=1&limit=30");
-      await mutate();
-      setTopics(null); // reset local overrides after refresh
+      const res = await apiClient.post<{ topics: FocusTopicDTO[] }>(
+        "/api/focus/recompute?limit=30",
+      );
+      setTopics(res.data.topics ?? null);
+      await mutate(res.data.topics ?? [], false);
     } catch {
       // silent
     } finally {
@@ -47,9 +60,9 @@ export default function FocusPage() {
       <header className="focus-page__topbar sticky top-0 z-10 flex h-14 items-center justify-between border-b border-gray-200 bg-white px-6">
         <div className="flex items-center gap-2">
           <h1 className="text-base font-semibold text-gray-900">Focus</h1>
-          {displayTopics.length > 0 && (
+          {visibleTopics.length > 0 && (
             <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
-              {displayTopics.length}
+              {visibleTopics.length}
             </span>
           )}
         </div>
@@ -77,6 +90,33 @@ export default function FocusPage() {
 
       {/* Content */}
       <main className="focus-page__content flex-1 overflow-y-auto px-6 py-5">
+        {!isLoading && !error && (
+          <div className="focus-page__tabs mb-4 inline-flex items-center rounded-lg border border-gray-200 bg-white p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveTab("high")}
+              className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                activeTab === "high"
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-500 hover:bg-gray-50"
+              }`}
+            >
+              High
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("medium")}
+              className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                activeTab === "medium"
+                  ? "bg-indigo-600 text-white"
+                  : "text-gray-500 hover:bg-gray-50"
+              }`}
+            >
+              Medium
+            </button>
+          </div>
+        )}
+
         {/* Loading skeleton */}
         {isLoading && (
           <ul className="focus-page__skeleton space-y-3">
@@ -106,7 +146,7 @@ export default function FocusPage() {
         )}
 
         {/* Empty state */}
-        {!isLoading && !error && displayTopics.length === 0 && (
+        {!isLoading && !error && visibleTopics.length === 0 && (
           <div className="focus-page__empty flex flex-col items-center justify-center py-24 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-400">
               <svg className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
@@ -119,27 +159,26 @@ export default function FocusPage() {
               </svg>
             </div>
             <p className="text-sm font-medium text-gray-700">
-              Nothing to focus on
+              No {activeTab} priority topics
             </p>
             <p className="mt-1 max-w-xs text-xs text-gray-400">
-              Topics will appear here once emails are synced and clustered. Try
-              clicking "Refresh scores" to recalculate.
+              Topics will appear here once emails are synced and clustered.
+              Switch tab or click "Refresh scores" to recalculate.
             </p>
           </div>
         )}
 
         {/* Topic cards */}
-        {!isLoading && !error && displayTopics.length > 0 && (
+        {!isLoading && !error && visibleTopics.length > 0 && (
           <div className="focus-page__description mb-4">
             <p className="text-xs text-gray-400">
-              Topics ranked by urgency · unanswered threads, recency, and
-              contact relationship.
+              Showing {activeTab} priority topics ranked by urgency.
             </p>
           </div>
         )}
         {!isLoading && !error && (
           <ul className="focus-page__list space-y-3">
-            {displayTopics.map((topic) => (
+            {visibleTopics.map((topic) => (
               <li key={topic._id} className="group">
                 <FocusTopicCard topic={topic} onRename={handleRename} />
               </li>

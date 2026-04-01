@@ -8,7 +8,6 @@ import { MessageCircle } from "lucide-react";
 import type { FocusTopicDTO } from "@/hooks/useFocusTopics";
 import type { ChatInsightDTO } from "@/hooks/useContactTopics";
 import apiClient from "@/lib/api";
-import { PriorityBadge } from "@/components/PriorityBadge";
 
 interface Thread {
   _id: string;
@@ -209,11 +208,6 @@ export function FocusTopicCard({ topic, onRename }: Props) {
             {topic.contact.org && ` · ${topic.contact.org}`}
           </p>
 
-          {/* Priority badge */}
-          <PriorityBadge
-            score={topic.focusScore}
-            className="focus-topic-card__priority"
-          />
         </div>
 
         {/* Right-side stats */}

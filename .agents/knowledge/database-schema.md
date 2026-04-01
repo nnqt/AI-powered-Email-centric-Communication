@@ -47,6 +47,9 @@ Connection: `MONGO_URI` (`mongodb://mongo:27017/emailhub` in Docker)
 | `lastInboundAt`        | Date     | nullable             | Date of last inbound message                         |
 | `noiseFiltered`        | Boolean  | default false        | true = Tier 1 noise (noreply/automated)              |
 | `topicId`              | ObjectId | ref: Topic, nullable | Topic this thread is clustered into                  |
+| `topicKey`             | String   | indexed, nullable    | Canonical topic key (AI or heuristic)                |
+| `topicKeySource`       | String   | enum                 | `"ai"` or `"heuristic"`                           |
+| `topicKeyConfidence`   | Number   | nullable             | Confidence score for topic key                        |
 | `createdAt`            | Date     | timestamps           |                                                      |
 | `updatedAt`            | Date     | timestamps           |                                                      |
 
@@ -117,6 +120,9 @@ personal | other
 | `userId`                   | ObjectId   | ref: User, required     |                                                     |
 | `contactId`                | ObjectId   | ref: Contact, required  | The contact this topic belongs to                   |
 | `name`                     | String     | required                | Topic label (AI-generated or user-renamed)          |
+| `clusterKey`               | String     | indexed, nullable       | Canonical key used for stable topic grouping        |
+| `clusterKeySource`         | String     | enum, nullable          | `"ai"` or `"heuristic"`                          |
+| `clusterVersion`           | Number     | default 1               | Key schema version for future migrations            |
 | `nameEditedByUser`         | Boolean    | default false           | Prevents AI re-labeling when true                   |
 | `threadIds`                | ObjectId[] | ref: Thread             | All threads in this topic                           |
 | `threadCount`              | Number     | default 0               | Denormalized count                                  |

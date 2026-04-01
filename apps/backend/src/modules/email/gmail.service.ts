@@ -192,50 +192,9 @@ export class GmailService {
             { upsert: true, new: true, setDefaultsOnInsert: true },
           );
 
-          // Fire-and-forget: thread category classification (if not yet classified)
-          if (!threadDoc.categorizedAt) {
-            const catSenderEmail = firstSenderRaw
-              ? GmailService.parseEmail(firstSenderRaw)
-              : undefined;
-
-            const catContactLookup = catSenderEmail
-              ? Contact.findOne({
-                  userId: new mongoose.Types.ObjectId(this.userId),
-                  email: catSenderEmail,
-                })
-                  .lean()
-                  .then((c) => (c ? (c.categories as string[]) : undefined))
-                  .catch(() => undefined)
-              : Promise.resolve(undefined);
-
-            catContactLookup
-              .then((senderCategories) =>
-                aiService.classifyThreadCategory(
-                  thread.id!,
-                  threadDoc.subject,
-                  threadDoc.snippet,
-                  catSenderEmail,
-                  senderCategories,
-                ),
-              )
-              .then(({ categories, noiseFiltered }) =>
-                Thread.updateOne(
-                  { id: thread.id },
-                  {
-                    categories,
-                    noiseFiltered,
-                    categorizedAt: new Date(),
-                    categorySource: "ai",
-                  },
-                ),
-              )
-              .catch((err) =>
-                console.warn(
-                  "[syncEmails] classify-thread-category error:",
-                  err.message,
-                ),
-              );
-          }
+          const catSenderEmail = firstSenderRaw
+            ? GmailService.parseEmail(firstSenderRaw)
+            : undefined;
 
           // Fire-and-forget urgent classification for unclassified threads
           if (!threadDoc.urgentClassifiedAt) {
@@ -333,28 +292,122 @@ export class GmailService {
           syncedMessages += msgResults.filter(
             (r) => r.status === "fulfilled",
           ).length;
+
+          // Unified AI analysis (classification + optional summary) for unclassified threads.
+          if (!threadDoc.categorizedAt) {
+            const senderCategories = catSenderEmail
+              ? await Contact.findOne({
+                  userId: new mongoose.Types.ObjectId(this.userId),
+                  email: catSenderEmail,
+                })
+                  .lean()
+                  .then((c) => (c ? (c.categories as string[]) : undefined))
+                  .catch(() => undefined)
+              : undefined;
+
+            const savedMessages = await Message.find({ threadId })
+              .sort({ date: 1 })
+              .lean();
+
+            aiService
+              .analyzeThread({
+                thread_id: thread.id!,
+                subject: threadDoc.subject,
+                snippet: threadDoc.snippet,
+                sender_email: catSenderEmail,
+                sender_categories: senderCategories,
+                messages: savedMessages.map((m) => ({
+                  id: m.id,
+                  from: m.from || "",
+                  to: m.to,
+                  sent_at: m.date?.toISOString() || new Date().toISOString(),
+                  text: m.body || "",
+                })),
+              })
+              .then((analyzed) =>
+                Thread.updateOne(
+                  { id: thread.id },
+                  {
+                    categories: analyzed.categories,
+                    noiseFiltered: analyzed.noiseFiltered,
+                    categorizedAt: new Date(),
+                    categorySource: "ai",
+                    ...(analyzed.topicKey
+                      ? { topicKey: analyzed.topicKey, topicKeySource: "ai" }
+                      : {}),
+                    ...(typeof analyzed.topicKeyConfidence === "number"
+                      ? { topicKeyConfidence: analyzed.topicKeyConfidence }
+                      : {}),
+                    ...(analyzed.summary ? { summary: analyzed.summary } : {}),
+                  },
+                ).then(async () => {
+                  if (analyzed.summary) {
+                    emitToUser(this.userId, "SUMMARY_READY", {
+                      threadId: thread.id!,
+                    });
+                  }
+                }),
+              )
+              .catch((err) =>
+                console.warn("[syncEmails] analyze-thread error:", err.message),
+              );
+          }
         }),
       );
     }
 
+    // Ensure contacts exist before topic clustering so newly synced threads can
+    // be assigned immediately instead of waiting for a later sync cycle.
+    if (allParticipants.length > 0) {
+      const uniqueParticipants = [...new Set(allParticipants.flat())];
+      try {
+        await contactService.upsertParticipants(this.userId, uniqueParticipants);
+      } catch (err: any) {
+        console.warn("[syncEmails] upsertParticipants error:", err.message);
+      }
+    }
+
     // ── Post-sync topic work (fire-and-forget) ───────────────────────────────
     if (syncedThreadMetas.length > 0) {
-      // Trigger 1 & 2: new threads without a topic → cluster
+      // Trigger 1 & 2: eligible new threads without a topic → cluster
+      // Exclude known noise so low-value filtered threads do not keep
+      // re-triggering the topic pipeline toast on later syncs.
       const unassignedIds = syncedThreadMetas
         .filter((m) => !m.topicId)
         .map((m) => m._id);
+      const eligibleUnassignedIds =
+        unassignedIds.length > 0
+          ? await Thread.find({
+              _id: { $in: unassignedIds },
+              topicId: { $exists: false },
+              categorizedAt: { $exists: true },
+              noiseFiltered: { $ne: true },
+            })
+              .select("_id")
+              .lean()
+              .then((rows) =>
+                rows.map((r) => r._id as mongoose.Types.ObjectId),
+              )
+          : [];
 
-      if (unassignedIds.length > 0) {
+      if (eligibleUnassignedIds.length > 0) {
         const jobId = `topic-pipeline-${Date.now()}`;
         emitToUser(this.userId, "AI_JOB_START", {
           jobId,
-          label: `Organizing ${unassignedIds.length} thread(s) into topics…`,
+          label: `Organizing ${eligibleUnassignedIds.length} thread(s) into topics…`,
         });
 
         topicService
-          .clusterThreadsIntoTopics(this.userId, unassignedIds)
-          // Phase 3: after clustering, label any unlabeled topics for this user
-          .then(() => topicService.labelUnlabeledTopics(this.userId))
+          .clusterThreadsIntoTopics(this.userId, eligibleUnassignedIds)
+          // Consolidate only contacts touched by this batch.
+          .then((touchedContactIds) =>
+            touchedContactIds.length > 0
+              ? topicService.aiConsolidateTopicsForContacts(
+                  this.userId,
+                  touchedContactIds,
+                )
+              : Promise.resolve(),
+          )
           // Phase 4: re-score all topics after cluster+label pipeline
           .then(() => topicService.scoreAllTopicsForUser(this.userId))
           .then(() =>
@@ -396,17 +449,6 @@ export class GmailService {
       }
     }
 
-    // Batch upsert all participants once after all threads are processed
-    if (allParticipants.length > 0) {
-      const uniqueParticipants = [...new Set(allParticipants.flat())];
-      // Fire-and-forget – don't block sync response on contact upserts
-      contactService
-        .upsertParticipants(this.userId, uniqueParticipants)
-        .catch((err) =>
-          console.warn("[syncEmails] upsertParticipants error:", err.message),
-        );
-    }
-
     // Store nextPageToken for future syncs
     const nextPageToken = listRes.data.nextPageToken ?? undefined;
     const hasMore = !!nextPageToken;
@@ -424,25 +466,41 @@ export class GmailService {
   }
 
   public async markRead(gmailThreadId: string, read: boolean): Promise<void> {
-    const gmail = await this.getGmailClient();
-    if (read) {
-      await gmail.users.threads.modify({
-        userId: "me",
-        id: gmailThreadId,
-        requestBody: { removeLabelIds: ["UNREAD"] },
-      });
-    } else {
-      await gmail.users.threads.modify({
-        userId: "me",
-        id: gmailThreadId,
-        requestBody: { addLabelIds: ["UNREAD"] },
-      });
+    await connectToDatabase();
+
+    const userObjectId = new mongoose.Types.ObjectId(this.userId);
+    const existingThread = await Thread.findOne({
+      id: gmailThreadId,
+      userId: userObjectId,
+    })
+      .select("isMock")
+      .lean();
+
+    const isMockThread =
+      !!existingThread?.isMock || gmailThreadId.startsWith("mock-thread-");
+
+    if (!isMockThread) {
+      const gmail = await this.getGmailClient();
+      if (read) {
+        await gmail.users.threads.modify({
+          userId: "me",
+          id: gmailThreadId,
+          requestBody: { removeLabelIds: ["UNREAD"] },
+        });
+      } else {
+        await gmail.users.threads.modify({
+          userId: "me",
+          id: gmailThreadId,
+          requestBody: { addLabelIds: ["UNREAD"] },
+        });
+      }
     }
+
     // When marking as read, also dismiss from urgent list (Option B: granular flag)
     const update: Record<string, any> = { isRead: read };
     if (read) update.urgentDismissed = true;
     const threadDoc = await Thread.findOneAndUpdate(
-      { id: gmailThreadId },
+      { id: gmailThreadId, userId: userObjectId },
       update,
     );
 
@@ -458,14 +516,30 @@ export class GmailService {
   }
 
   public async archiveThread(gmailThreadId: string): Promise<void> {
-    const gmail = await this.getGmailClient();
-    await gmail.users.threads.modify({
-      userId: "me",
+    await connectToDatabase();
+
+    const userObjectId = new mongoose.Types.ObjectId(this.userId);
+    const existingThread = await Thread.findOne({
       id: gmailThreadId,
-      requestBody: { removeLabelIds: ["INBOX"] },
-    });
+      userId: userObjectId,
+    })
+      .select("isMock")
+      .lean();
+
+    const isMockThread =
+      !!existingThread?.isMock || gmailThreadId.startsWith("mock-thread-");
+
+    if (!isMockThread) {
+      const gmail = await this.getGmailClient();
+      await gmail.users.threads.modify({
+        userId: "me",
+        id: gmailThreadId,
+        requestBody: { removeLabelIds: ["INBOX"] },
+      });
+    }
+
     const archivedDoc = await Thread.findOneAndUpdate(
-      { id: gmailThreadId },
+      { id: gmailThreadId, userId: userObjectId },
       { isArchived: true },
     );
 

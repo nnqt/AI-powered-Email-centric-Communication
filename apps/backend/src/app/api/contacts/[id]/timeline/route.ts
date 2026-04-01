@@ -77,7 +77,7 @@ export async function GET(
       timeline.push({
         type: "email",
         id: t._id.toString(),
-        threadId: t.threadId,
+        threadId: t.id,
         date: t.lastMessageDate,
         isOutbound: false, // Threads don't easily map to a single out/in state without deep inspection
         subject: t.subject,

@@ -5,8 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { format, formatDistanceToNow } from "date-fns";
 
-import { useContactDetail, useContactTimeline } from "@/hooks/useContacts";
+import { useContactDetail } from "@/hooks/useContacts";
 import { useUnifiedTimeline, TimelineItemDTO } from "@/hooks/useTimeline";
+import { useSocket } from "@/hooks/useSocket";
 import type { ContactCategory } from "@/hooks/useContacts";
 import { useContactTopics } from "@/hooks/useContactTopics";
 import type { TopicDTO } from "@/hooks/useContactTopics";
@@ -86,9 +87,10 @@ export default function ContactDetailPage() {
   const { showToast, updateToast } = useToast();
 
   const contactId = params.id as string;
+  const userId = (session?.user as any)?.id as string | undefined;
   const { contact, isLoading, isError, mutate } = useContactDetail(contactId);
-  const { timeline, isLoading: timelineLoading } = useUnifiedTimeline(contactId);
-  const { threads } = useContactTimeline(contactId); // keep for topic view, or we can adapt later
+  const { timeline, isLoading: timelineLoading, mutate: mutateTimeline } =
+    useUnifiedTimeline(contactId);
   const {
     topics,
     isLoading: topicsLoading,
@@ -99,6 +101,25 @@ export default function ContactDetailPage() {
   const [timelineView, setTimelineView] = useState<"flat" | "topics">("flat");
   const [localTopics, setLocalTopics] = useState<TopicDTO[] | null>(null);
 
+  useSocket(userId, {
+    CONTACTS_UPDATED: (payload: {
+      targetId?: string;
+      targetIds?: string[];
+    }) => {
+      const shouldRefresh =
+        payload?.targetId === contactId ||
+        (Array.isArray(payload?.targetIds) &&
+          payload.targetIds.includes(contactId));
+
+      if (!shouldRefresh) return;
+
+      setLocalTopics(null);
+      void mutate();
+      void mutateTopics();
+      void mutateTimeline();
+    },
+  });
+
   const displayedTopics = localTopics ?? topics;
 
   // ─── Inline edit state ───────────────────────────────────────────────────────
@@ -107,13 +128,24 @@ export default function ContactDetailPage() {
   const [editOrg, setEditOrg] = useState("");
   const [editLanguage, setEditLanguage] = useState("");
   const [editAltEmails, setEditAltEmails] = useState("");
+  const [editCategories, setEditCategories] = useState<Set<ContactCategory>>(
+    new Set(),
+  );
   const [saving, setSaving] = useState(false);
 
   const startEdit = () => {
+    const baseCategories = (contact?.categories?.filter((c) => c !== "unknown")
+      ?.length
+      ? contact.categories.filter((c) => c !== "unknown")
+      : contact?.category && contact.category !== "unknown"
+        ? [contact.category]
+        : []) as ContactCategory[];
+
     setEditName(contact?.name ?? "");
     setEditOrg(contact?.org ?? "");
     setEditLanguage(contact?.language ?? "");
     setEditAltEmails(contact?.alternateEmails?.join(", ") ?? "");
+    setEditCategories(new Set(baseCategories));
     setIsEditing(true);
   };
 
@@ -122,6 +154,7 @@ export default function ContactDetailPage() {
   const handleSaveEdit = async () => {
     setSaving(true);
     try {
+      const selectedCategories = Array.from(editCategories);
       await apiClient.patch(`/api/contacts/${contactId}`, {
         name: editName.trim() || undefined,
         org: editOrg.trim() || undefined,
@@ -130,6 +163,10 @@ export default function ContactDetailPage() {
           .split(",")
           .map((e) => e.trim().toLowerCase())
           .filter(Boolean),
+        categories: selectedCategories,
+        category: selectedCategories.length > 0 ? selectedCategories[0] : "unknown",
+        categorySource: "user",
+        categoryAiSuggestion: null,
       });
       await mutate();
       showToast("Contact saved", "success");
@@ -160,6 +197,15 @@ export default function ContactDetailPage() {
 
   const togglePendingCat = (cat: ContactCategory) => {
     setPendingCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
+  const toggleEditCategory = (cat: ContactCategory) => {
+    setEditCategories((prev) => {
       const next = new Set(prev);
       if (next.has(cat)) next.delete(cat);
       else next.add(cat);
@@ -441,7 +487,7 @@ export default function ContactDetailPage() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Display name"
-                  className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="flex-1 text-black rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               ) : (
                 <span
@@ -463,7 +509,7 @@ export default function ContactDetailPage() {
                   value={editOrg}
                   onChange={(e) => setEditOrg(e.target.value)}
                   placeholder="Acme Corp"
-                  className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="flex-1 text-black rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               ) : (
                 <span
@@ -483,7 +529,7 @@ export default function ContactDetailPage() {
                 <select
                   value={editLanguage}
                   onChange={(e) => setEditLanguage(e.target.value)}
-                  className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="flex-1 text-black rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
                   <option value="">— Select language —</option>
                   {Object.entries(LANGUAGE_LABELS).map(([code, label]) => (
@@ -513,7 +559,7 @@ export default function ContactDetailPage() {
                     value={editAltEmails}
                     onChange={(e) => setEditAltEmails(e.target.value)}
                     placeholder="alias@example.com, other@example.com"
-                    className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full text-black rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                   <p className="mt-0.5 text-xs text-gray-400">
                     Comma-separated
@@ -527,6 +573,70 @@ export default function ContactDetailPage() {
                     ? contact.alternateEmails.join(", ")
                     : "—"}
                 </span>
+              )}
+            </div>
+
+            {/* Editable: Categories (multi-select) */}
+            <div className="contact-detail__info-row flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-4 py-2.5 border-b border-gray-100">
+              <span className="w-36 shrink-0 text-xs font-medium text-gray-500 uppercase tracking-wide pt-0.5">
+                Categories
+              </span>
+              {isEditing ? (
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_CATEGORIES.filter((cat) => cat !== "unknown").map((cat) => {
+                      const selected = editCategories.has(cat);
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => toggleEditCategory(cat)}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                            selected
+                              ? CATEGORY_CHIP_STYLE[cat]
+                              : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          {CATEGORY_LABELS[cat]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
+                    You can select multiple categories.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex-1">
+                  {((contact.categories?.filter((c) => c !== "unknown") ?? [])
+                    .length > 0
+                    ? contact.categories!.filter((c) => c !== "unknown")
+                    : contact.category && contact.category !== "unknown"
+                      ? [contact.category]
+                      : []
+                  ).length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {((contact.categories?.filter((c) => c !== "unknown") ?? [])
+                        .length > 0
+                        ? contact.categories!.filter((c) => c !== "unknown")
+                        : contact.category && contact.category !== "unknown"
+                          ? [contact.category]
+                          : []
+                      ).map((cat) => (
+                        <span
+                          key={cat}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                            CATEGORY_CHIP_STYLE[cat] ?? ""
+                          }`}
+                        >
+                          {CATEGORY_LABELS[cat] ?? cat}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-300">—</span>
+                  )}
+                </div>
               )}
             </div>
 
@@ -687,7 +797,7 @@ export default function ContactDetailPage() {
                 <div className="rounded-xl border border-gray-200 bg-white p-6 text-center">
                   <p className="text-sm text-gray-400">Loading…</p>
                 </div>
-              ) : threads.length === 0 ? (
+              ) : timeline.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-gray-200 bg-white p-10 text-center">
                   <p className="text-sm text-gray-400">
                     No emails with this contact yet.
@@ -700,10 +810,22 @@ export default function ContactDetailPage() {
                       key={`${item.type}-${item.id}`}
                       role="button"
                       tabIndex={0}
-                      onClick={() => item.type === "email" ? router.push(`/threads/${item.threadId}`) : router.push(`/chat/${item.chatId}`)}
+                      onClick={() => {
+                        if (item.type === "email" && item.threadId) {
+                          router.push(`/threads/${item.threadId}`);
+                          return;
+                        }
+                        if (item.type === "telegram" && item.chatId) {
+                          router.push(`/chat/${item.chatId}`);
+                        }
+                      }}
                       onKeyDown={(e) =>
                         e.key === "Enter" &&
-                        (item.type === "email" ? router.push(`/threads/${item.threadId}`) : router.push(`/chat/${item.chatId}`))
+                        (item.type === "email" && item.threadId
+                          ? router.push(`/threads/${item.threadId}`)
+                          : item.type === "telegram" && item.chatId
+                            ? router.push(`/chat/${item.chatId}`)
+                            : null)
                       }
                       className="contact-detail__timeline-item flex cursor-pointer items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group"
                     >

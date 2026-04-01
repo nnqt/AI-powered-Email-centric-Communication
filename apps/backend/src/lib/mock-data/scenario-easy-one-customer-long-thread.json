@@ -1,0 +1,482 @@
+[
+  {
+    "scenarioName": "Easy 03 - Một khách hàng có chuỗi thư dài cần theo dõi gấp",
+    "contacts": [
+      {
+        "email": "huong.finance.client@example.com",
+        "name": "Hương Bùi",
+        "org": "Delta Learning",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "Yêu cầu bổ sung chứng từ đối soát cho gói đào tạo doanh nghiệp",
+            "snippet": "Chuỗi thư dài, nội dung nghiệp vụ chi tiết, cần theo dõi sát.",
+            "dateOffsetMs": 7200000,
+            "messages": [
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Yêu cầu bổ sung chứng từ đối soát cho gói đào tạo doanh nghiệp",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nSau khi đối soát bộ chứng từ thanh toán cho gói đào tạo doanh nghiệp quý I, phòng Tài chính của chúng tôi ghi nhận một số sai lệch giữa biên bản nghiệm thu và bảng kê khối lượng thực tế. Cụ thể, có 3 lớp học chưa được cập nhật số học viên tham gia sau cùng, dẫn đến chênh lệch 18.600.000 VND so với mức dự kiến.\n\nĐể chúng tôi có thể đóng kỳ kiểm soát chi phí trước kỳ báo cáo tháng, đề nghị bên anh/chị cung cấp bộ tài liệu bổ sung gồm: (1) danh sách học viên theo từng lớp có xác nhận điểm danh, (2) biên bản nghiệm thu điều chỉnh có chữ ký hai bên, (3) bảng đối soát công nợ cập nhật tới ngày hiện tại.\n\nHạn cuối để tiếp nhận tài liệu là 16:00 ngày mai. Nếu quá hạn, chúng tôi buộc phải chuyển hồ sơ sang đợt duyệt tiếp theo.\n\nTrân trọng,\nHương Bùi\nFinance Controller, Delta Learning",
+                "dateOffsetMs": 172800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Yêu cầu bổ sung chứng từ đối soát cho gói đào tạo doanh nghiệp",
+                "body": "Kính gửi chị Hương,\n\nBên em đã nhận được danh sách tài liệu cần bổ sung. Hiện đội ngũ đang tổng hợp điểm danh và cập nhật biên bản nghiệm thu điều chỉnh.\n\nBên em cam kết gửi đầy đủ bộ hồ sơ trước 15:00 ngày mai để chị kịp đóng kỳ kiểm soát chi phí.\n\nTrân trọng,\n{{USER_NAME}}\nProgram Manager",
+                "dateOffsetMs": 93600000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Yêu cầu bổ sung chứng từ đối soát cho gói đào tạo doanh nghiệp",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nTôi xin nhắc lại hạn nộp hồ sơ là 16:00 hôm nay. Hiện tại phòng Tài chính vẫn chưa nhận đủ tài liệu theo danh mục đã thống nhất.\n\nĐề nghị anh/chị ưu tiên gửi ngay bộ chứng từ trong khung giờ này để tránh ảnh hưởng đến lịch thanh toán của quý đối tác.\n\nTrân trọng,\nHương Bùi",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Yêu cầu bổ sung chứng từ đối soát cho gói đào tạo doanh nghiệp",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nHương Bùi",
+                "dateOffsetMs": 2400000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Newsletter Delta Learning - Chương trình học bổng mùa hè",
+            "snippet": "Mail không liên quan đến follow-up chính.",
+            "dateOffsetMs": 3600000,
+            "messages": [
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Newsletter Delta Learning - Chương trình học bổng mùa hè",
+                "body": "Kính gửi quý đối tác,\n\nDelta Learning trân trọng giới thiệu chương trình học bổng mùa hè 2026 dành cho học viên giỏi.\n\nEmail mang tính thông tin và không yêu cầu hành động.\n\nTrân trọng,\nBan Truyền thông Delta Learning",
+                "labelIds": [
+                  "CATEGORY_UPDATES"
+                ],
+                "dateOffsetMs": 3600000
+              }
+            ]
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Delta Learning",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Delta Learning",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nHương Bùi",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Delta Learning",
+                "body": "Kính gửi Hương Bùi,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Delta Learning",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nHương Bùi",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Delta Learning",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 36000000,
+            "messages": [
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Delta Learning",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nHương Bùi",
+                "dateOffsetMs": 79200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Delta Learning",
+                "body": "Kính gửi Hương Bùi,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 50400000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Delta Learning",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nHương Bùi",
+                "dateOffsetMs": 36000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+            "snippet": "Thread nhiễu dài 24 email để stress test phân cụm topic và tóm tắt.",
+            "dateOffsetMs": 5400000,
+            "messages": [
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 1/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 70200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Đã nhận cập nhật 2/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 67500000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 3/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 64800000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 4/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 62100000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Đã nhận cập nhật 5/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 59400000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 6/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 56700000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 7/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Đã nhận cập nhật 8/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 51300000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 9/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 48600000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 10/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 45900000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Đã nhận cập nhật 11/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 43200000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 12/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 40500000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 13/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 37800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Đã nhận cập nhật 14/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 35100000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 15/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 32400000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 16/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 29700000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Đã nhận cập nhật 17/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 27000000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 18/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 24300000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 19/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 21600000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Đã nhận cập nhật 20/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 18900000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 21/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 16200000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 22/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 13500000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "huong.finance.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Đã nhận cập nhật 23/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 10800000
+              },
+              {
+                "from": "huong.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Delta Learning",
+                "body": "Cập nhật nhanh 24/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 8100000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "minh.audit.client@example.com",
+        "name": "Minh Lê",
+        "org": "Delta Learning",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "Đề nghị đối soát lại phụ lục khối lượng đào tạo",
+            "snippet": "Bổ sung kênh kiểm toán nội bộ cho cùng hợp đồng.",
+            "dateOffsetMs": 8400000,
+            "messages": [
+              {
+                "from": "minh.audit.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Đề nghị đối soát lại phụ lục khối lượng đào tạo",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBộ phận kiểm toán nội bộ cần rà soát lại phụ lục khối lượng đào tạo quý I trước khi phát hành biên bản tổng hợp.\n\nNhờ anh/chị cung cấp bản phụ lục cập nhật và file đối chiếu thay đổi trước 17:00 hôm nay.\n\nTrân trọng,\nMinh Lê\nInternal Audit"
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "minh.audit.client@example.com"
+                ],
+                "subject": "Re: Đề nghị đối soát lại phụ lục khối lượng đào tạo",
+                "body": "Kính gửi anh Minh,\n\nBên em đã tổng hợp bản phụ lục mới và nhật ký thay đổi theo từng lớp.\n\nEm gửi đầy đủ bộ tài liệu trước 16:30 để anh kiểm tra.\n\nTrân trọng,\n{{USER_NAME}}"
+              },
+              {
+                "from": "minh.audit.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Đề nghị đối soát lại phụ lục khối lượng đào tạo",
+                "body": "Cảm ơn anh/chị. Sau khi nhận tài liệu, bên tôi sẽ phản hồi checklist xác nhận trong tối nay.\n\nTrân trọng,\nMinh Lê"
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Delta Learning",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 16416000000,
+            "messages": [
+              {
+                "from": "minh.audit.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Delta Learning",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nMinh Lê",
+                "dateOffsetMs": 16588800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "minh.audit.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Delta Learning",
+                "body": "Kính gửi Minh Lê,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 16502400000
+              },
+              {
+                "from": "minh.audit.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Delta Learning",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nMinh Lê",
+                "dateOffsetMs": 16416000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Delta Learning",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 39600000,
+            "messages": [
+              {
+                "from": "minh.audit.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Delta Learning",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nMinh Lê",
+                "dateOffsetMs": 82800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "minh.audit.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Delta Learning",
+                "body": "Kính gửi Minh Lê,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "minh.audit.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Delta Learning",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nMinh Lê",
+                "dateOffsetMs": 39600000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      }
+    ]
+  }
+]

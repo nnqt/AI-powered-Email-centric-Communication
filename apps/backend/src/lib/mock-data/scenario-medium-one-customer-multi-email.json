@@ -1,0 +1,637 @@
+[
+  {
+    "scenarioName": "Medium 01 - Một khách hàng dùng nhiều email cho các chủ đề liên quan",
+    "contacts": [
+      {
+        "email": "van.pm.client@example.com",
+        "name": "Vân Đỗ",
+        "org": "NorthWind Distribution",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "CR-52: Chốt scope dashboard giao vận",
+            "snippet": "Chuỗi thư từ email PM của khách hàng.",
+            "dateOffsetMs": 14400000,
+            "messages": [
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "CR-52: Chốt scope dashboard giao vận",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần chốt scope dashboard giao vận cho CR-52 trước cuộc họp Steering vào sáng mai.\n\nĐề nghị anh/chị xác nhận danh sách chỉ số KPI sẽ đưa vào phase 1 và các hạng mục để lại phase 2.\n\nTrân trọng,\nVân Đỗ\nPM, NorthWind Distribution",
+                "dateOffsetMs": 104400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: CR-52: Chốt scope dashboard giao vận",
+                "body": "Kính gửi chị Vân,\n\nBên em đề xuất phase 1 gồm 5 KPI cốt lõi và 2 dashboard view theo khu vực.\n\nBản scope matrix sẽ được gửi trước 15:00 hôm nay để chị review.\n\nTrân trọng,\n{{USER_NAME}}\nProduct Manager",
+                "dateOffsetMs": 57600000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: CR-52: Chốt scope dashboard giao vận",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 4800000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Follow-up kế hoạch triển khai tuần này - NorthWind Distribution",
+            "snippet": "Thread bổ sung để tăng độ phủ bối cảnh theo dõi.",
+            "dateOffsetMs": 5100000,
+            "messages": [
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Follow-up kế hoạch triển khai tuần này - NorthWind Distribution",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị cập nhật giúp kế hoạch triển khai tuần này và các đầu việc có rủi ro cao để bên tôi chủ động sắp xếp nguồn lực.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - NorthWind Distribution",
+                "body": "Kính gửi anh/chị,\n\nBên em đã rà soát lại kế hoạch tuần này và sẽ gửi bảng cập nhật theo từng đầu việc cùng mức ưu tiên trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - NorthWind Distribution",
+                "body": "Cảm ơn anh/chị. Bên tôi chờ bản cập nhật để chốt lịch làm việc với các bộ phận liên quan.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 4200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Kính gửi Vân Đỗ,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 36000000,
+            "messages": [
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 79200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Kính gửi Vân Đỗ,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 50400000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 36000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+            "snippet": "Thread nhiễu dài 24 email để stress test phân cụm topic và tóm tắt.",
+            "dateOffsetMs": 5400000,
+            "messages": [
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 1/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 70200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Đã nhận cập nhật 2/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 67500000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 3/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 64800000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 4/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 62100000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Đã nhận cập nhật 5/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 59400000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 6/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 56700000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 7/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Đã nhận cập nhật 8/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 51300000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 9/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 48600000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 10/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 45900000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Đã nhận cập nhật 11/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 43200000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 12/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 40500000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 13/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 37800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Đã nhận cập nhật 14/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 35100000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 15/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 32400000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 16/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 29700000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Đã nhận cập nhật 17/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 27000000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 18/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 24300000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 19/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 21600000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Đã nhận cập nhật 20/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 18900000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 21/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 16200000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 22/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 13500000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Đã nhận cập nhật 23/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 10800000
+              },
+              {
+                "from": "van.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - NorthWind Distribution",
+                "body": "Cập nhật nhanh 24/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 8100000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "van.finance.client@example.com",
+        "name": "Vân Đỗ",
+        "org": "NorthWind Distribution",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "CR-52: Theo dõi ngân sách từ bộ phận tài chính",
+            "snippet": "Chuỗi thư từ email tài chính của cùng khách hàng, vẫn theo chủ đề CR-52.",
+            "dateOffsetMs": 3600000,
+            "messages": [
+              {
+                "from": "van.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "CR-52: Theo dõi ngân sách từ bộ phận tài chính",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nTôi theo dõi CR-52 từ bộ phận Tài chính và cần xác nhận tổng budget phase 1 để chốt đề xuất procurement.\n\nĐề nghị anh/chị gửi bảng tổng hợp effort và chi phí trước 16:30 hôm nay.\n\nTrân trọng,\nVân Đỗ\nFinance Controller, NorthWind Distribution",
+                "dateOffsetMs": 18000000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.finance.client@example.com"
+                ],
+                "subject": "Re: CR-52: Theo dõi ngân sách từ bộ phận tài chính",
+                "body": "Kính gửi chị Vân,\n\nBên em đã cập nhật budget phase 1 cho CR-52 và phân bổ theo 2 đợt thanh toán.\n\nEm gửi kèm bảng estimate chi tiết và danh mục risk có thể phát sinh.\n\nTrân trọng,\n{{USER_NAME}}\nProject Manager",
+                "dateOffsetMs": 3600000
+              },
+              {
+                "from": "van.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: CR-52: Theo dõi ngân sách từ bộ phận tài chính",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 1200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Follow-up kế hoạch triển khai tuần này - NorthWind Distribution",
+            "snippet": "Thread bổ sung để tăng độ phủ bối cảnh theo dõi.",
+            "dateOffsetMs": 5100000,
+            "messages": [
+              {
+                "from": "van.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Follow-up kế hoạch triển khai tuần này - NorthWind Distribution",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị cập nhật giúp kế hoạch triển khai tuần này và các đầu việc có rủi ro cao để bên tôi chủ động sắp xếp nguồn lực.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.finance.client@example.com"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - NorthWind Distribution",
+                "body": "Kính gửi anh/chị,\n\nBên em đã rà soát lại kế hoạch tuần này và sẽ gửi bảng cập nhật theo từng đầu việc cùng mức ưu tiên trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "van.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - NorthWind Distribution",
+                "body": "Cảm ơn anh/chị. Bên tôi chờ bản cập nhật để chốt lịch làm việc với các bộ phận liên quan.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 4200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 16416000000,
+            "messages": [
+              {
+                "from": "van.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 16588800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.finance.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Kính gửi Vân Đỗ,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 16502400000
+              },
+              {
+                "from": "van.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 16416000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 39600000,
+            "messages": [
+              {
+                "from": "van.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 82800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.finance.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Kính gửi Vân Đỗ,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "van.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 39600000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "van.ops.client@example.com",
+        "name": "Vân Đỗ",
+        "org": "NorthWind Distribution",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "CR-52: Xác nhận dữ liệu đầu vào cho dashboard vận hành",
+            "snippet": "Email thứ ba của cùng khách hàng để tăng case merge identity.",
+            "dateOffsetMs": 6000000,
+            "messages": [
+              {
+                "from": "van.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "CR-52: Xác nhận dữ liệu đầu vào cho dashboard vận hành",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nTôi phụ trách vận hành và cần xác nhận danh mục dữ liệu đầu vào cho dashboard CR-52 trước buổi chạy thử.\n\nĐề nghị gửi data mapping bản mới nhất trong hôm nay.\n\nTrân trọng,\nVân Đỗ\nOperations"
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.ops.client@example.com"
+                ],
+                "subject": "Re: CR-52: Xác nhận dữ liệu đầu vào cho dashboard vận hành",
+                "body": "Kính gửi chị Vân,\n\nBên em đã cập nhật data mapping theo 5 KPI và 2 chiều drill-down.\n\nEm sẽ gửi bản final trước 16:00 để chị duyệt.\n\nTrân trọng,\n{{USER_NAME}}"
+              },
+              {
+                "from": "van.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: CR-52: Xác nhận dữ liệu đầu vào cho dashboard vận hành",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên vận hành sẽ kiểm tra ngay khi nhận bản final.\n\nTrân trọng,\nVân Đỗ"
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "van.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.ops.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Kính gửi Vân Đỗ,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "van.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - NorthWind Distribution",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 43200000,
+            "messages": [
+              {
+                "from": "van.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 86400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "van.ops.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Kính gửi Vân Đỗ,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 57600000
+              },
+              {
+                "from": "van.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - NorthWind Distribution",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nVân Đỗ",
+                "dateOffsetMs": 43200000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      }
+    ]
+  }
+]

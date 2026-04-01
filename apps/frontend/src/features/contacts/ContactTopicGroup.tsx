@@ -7,7 +7,6 @@ import { MessageCircle } from "lucide-react";
 import apiClient from "@/lib/api";
 import type { TopicDTO, ChatInsightDTO } from "@/hooks/useContactTopics";
 import React from "react";
-import { PriorityBadge } from "@/components/PriorityBadge";
 
 interface ThreadMeta {
   _id: string;
@@ -192,18 +191,17 @@ export default function ContactTopicGroup({ topic, onRename }: Props) {
 
         {/* Right-side badges */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-xs text-gray-500 tabular-nums">
+            {topic.unansweredCount} {topic.unansweredCount === 1 ? "thread" : "threads"} unread
+          </span>
           {topic.unansweredCount > 0 && (
             <span
-              className="inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white tabular-nums"
-              title="Unanswered threads"
+              className="inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white"
+              title="Needs follow-up"
             >
-              {topic.unansweredCount}
+              New
             </span>
           )}
-          <span className="text-xs text-gray-400 tabular-nums">
-            {topic.threadCount}t
-          </span>
-          <PriorityBadge score={topic.focusScore} />
         </div>
       </button>
 

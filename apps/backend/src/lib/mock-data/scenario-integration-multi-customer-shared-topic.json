@@ -1,0 +1,637 @@
+[
+  {
+    "scenarioName": "Integration 02 - Nhiều khách hàng cùng theo dõi một chủ đề liên phòng ban",
+    "contacts": [
+      {
+        "email": "hieu.pm.client@example.com",
+        "name": "Hiếu Nguyễn",
+        "org": "Nova Retail Group",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "Theo dõi cutover dữ liệu khách hàng tại miền Nam",
+            "snippet": "PM khách hàng yêu cầu chốt timeline cutover.",
+            "dateOffsetMs": 5400000,
+            "messages": [
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Theo dõi cutover dữ liệu khách hàng tại miền Nam",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần xác nhận timeline cutover dữ liệu khách hàng tại cụm miền Nam trước cuộc họp vận hành lúc 16:30.\n\nĐề nghị cập nhật trạng thái migration, rủi ro tồn đọng và phương án rollback nếu có sự cố.\n\nTrân trọng,\nHiếu Nguyễn\nPM, Nova Retail Group",
+                "dateOffsetMs": 39600000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Theo dõi cutover dữ liệu khách hàng tại miền Nam",
+                "body": "Kính gửi Hiếu Nguyễn,\n\nBên em đã ghi nhận thông tin và đang phối hợp các bên liên quan để hoàn tất đầu việc.\n\nEm sẽ gửi bản cập nhật chi tiết trước 17:00 hôm nay.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 2700000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Theo dõi cutover dữ liệu khách hàng tại miền Nam",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nHiếu Nguyễn",
+                "dateOffsetMs": 1800000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Follow-up kế hoạch triển khai tuần này - Nova Retail Group",
+            "snippet": "Thread bổ sung để tăng độ phủ bối cảnh theo dõi.",
+            "dateOffsetMs": 5100000,
+            "messages": [
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Follow-up kế hoạch triển khai tuần này - Nova Retail Group",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị cập nhật giúp kế hoạch triển khai tuần này và các đầu việc có rủi ro cao để bên tôi chủ động sắp xếp nguồn lực.\n\nTrân trọng,\nHiếu Nguyễn",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Nova Retail Group",
+                "body": "Kính gửi anh/chị,\n\nBên em đã rà soát lại kế hoạch tuần này và sẽ gửi bảng cập nhật theo từng đầu việc cùng mức ưu tiên trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Nova Retail Group",
+                "body": "Cảm ơn anh/chị. Bên tôi chờ bản cập nhật để chốt lịch làm việc với các bộ phận liên quan.\n\nTrân trọng,\nHiếu Nguyễn",
+                "dateOffsetMs": 4200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nHiếu Nguyễn",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Kính gửi Hiếu Nguyễn,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nHiếu Nguyễn",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 36000000,
+            "messages": [
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nHiếu Nguyễn",
+                "dateOffsetMs": 79200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Kính gửi Hiếu Nguyễn,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 50400000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nHiếu Nguyễn",
+                "dateOffsetMs": 36000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+            "snippet": "Thread nhiễu dài 24 email để stress test phân cụm topic và tóm tắt.",
+            "dateOffsetMs": 5400000,
+            "messages": [
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 1/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 70200000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Đã nhận cập nhật 2/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 67500000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 3/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 64800000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 4/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 62100000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Đã nhận cập nhật 5/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 59400000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 6/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 56700000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 7/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Đã nhận cập nhật 8/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 51300000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 9/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 48600000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 10/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 45900000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Đã nhận cập nhật 11/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 43200000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 12/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 40500000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 13/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 37800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Đã nhận cập nhật 14/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 35100000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 15/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 32400000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 16/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 29700000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Đã nhận cập nhật 17/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 27000000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 18/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 24300000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 19/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 21600000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Đã nhận cập nhật 20/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 18900000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 21/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 16200000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 22/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 13500000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hieu.pm.client@example.com"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Đã nhận cập nhật 23/24. Bên em sẽ tổng hợp lại thành một bản timeline để tránh trùng lặp khi xử lý đầu việc.",
+                "dateOffsetMs": 10800000
+              },
+              {
+                "from": "hieu.pm.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Chuỗi cập nhật nhanh nội bộ nhiều tín hiệu nhiễu - Nova Retail Group",
+                "body": "Cập nhật nhanh 24/24: bên tôi ghi nhận thêm một thay đổi nhỏ về lịch họp, người tham dự hoặc tài liệu đính kèm. Nhờ đội dự án lưu ý để tránh bỏ sót thông tin vận hành.",
+                "dateOffsetMs": 8100000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "hanh.finance.client@example.com",
+        "name": "Hạnh Trần",
+        "org": "Nova Retail Group",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "Đối soát ngân sách cho đợt cutover dữ liệu",
+            "snippet": "Bộ phận tài chính cùng khách hàng theo dõi cùng chủ đề.",
+            "dateOffsetMs": 2700000,
+            "messages": [
+              {
+                "from": "hanh.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Đối soát ngân sách cho đợt cutover dữ liệu",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nLiên quan đợt cutover dữ liệu, phòng Tài chính cần chốt ngân sách vận hành ngoài giờ và chi phí giám sát sau cutover.\n\nĐề nghị gửi bảng tổng hợp effort và estimate chi phí cập nhật trước 17:00 hôm nay.\n\nTrân trọng,\nHạnh Trần\nFinance Controller, Nova Retail Group",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hanh.finance.client@example.com"
+                ],
+                "subject": "Re: Đối soát ngân sách cho đợt cutover dữ liệu",
+                "body": "Kính gửi chị Hạnh,\n\nBên em đã hoàn tất bản estimate theo 2 phương án cutover và đính kèm bảng rủi ro phát sinh.\n\nBên em sẽ cập nhật lần cuối sau buổi họp vận hành lúc 16:30.\n\nTrân trọng,\n{{USER_NAME}}\nProduct Manager",
+                "dateOffsetMs": 2700000
+              },
+              {
+                "from": "hanh.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Đối soát ngân sách cho đợt cutover dữ liệu",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị xác nhận giúp mốc hoàn tất và danh mục bàn giao cuối cùng để bên tôi chủ động kế hoạch nội bộ.\n\nTrân trọng,\nHạnh Trần",
+                "dateOffsetMs": 900000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Follow-up kế hoạch triển khai tuần này - Nova Retail Group",
+            "snippet": "Thread bổ sung để tăng độ phủ bối cảnh theo dõi.",
+            "dateOffsetMs": 5100000,
+            "messages": [
+              {
+                "from": "hanh.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Follow-up kế hoạch triển khai tuần này - Nova Retail Group",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nNhờ anh/chị cập nhật giúp kế hoạch triển khai tuần này và các đầu việc có rủi ro cao để bên tôi chủ động sắp xếp nguồn lực.\n\nTrân trọng,\nHạnh Trần",
+                "dateOffsetMs": 14400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hanh.finance.client@example.com"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Nova Retail Group",
+                "body": "Kính gửi anh/chị,\n\nBên em đã rà soát lại kế hoạch tuần này và sẽ gửi bảng cập nhật theo từng đầu việc cùng mức ưu tiên trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 7200000
+              },
+              {
+                "from": "hanh.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Follow-up kế hoạch triển khai tuần này - Nova Retail Group",
+                "body": "Cảm ơn anh/chị. Bên tôi chờ bản cập nhật để chốt lịch làm việc với các bộ phận liên quan.\n\nTrân trọng,\nHạnh Trần",
+                "dateOffsetMs": 4200000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 16416000000,
+            "messages": [
+              {
+                "from": "hanh.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nHạnh Trần",
+                "dateOffsetMs": 16588800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hanh.finance.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Kính gửi Hạnh Trần,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 16502400000
+              },
+              {
+                "from": "hanh.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2024: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nHạnh Trần",
+                "dateOffsetMs": 16416000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 39600000,
+            "messages": [
+              {
+                "from": "hanh.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nHạnh Trần",
+                "dateOffsetMs": 82800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "hanh.finance.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Kính gửi Hạnh Trần,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 54000000
+              },
+              {
+                "from": "hanh.finance.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nHạnh Trần",
+                "dateOffsetMs": 39600000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      },
+      {
+        "email": "nam.ops.client@example.com",
+        "name": "Nam Bùi",
+        "org": "Nova Retail Group",
+        "language": "vi",
+        "threads": [
+          {
+            "subject": "Theo dõi checklist cutover tại trung tâm dữ liệu",
+            "snippet": "Bổ sung đầu mối vận hành cùng chủ đề cutover.",
+            "dateOffsetMs": 3300000,
+            "messages": [
+              {
+                "from": "nam.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Theo dõi checklist cutover tại trung tâm dữ liệu",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nĐội vận hành cần checklist cutover tại trung tâm dữ liệu để chuẩn bị phiên chuyển đổi đêm nay.\n\nNhờ anh/chị gửi bản checklist cùng phương án fallback trước 18:00.\n\nTrân trọng,\nNam Bùi\nOperations Lead"
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nam.ops.client@example.com"
+                ],
+                "subject": "Re: Theo dõi checklist cutover tại trung tâm dữ liệu",
+                "body": "Kính gửi anh Nam,\n\nBên em đã cập nhật checklist cutover và phân công owner theo từng hạng mục.\n\nEm sẽ gửi đầy đủ trước 17:30 để anh rà soát.\n\nTrân trọng,\n{{USER_NAME}}"
+              },
+              {
+                "from": "nam.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Theo dõi checklist cutover tại trung tâm dữ liệu",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ xác nhận lại sau phiên dry-run lúc 19:00.\n\nTrân trọng,\nNam Bùi"
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+            "snippet": "Thread cũ để test recency/focus và phân tách topic theo thời gian.",
+            "dateOffsetMs": 10368000000,
+            "messages": [
+              {
+                "from": "nam.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi gửi lại biên bản tổng kết các hạng mục đã triển khai ở giai đoạn trước để đối chiếu lịch sử thay đổi.\n\nĐây là luồng trao đổi cũ, hiện không cần hành động gấp.\n\nTrân trọng,\nNam Bùi",
+                "dateOffsetMs": 10540800000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nam.ops.client@example.com"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Kính gửi Nam Bùi,\n\nBên em đã nhận được hồ sơ lưu trữ và ghi nhận để đối chiếu trong các đợt rà soát tiếp theo.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 10454400000
+              },
+              {
+                "from": "nam.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Lưu trữ 2025: Tổng kết yêu cầu triển khai giai đoạn trước - Nova Retail Group",
+                "body": "Cảm ơn anh/chị. Bên tôi sẽ dùng thread này làm mốc tham chiếu lịch sử cho các yêu cầu mới.\n\nTrân trọng,\nNam Bùi",
+                "dateOffsetMs": 10368000000
+              }
+            ],
+            "isRead": true
+          },
+          {
+            "subject": "Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+            "snippet": "Topic bổ sung khác bối cảnh delivery để test AI phân biệt nhiều cụm ý định.",
+            "dateOffsetMs": 43200000,
+            "messages": [
+              {
+                "from": "nam.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Kính gửi anh/chị {{USER_NAME}},\n\nBên tôi cần rà soát SLA hỗ trợ sau triển khai, bao gồm thời gian phản hồi và quy trình escalation khi có sự cố.\n\nNhờ anh/chị gửi bản đề xuất cập nhật SLA trong hôm nay.\n\nTrân trọng,\nNam Bùi",
+                "dateOffsetMs": 86400000
+              },
+              {
+                "from": "{{USER_EMAIL}}",
+                "to": [
+                  "nam.ops.client@example.com"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Kính gửi Nam Bùi,\n\nBên em đang tổng hợp đề xuất SLA theo 3 mức độ ưu tiên sự cố và sẽ gửi bản chi tiết trước 16:30.\n\nTrân trọng,\n{{USER_NAME}}",
+                "dateOffsetMs": 57600000
+              },
+              {
+                "from": "nam.ops.client@example.com",
+                "to": [
+                  "{{USER_EMAIL}}"
+                ],
+                "subject": "Re: Rà soát SLA hỗ trợ sau triển khai - Nova Retail Group",
+                "body": "Đã rõ, cảm ơn anh/chị. Bên tôi chờ bản SLA để chốt với bộ phận vận hành nội bộ.\n\nTrân trọng,\nNam Bùi",
+                "dateOffsetMs": 43200000
+              }
+            ],
+            "isRead": true
+          }
+        ]
+      }
+    ]
+  }
+]

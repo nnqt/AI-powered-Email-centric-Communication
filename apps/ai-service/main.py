@@ -12,6 +12,7 @@ from routes import contact as contact_routes
 from routes import urgent as urgent_routes
 from routes import thread_category as thread_category_routes
 from routes import topic_label as topic_label_routes
+from routes import thread_analysis as thread_analysis_routes
 from routes import chat as chat_routes
 
 app = FastAPI(
@@ -40,4 +41,5 @@ app.include_router(contact_routes.router)
 app.include_router(urgent_routes.router)
 app.include_router(thread_category_routes.router)
 app.include_router(topic_label_routes.router)
+app.include_router(thread_analysis_routes.router)
 app.include_router(chat_routes.router)

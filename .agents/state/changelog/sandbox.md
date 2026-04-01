@@ -1,5 +1,141 @@
 # Sandbox Changelog
 
+## 2026-04-01 — Temporal + High-Volume Noise Expansion
+
+### Changed
+
+- Expanded all scenario payloads in `apps/backend/src/lib/mock-data/*.json` to better stress real-world behavior:
+  - added legacy threads/topics with old timestamps (`dateOffsetMs` in 90-190 day ranges),
+  - added additional distinct business topics per contact (for topic separation quality checks),
+  - added one high-volume noisy email thread per scenario (`24` messages) to test summarization/clustering robustness under signal noise.
+- Re-applied read-state normalization:
+  - threads containing outbound user reply are marked `isRead: true`.
+
+### Validation
+
+- `11/11` scenarios now contain legacy threads.
+- `11/11` scenarios now contain at least one 20-30 message noisy thread.
+- All mock JSON files parse successfully.
+
+## 2026-04-01 — Test-Case Intent Alignment Pass
+
+### Changed
+
+- Re-validated all mock scenarios against actual system test goals (contact verify/merge, topic clustering, focus ranking, noise filtering, smart reply context).
+- Fixed semantic drift in noise threads:
+  - removed unnatural outbound replies from newsletter/promotion threads in:
+    - `scenario-easy-one-customer-long-thread.json`
+    - `scenario-easy-one-customer-multi-topic-noise.json`
+    - `scenario-integration-multi-channel-noise-escalation.json`
+  - kept these threads as informational-only noise signals.
+- Added explicit scenario validation matrix to `.agents/knowledge/sandbox-usage.md` so each scenario maps to expected behavior/outcome.
+
+## 2026-04-01 — Full Mock Dataset Enhancement Pass
+
+### Changed
+
+- Reviewed and refreshed all sandbox mock scenario payloads under `apps/backend/src/lib/mock-data/*.json`.
+- Rewrote unnatural/ambiguous wording in email content, including replacing the confusing line:
+  - "Nội dung này vẫn thuộc cùng bối cảnh làm việc với thầy Anh ở chuỗi trước."
+  - with clearer business context continuity phrasing.
+- Increased scenario density across all mocks:
+  - added more contacts (customer personas),
+  - added more threads per contact,
+  - added more email messages per thread.
+- Added read-state realism:
+  - threads that already have outbound reply from authenticated user are now marked `isRead: true` in payload.
+
+### Validation
+
+- All modified mock JSON files parse successfully.
+- Post-update aggregate density (per file) shows higher contacts/threads/messages compared to previous baseline.
+
+## 2026-03-31 — Scenario Matrix Overhaul + Telegram Injection Support
+
+### Changed
+
+- Replaced legacy 2-scenario registry with progressive test matrix:
+  - Easy (3 cases)
+  - Medium (2 cases)
+  - Hard (2 cases)
+- Updated scenario titles/descriptions to be explicit about testing intent and complexity.
+- Added new scenario payload files under `apps/backend/src/lib/mock-data/`:
+  - `scenario-easy-one-customer-single-topic.json`
+  - `scenario-easy-one-customer-multi-topic-noise.json`
+  - `scenario-easy-one-customer-long-thread.json`
+  - `scenario-medium-one-customer-multi-email.json`
+  - `scenario-medium-multi-customer-multi-email.json`
+  - `scenario-hard-multi-customer-email-telegram.json`
+  - `scenario-hard-release-war-room.json`
+
+### API / Contract
+
+- Extended sandbox payload schema with optional Telegram branch on contact:
+  - `contacts[].telegram.telegramId`
+  - `contacts[].telegram.telegramUsername`
+  - `contacts[].telegram.telegramName`
+  - `contacts[].telegram.chats[]`
+  - `contacts[].telegram.chats[].messages[]`
+- Injector now persists Telegram mock entities (`TelegramChat`, `TelegramMessage`) with `isMock=true`.
+- Added support for `{{USER_NAME}}` placeholder in scenario text templates, alongside existing `{{USER_EMAIL}}` support.
+
+### Testing Intent
+
+- Easy: one-customer baseline, then add unrelated/noise threads, then long formal email body.
+- Medium: one customer with multiple sender emails, then multiple customers and mixed signal/noise.
+- Hard: medium-like complexity plus Telegram escalation in parallel with email threads.
+
+## 2026-03-28 — Topic Test Dataset Expansion (4 Threads / 2 Scenarios)
+
+### Changed
+
+- Updated built-in scenario payloads to support multi-thread same-topic testing:
+  - `angry-customer` now contains 2 related logistics threads for one contact (`alex.customer@example.com`).
+  - `payment-dispute` now contains 2 related billing threads for one contact (`Maria Tran`) using 2 sender emails.
+- Each thread now has 2-3 messages and ends with an inbound unresolved customer email so Smart Reply and Summary can be tested on latest pending response.
+
+### Testing Intent
+
+- Validate topic clustering groups related threads under the same topic.
+- Validate summary timeline and smart-reply context selection on unresolved latest inbound messages.
+
+## 2026-03-28 — PO Communication Rewrite For Sandbox Scenarios
+
+### Changed
+
+- Rewrote both built-in scenario contents from support/billing incident style to Product Owner communication style.
+- New thread topics now center around:
+  - CRM UAT timeline and scope baseline alignment.
+  - Change request (`CR-17`) effort/cost estimation and phase approval.
+- Kept technical test contract unchanged:
+  - 2 scenarios, total 4 threads.
+  - Each thread has 2-3 emails.
+  - Latest email remains inbound unresolved for Smart Reply and Summary testing.
+  - Scenario B still uses two sender emails for one contact identity.
+
+## 2026-03-28 — Authenticated Mailbox Alignment In Scenarios
+
+### Changed
+
+- Added support for `{{USER_EMAIL}}` placeholder in sandbox injector message normalization.
+- Updated built-in scenario payloads so:
+  - outbound mock messages use `from: "{{USER_EMAIL}}"`
+  - inbound mock messages target `to: ["{{USER_EMAIL}}"]`
+- This ensures sent/received mock emails align with the currently authenticated user mailbox during injection.
+
+## 2026-03-28 — FR Topic Scenario Naming + Scenario 02 Distribution Update
+
+### Changed
+
+- Renamed topic-testing scenarios to explicit FR labels:
+  - `FR-Topic-Scenario-01`
+  - `FR-Topic-Scenario-02`
+- Updated `FR-Topic-Scenario-02` dataset to follow test intent exactly:
+  - total 3 threads, same topic `CR-17`
+  - thread 1,2 from email 1 (`ha.nguyen.client@example.com`)
+  - thread 3 from email 2 (`ha.finance.client@example.com`)
+  - all messages still target authenticated mailbox via `{{USER_EMAIL}}` placeholder.
+
 ## 2026-03-17 — Phase 1 (Database Update & API Guards)
 
 ### Added
@@ -34,7 +170,7 @@
 
 - Added sandbox payload type definitions in `apps/backend/src/types/sandbox.ts`.
 - Added route: `POST /api/sandbox/inject` at `apps/backend/src/app/api/sandbox/inject/route.ts`.
-- Added sample mock scenario JSON at `apps/backend/src/lib/mock-data/scenario-angry-customer.json`.
+- Added sample mock scenario JSON at `apps/backend/src/lib/mock-data/scenario-fr-topic-01.json`.
 
 ### Changed
 
@@ -89,7 +225,7 @@
 - Added backend scenario registry at `apps/backend/src/lib/sandbox-scenarios.ts`.
 - Added route `GET /api/sandbox/scenarios` to return scenario list for UI dropdown.
 - Added route `GET /api/sandbox/scenarios/:slug` to return full scenario payload by slug.
-- Added second scenario file: `apps/backend/src/lib/mock-data/scenario-payment-dispute.json`.
+- Added second scenario file: `apps/backend/src/lib/mock-data/scenario-fr-topic-02.json`.
 
 ### Changed
 

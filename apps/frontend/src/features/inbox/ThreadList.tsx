@@ -386,11 +386,6 @@ export function ThreadList() {
                   </div>
 
                   <div className="ml-2 flex shrink-0 flex-col items-end gap-1">
-                    {thread.isUrgent && (
-                      <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-xs font-medium text-red-600">
-                        🔴 Urgent
-                      </span>
-                    )}
                     <span className="text-xs text-gray-500">
                       {thread.lastMessageDate
                         ? formatDistanceToNow(

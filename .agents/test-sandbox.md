@@ -56,7 +56,7 @@ Bạn là AI coding assistant. Trước khi bắt đầu, hãy đọc file `.age
 - Data mock khi set ngày (Date) cần lùi thời gian một chút (ví dụ `Date.now() - 5000`) để test được workflow sắp xếp.
 - Response trả về JSON chứa số lượng record được tạo.
 
-Sau khi hoàn thành, viết 1 file mock JSON mẫu vào folder `apps/backend/src/lib/mock-data/scenario-angry-customer.json`.
+Sau khi hoàn thành, viết 1 file mock JSON mẫu vào folder `apps/backend/src/lib/mock-data/scenario-fr-topic-01.json`.
 ```
 
 ---

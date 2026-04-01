@@ -1,3 +1,80 @@
+# 2026-04-01 — Verify Hub Merge Direction Consistency Fix
+
+## Changed
+
+- Fixed merge queue behavior in `/contacts/verify` so staged merge direction is preserved at save-time.
+- Fixed verified-anchor handling in Duplicate/Similar Candidates:
+  - if backend marks a suggestion as `verified_anchor`, frontend now keeps that source/target direction instead of force-anchoring into currently selected contact.
+- Result: when merging a duplicate into a verified target, the duplicate source contact is correctly removed from Needs Review after save.
+
+# 2026-03-31 — Inbox Sync Toast + Timeline ThreadId Fix
+
+## Changed
+
+- Reduced duplicate inbox sync success toasts on `/inbox`:
+  - keep processing toast + final result from the initiating sync call
+  - stop showing additional success toast from `EMAIL_SYNCED` socket handler on inbox page.
+- Fixed contact timeline email navigation payload:
+  - `GET /api/contacts/:id/timeline` now maps `threadId` from `Thread.id` (was incorrect `threadId` field), preventing `/threads/undefined` navigation.
+- Added defensive frontend guard in contact timeline click handlers to skip navigation when `threadId`/`chatId` is missing.
+
+# 2026-03-31 — Backend AI Architecture Cleanup
+
+## Changed
+
+- Removed deprecated summarize API layer that diverged from module-based backend architecture:
+  - deleted `apps/backend/src/app/api/ai/summarize/route.ts`
+  - deleted `apps/backend/src/services/ai.service.ts`
+  - deleted `apps/backend/src/services/cache.service.ts`
+  - deleted `apps/backend/src/types/ai.types.ts`
+- Consolidated backend AI integration to single adapter path:
+  - `apps/backend/src/modules/ai/ai.service.ts`
+
+# 2026-03-28 — Contacts Verify Hub Consolidation
+
+## Changed
+
+- Added new unified page `apps/frontend/src/app/(dashboard)/contacts/verify/page.tsx` to process contact triage in one place:
+  - name edit
+  - category verify
+  - duplicate merge suggestions.
+- Updated dashboard sidebar nav (`apps/frontend/src/app/(dashboard)/layout.tsx`):
+  - replaced `Check Duplicates` sub-item with `Verify Hub` (`/contacts/verify`)
+  - added Contacts review badge using unverified contacts count.
+- Reduced duplicate workflow fragmentation by redirecting legacy route:
+  - `apps/frontend/src/app/(dashboard)/contacts/duplicates/page.tsx` now redirects to `/contacts/verify`.
+
+# 2026-03-29 — Single Contact Enrich API
+
+## Added
+
+- Added route `POST /api/contacts/:id/enrich` at `apps/backend/src/app/api/contacts/[id]/enrich/route.ts`.
+- Route behavior:
+  - auth + ownership checks
+  - returns cached contact when `aiEnriched=true` and `force` is not set
+  - runs AI enrichment and updates contact fields (`name`, `org`, `language`, `categoryAiSuggestion`, `enrichedAt`) when needed.
+- Used by frontend flows:
+  - contact detail page
+  - contacts verify list
+  - verify hub page.
+
+# 2026-03-29 — Verify UX Auto-Run + Duplicate Heuristic Upgrade
+
+## Changed
+
+- Contact verification now runs through dedicated Verify Hub at `/contacts/verify`.
+- Sidebar now shows pending review badge on `Verify Hub` sub-item under Contacts.
+- Verify Hub contact selection now auto-runs:
+  - `POST /api/contacts/:id/enrich` (fills category suggestion/ticks when available)
+  - `GET /api/contacts/merge-suggestions?selectedContactId=<id>` (selected-aware duplicate candidates).
+
+## Improved Duplicate Detection
+
+- `GET /api/contacts/merge-suggestions` now combines:
+  - AI suggestions
+  - heuristic suggestions based on normalized name equality / high token overlap.
+- Heuristic scoring adds confidence boost when pairing Telegram placeholder emails (`@telegram.local`) with non-Telegram contacts, improving same-person detection across Telegram + Gmail identities.
+
 # Changelog — Email Core & Contact Management (FR-01..08)
 
 > Load file này khi làm việc với Email sync, Compose, Thread, Contact, AI features (summarize/reply/urgent/enrich).

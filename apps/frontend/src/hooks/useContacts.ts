@@ -52,9 +52,9 @@ const PAGE_SIZE = 30;
 export function useContacts(limit = PAGE_SIZE) {
   const [skip, setSkip] = useState(0);
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<ContactCategory | "all">(
-    "all",
-  );
+  const [categoryFilter, setCategoryFilter] = useState<
+    ContactCategory | "all" | "unverified"
+  >("all");
 
   // Fetch all contacts when filtering (large limit), else paginate
   const isFiltering = search.trim() !== "" || categoryFilter !== "all";
@@ -73,9 +73,19 @@ export function useContacts(limit = PAGE_SIZE) {
   // Client-side filter
   const filtered = useMemo(() => {
     let list = allContacts;
-    if (categoryFilter !== "all") {
-      list = list.filter((c) => (c.category ?? "unknown") === categoryFilter);
+
+    const isVerified = (c: (typeof allContacts)[number]) =>
+      c.categorySource === "user" || (c.categories?.length ?? 0) > 0;
+
+    if (categoryFilter === "unverified") {
+      list = list.filter((c) => !isVerified(c));
+    } else {
+      list = list.filter((c) => isVerified(c));
+      if (categoryFilter !== "all") {
+        list = list.filter((c) => (c.category ?? "unknown") === categoryFilter);
+      }
     }
+
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
@@ -122,7 +132,7 @@ export function useContacts(limit = PAGE_SIZE) {
       setFilterPage(0);
     },
     categoryFilter,
-    setCategoryFilter: (v: ContactCategory | "all") => {
+    setCategoryFilter: (v: ContactCategory | "all" | "unverified") => {
       setCategoryFilter(v);
       setFilterPage(0);
     },
@@ -136,6 +146,10 @@ export function useContactDetail(contactId: string) {
       const res = await apiClient.get<ContactDTO>(url);
       return res.data;
     },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
   );
   return { contact: data, isLoading, isError: !!error, mutate };
 }
@@ -146,6 +160,10 @@ export function useContactTimeline(contactId: string) {
     async (url: string) => {
       const res = await apiClient.get<{ threads: any[] }>(url);
       return res.data;
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
     },
   );
   return { threads: data?.threads ?? [], isLoading, isError: !!error, mutate };

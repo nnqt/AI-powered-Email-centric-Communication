@@ -24,7 +24,14 @@ export default function InboxPage() {
     const toastId = showToast("Syncing inbox…", "processing");
     apiClient
       .post("/api/emails/sync")
-      .then(() => updateToast(toastId, "Inbox synced", "success"))
+      .then((res) => {
+        const synced = res.data?.syncedMessages ?? 0;
+        updateToast(
+          toastId,
+          `Synced ${synced} email${synced !== 1 ? "s" : ""}`,
+          "success",
+        );
+      })
       .catch(() => updateToast(toastId, "Sync failed", "error"));
   }, [status]);
 
@@ -39,12 +46,6 @@ export default function InboxPage() {
   useSocket(userId, {
     EMAIL_SYNCED: (payload: { count: number; hasMore: boolean }) => {
       revalidateThreads();
-      if (payload.count > 0) {
-        showToast(
-          `Synced ${payload.count} email${payload.count !== 1 ? "s" : ""}`,
-          "success",
-        );
-      }
     },
     NEW_THREAD: () => revalidateThreads(),
     EMAIL_SENT: () => revalidateThreads(),

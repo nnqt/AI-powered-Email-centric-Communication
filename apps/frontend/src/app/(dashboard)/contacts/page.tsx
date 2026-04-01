@@ -2,239 +2,24 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
-import useSWR from "swr";
+import { useEffect, useState } from "react";
 
 import { useContacts, ContactDTO } from "@/hooks/useContacts";
 import type { ContactCategory } from "@/hooks/useContacts";
 import apiClient from "@/lib/api";
 
-const ALL_CATEGORIES: ContactCategory[] = [
-  "colleague",
-  "customer",
-  "other",
-  "spam",
-];
-
 const CATEGORY_FILTER_TABS: {
-  value: ContactCategory | "all";
+  value: ContactCategory | "all" | "unverified";
   label: string;
 }[] = [
-  { value: "all", label: "All" },
+  { value: "all", label: "All (Verified)" },
+  { value: "unverified", label: "Unverified" },
   { value: "colleague", label: "Colleague" },
   { value: "customer", label: "Customer" },
   { value: "other", label: "Other" },
   { value: "spam", label: "Spam" },
 ];
 
-const CATEGORY_CHIP_STYLE: Record<ContactCategory, string> = {
-  colleague: "bg-blue-50 text-blue-700 ring-blue-200",
-  customer: "bg-green-50 text-green-700 ring-green-200",
-  other: "bg-gray-100 text-gray-600 ring-gray-200",
-  spam: "bg-red-50 text-red-600 ring-red-200",
-  unknown: "bg-gray-100 text-gray-400 ring-gray-200",
-};
-
-/** Inline contact row for the Verify tab. */
-function VerifyContactRow({
-  contact,
-  onVerified,
-}: {
-  contact: ContactDTO;
-  onVerified: (contactId: string) => void;
-}) {
-  const router = useRouter();
-  const suggestion = contact.categoryAiSuggestion as
-    | ContactCategory
-    | undefined;
-  const [selected, setSelected] = useState<Set<ContactCategory>>(
-    () => new Set(suggestion ? [suggestion] : []),
-  );
-  const [confirming, setConfirming] = useState(false);
-  const [enriching, setEnriching] = useState(false);
-  const [localSuggestion, setLocalSuggestion] = useState<
-    ContactCategory | undefined
-  >(suggestion);
-
-  const toggle = (cat: ContactCategory) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
-      return next;
-    });
-  };
-
-  const handleConfirm = async () => {
-    if (selected.size === 0) return;
-    setConfirming(true);
-    try {
-      const cats = Array.from(selected);
-      await apiClient.patch(`/api/contacts/${contact._id}`, {
-        categories: cats,
-        category: cats[0],
-        categorySource: "user",
-        categoryAiSuggestion: null,
-      });
-      onVerified(contact._id);
-    } catch {
-      // silent
-    } finally {
-      setConfirming(false);
-    }
-  };
-
-  const handleAISuggest = async () => {
-    setEnriching(true);
-    try {
-      const res = await apiClient.post<{ contact: ContactDTO }>(
-        `/api/contacts/${contact._id}/enrich`,
-      );
-      const updated = res.data.contact;
-      if (updated.categoryAiSuggestion) {
-        setLocalSuggestion(updated.categoryAiSuggestion as ContactCategory);
-        setSelected(new Set([updated.categoryAiSuggestion as ContactCategory]));
-      }
-    } catch {
-      // silent
-    } finally {
-      setEnriching(false);
-    }
-  };
-
-  const initials = contact.name
-    ? contact.name
-        .split(" ")
-        .map((w) => w[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : contact.email[0].toUpperCase();
-
-  return (
-    <div className="verify-contact-row flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => router.push(`/contacts/${contact._id}`)}
-          className="verify-contact-row__avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 hover:opacity-80"
-        >
-          {initials}
-        </button>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-gray-900">
-            {contact.name ?? contact.email}
-          </p>
-          {contact.name && (
-            <p className="truncate text-xs text-gray-500">{contact.email}</p>
-          )}
-          {contact.org && (
-            <p className="truncate text-xs text-gray-400">{contact.org}</p>
-          )}
-        </div>
-        {!contact.aiEnriched && !localSuggestion && (
-          <button
-            type="button"
-            onClick={handleAISuggest}
-            disabled={enriching}
-            className="shrink-0 flex items-center gap-1 rounded-md border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50"
-          >
-            {enriching ? (
-              <svg
-                className="h-3 w-3 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8z"
-                />
-              </svg>
-            ) : (
-              <span>✦</span>
-            )}
-            AI
-          </button>
-        )}
-      </div>
-
-      {/* Category chips */}
-      <div className="flex flex-wrap gap-2">
-        {ALL_CATEGORIES.map((cat) => {
-          const isSelected = selected.has(cat);
-          const isAISuggestion = cat === localSuggestion;
-          return (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => toggle(cat)}
-              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset transition-all ${
-                isSelected
-                  ? `${CATEGORY_CHIP_STYLE[cat]} ring-2 font-semibold`
-                  : "bg-gray-50 text-gray-500 ring-gray-200 hover:bg-gray-100"
-              }`}
-            >
-              {cat}
-              {isAISuggestion && (
-                <span className="rounded bg-purple-100 px-1 text-[9px] font-bold uppercase text-purple-600">
-                  AI
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleConfirm}
-          disabled={selected.size === 0 || confirming}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
-        >
-          {confirming ? "Saving…" : "Confirm"}
-        </button>
-        <button
-          type="button"
-          onClick={() => onVerified(contact._id)}
-          className="text-xs text-gray-400 hover:text-gray-600"
-        >
-          Skip
-        </button>
-      </div>
-    </div>
-  );
-}
-
-const unverifiedFetcher = async (url: string) => {
-  const res = await apiClient.get<{ contacts: ContactDTO[]; total: number }>(
-    url,
-  );
-  return res.data;
-};
-
-function useUnverifiedContacts() {
-  const { data, isLoading, mutate } = useSWR(
-    "/api/contacts?unverified=true&limit=200",
-    unverifiedFetcher,
-  );
-  return {
-    contacts: data?.contacts ?? [],
-    total: data?.total ?? 0,
-    isLoading,
-    mutate,
-  };
-}
 
 function ContactRow({
   contact,
@@ -309,7 +94,6 @@ export default function ContactsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mainTab, setMainTab] = useState<"directory" | "verify">("directory");
   const {
     contacts,
     total,
@@ -324,27 +108,6 @@ export default function ContactsPage() {
     setCategoryFilter,
     mutate,
   } = useContacts(30);
-
-  const {
-    contacts: unverifiedContacts,
-    total: unverifiedTotal,
-    isLoading: unverifiedLoading,
-    mutate: mutateUnverified,
-  } = useUnverifiedContacts();
-
-  // Local dismissed list for optimistic "skip" behaviour
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const verifyContacts = unverifiedContacts.filter(
-    (c) => !dismissedIds.has(c._id),
-  );
-
-  const handleVerified = useCallback(
-    (contactId: string) => {
-      setDismissedIds((prev) => new Set(prev).add(contactId));
-      mutateUnverified();
-    },
-    [mutateUnverified],
-  );
 
   const [bulkEnriching, setBulkEnriching] = useState(false);
   const [bulkResult, setBulkResult] = useState<{
@@ -400,28 +163,9 @@ export default function ContactsPage() {
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
             {total}
           </span>
-          {/* Main tab switcher */}
-          <div className="ml-4 flex gap-1 rounded-lg bg-gray-100 p-0.5">
-            {(["directory", "verify"] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setMainTab(tab)}
-                className={`relative rounded-md px-3 py-1 text-xs font-medium transition-colors ${
-                  mainTab === tab
-                    ? "bg-white text-indigo-700 shadow-sm"
-                    : "text-gray-500 hover:text-gray-800"
-                }`}
-              >
-                {tab === "directory" ? "Directory" : "Verify"}
-                {tab === "verify" && unverifiedTotal > 0 && (
-                  <span className="ml-1 rounded-full bg-amber-400 px-1.5 text-[10px] font-bold text-white">
-                    {unverifiedTotal}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          <span className="ml-2 rounded-md border border-gray-200 px-2 py-0.5 text-xs text-gray-600">
+            Directory
+          </span>
         </div>
         <div className="flex items-center gap-3">
           {bulkResult && bulkResult.failed === -1 && (
@@ -469,35 +213,7 @@ export default function ContactsPage() {
         </div>
       </header>
 
-      {/* ── Verify tab panel ── */}
-      {mainTab === "verify" && (
-        <div className="contacts-page__verify flex-1 overflow-y-auto px-6 py-4">
-          <p className="mb-4 text-sm text-gray-500">
-            {verifyContacts.length > 0
-              ? `${verifyContacts.length} contact(s) without a confirmed category. Assign categories to help AI prioritize your inbox.`
-              : "All contacts have been verified. ✓"}
-          </p>
-          {unverifiedLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <p className="text-sm text-gray-500">Loading…</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {verifyContacts.map((c) => (
-                <VerifyContactRow
-                  key={c._id}
-                  contact={c}
-                  onVerified={handleVerified}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Directory tab panel ── */}
-      {mainTab === "directory" && (
-        <div className="contacts-page__list flex-1 overflow-y-auto px-6 py-4">
+      <div className="contacts-page__list flex-1 overflow-y-auto px-6 py-4">
           {/* Search bar */}
           <div className="contacts-page__search relative mb-2">
             <svg
@@ -618,8 +334,7 @@ export default function ContactsPage() {
               </div>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

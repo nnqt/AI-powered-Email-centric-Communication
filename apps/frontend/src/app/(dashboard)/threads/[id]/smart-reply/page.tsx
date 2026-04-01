@@ -26,6 +26,26 @@ interface ParsedAction {
   action: string;
 }
 
+function normalizeSummaryText(summary: unknown): string {
+  if (typeof summary === "string") return summary;
+  if (Array.isArray(summary)) {
+    return summary
+      .map((item) => (typeof item === "string" ? item : ""))
+      .filter(Boolean)
+      .join("\n");
+  }
+  return "";
+}
+
+function normalizeActionItem(raw: unknown): string {
+  if (typeof raw === "string") return raw;
+  if (raw && typeof raw === "object") {
+    const value = (raw as any).action ?? (raw as any).text ?? "";
+    return typeof value === "string" ? value : "";
+  }
+  return "";
+}
+
 const USER_CONTEXT_BUDGET = 1200;
 const ACTION_META_PATTERN = /^(.+?)\s*\(([^|]+)\s*\|\s*([^)]+)\)\s*$/i;
 
@@ -139,8 +159,20 @@ export default function SmartReplyStudioPage() {
 
   const overBudgetWarnedRef = useRef(false);
 
-  const nextActions = thread?.summary?.action_required ?? [];
-  const summaryText = thread?.summary?.text || "";
+  const nextActions = useMemo(
+    () =>
+      Array.isArray(thread?.summary?.action_required)
+        ? thread.summary.action_required
+            .map((item: unknown) => normalizeActionItem(item))
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : [],
+    [thread?.summary?.action_required],
+  );
+  const summaryText = useMemo(
+    () => normalizeSummaryText(thread?.summary?.text),
+    [thread?.summary?.text],
+  );
 
   const userContextLength = useMemo(() => {
     return selectedNextActions.join("\n").length + additionalContext.length;

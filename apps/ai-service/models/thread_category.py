@@ -37,3 +37,5 @@ class ClassifyThreadCategoryResponse(BaseModel):
     thread_id: str
     categories: List[str]
     noise_filtered: bool
+    topic_key: Optional[str] = None
+    topic_key_confidence: Optional[float] = None

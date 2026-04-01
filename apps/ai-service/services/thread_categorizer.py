@@ -11,4 +11,6 @@ async def classify_thread_category(
         thread_id=request.thread_id,
         categories=result["categories"],
         noise_filtered=result["noise_filtered"],
+        topic_key=result.get("topic_key"),
+        topic_key_confidence=result.get("topic_key_confidence"),
     )
