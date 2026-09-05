@@ -106,8 +106,11 @@ apps/
   ai-service/   — Python FastAPI microservice (Gemini)
 infra/
   docker-compose.yml
-report/         — LaTeX thesis document
-.copilot/       — Copilot guidance docs (architecture, state, style)
+thesis-template-master/  — LaTeX thesis (bkthesis.sty)
+.ai/            — Canonical AI knowledge base (knowledge, skills, state, roles, thesis)
+.agents/        — Antigravity adapter (symlinks → .ai/)
+.github/        — Copilot workspace instructions (refs → .ai/)
 ```
 
-For detailed architecture documentation see [`.copilot/CURRENT_STATE.md`](.copilot/CURRENT_STATE.md).
+For detailed architecture documentation see [`.ai/knowledge/architecture.md`](.ai/knowledge/architecture.md).
+

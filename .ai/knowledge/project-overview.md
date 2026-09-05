@@ -34,8 +34,9 @@
 ├── infra/
 │   └── docker-compose.yml
 ├── shared/            # (future) shared models/utils
-└── .claude/           # Project knowledge docs
+└── .agents/           # AI agent knowledge base (skills, knowledge, state)
 ```
+
 
 ## Request Flow
 
@@ -57,7 +58,7 @@ Browser
 
 - **Frontend → Backend**: SWR (data hooks) + axios (mutations); all calls go through `BACKEND_INTERNAL_URL` rewrite or direct to `NEXT_PUBLIC_BACKEND_SOCKET_URL` for WebSocket.
 - **Backend → AI Service**: axios HTTP calls (non-blocking, fire-and-forget for urgent classification).
-- **Backend → Frontend**: Socket.IO room `user:<userId>`; events: `EMAIL_SYNCED`, `SUMMARY_READY`, `EMAIL_SENT`.
+- **Backend → Frontend**: Socket.IO room `user:<userId>`; events: `EMAIL_SYNCED`, `SUMMARY_READY`, `EMAIL_SENT`, `NEW_TELEGRAM_MESSAGE`, `AI_JOB_START`, `AI_JOB_DONE`.
 - **Backend → Gmail**: Google API client with stored OAuth tokens; auto-refresh when within 5min of expiry.
 - **Redis**: Merge suggestion cache (6h TTL, key `contact:merge_suggestions:{userId}`); Socket.IO pub/sub adapter for multi-instance.
 

@@ -31,8 +31,8 @@ dist/
 build/
 coverage/
 
-# Copilot logs
-.copilot/*.tmp
+# AI assistant platform-specific caches (canonical knowledge is in .ai/)
+.agents/.gemini/
 
 # Latex log, temporary files
 *.aux

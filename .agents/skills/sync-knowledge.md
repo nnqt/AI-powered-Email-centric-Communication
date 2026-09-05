@@ -1,0 +1,1 @@
+../../.ai/skills/sync-knowledge.md
